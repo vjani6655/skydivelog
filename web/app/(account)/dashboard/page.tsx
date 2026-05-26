@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { cookies } from "next/headers"
 import { fmtDate } from "@/lib/display"
 import Link from "next/link"
-import { AlertTriangle, Clock, ChevronRight, Download, BookOpen, Package, Award } from "lucide-react"
+import { AlertTriangle, ChevronRight, Download, BookOpen, Package, Award } from "lucide-react"
 
 function fmtFreefall(seconds: number) {
   const h = Math.floor(seconds / 3600)
@@ -16,12 +16,6 @@ function fmtFreefall(seconds: number) {
 function daysSince(iso: string) {
   const ms = Date.now() - new Date(iso).getTime()
   return Math.floor(ms / 86400000)
-}
-
-function monthLabel(monthsAgo: number) {
-  const d = new Date()
-  d.setMonth(d.getMonth() - monthsAgo)
-  return d.toLocaleDateString("en-AU", { month: "short" }).toUpperCase()
 }
 
 export default async function DashboardPage({
@@ -149,7 +143,6 @@ export default async function DashboardPage({
 
   // Certificates expiring within 90 days
   const ninetyDaysFromNow = new Date(Date.now() + 90 * 86400000).toISOString().split("T")[0]
-  const today = new Date().toISOString().split("T")[0]
   const { data: expiringCerts } = await supabase
     .from("certificates")
     .select("id, title, expires_date, category")

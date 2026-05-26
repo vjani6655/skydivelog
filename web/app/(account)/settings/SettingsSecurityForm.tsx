@@ -60,7 +60,7 @@ export default function SettingsSecurityForm({
           <span className="text-sm font-semibold text-fg">Password</span>
         </div>
         <p className="text-xs text-fg-3">
-          We'll send a reset link to your email address. You'll be signed out after changing your password.
+          We&apos;ll send a reset link to your email address. You&apos;ll be signed out after changing your password.
         </p>
         <Link
           href="/forgot-password"
@@ -78,7 +78,7 @@ export default function SettingsSecurityForm({
             <div>
               <p className="text-sm font-semibold text-fg">Two-factor authentication</p>
               <p className="text-xs text-fg-3 mt-0.5">
-                Add an extra layer of security. You'll be prompted for a code on sign-in.
+                Add an extra layer of security. You&apos;ll be prompted for a code on sign-in.
               </p>
             </div>
           </div>
@@ -99,7 +99,7 @@ export default function SettingsSecurityForm({
         {twoFA && (
           <div className="mt-3 p-3 bg-sky/5 border border-sky/20 rounded-sm">
             <p className="text-xs text-sky">
-              2FA preference saved. Full TOTP setup coming soon — you'll be guided through pairing an authenticator app.
+              2FA preference saved. Full TOTP setup coming soon — you&apos;ll be guided through pairing an authenticator app.
             </p>
           </div>
         )}

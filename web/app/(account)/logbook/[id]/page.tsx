@@ -356,16 +356,16 @@ export default async function JumpDetailPage({ params }: Props) {
               )}
               {dzLabel && <Row label="Dropzone">{dzLabel}</Row>}
               {aircraft && <Row label="Aircraft">{aircraft}</Row>}
-              {(raw as any).canopy_type && (
-                <Row label="Canopy Type">{(raw as any).canopy_type}</Row>
+              {(raw as Record<string, unknown>).canopy_type && (
+                <Row label="Canopy Type">{String((raw as Record<string, unknown>).canopy_type)}</Row>
               )}
-              {isSigned && (raw.signatures as any[]).length > 0 && (
+              {isSigned && (raw.signatures as Array<{signer_name: string; signer_licence_rating?: string}>).length > 0 && (
                 <div>
                   <p className="text-overline font-mono uppercase tracking-wider text-fg-3 mb-1.5">
                     {isStudent ? "Instructors" : "Signed By"}
                   </p>
                   <div className="space-y-1">
-                    {((raw.signatures as any[]) ?? []).map((s: any, i: number) => (
+                    {((raw.signatures as Array<{signer_name: string; signer_licence_rating?: string}>) ?? []).map((s, i: number) => (
                       <div key={i} className="text-sm">
                         <span className="font-medium text-fg">{s.signer_name}</span>
                         {s.signer_licence_rating && (
