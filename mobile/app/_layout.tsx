@@ -4,9 +4,44 @@ import { Stack, router } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import 'react-native-reanimated';
 import type { Session } from '@supabase/supabase-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase';
 import { UserPrefsProvider } from '@/lib/prefsContext';
 import { registerPushToken } from '@/lib/notifications';
+
+/** 
+ * getSession() hangs indefinitely offline when the access token is expired
+ * (Supabase tries to refresh it via network with no fetch timeout in RN).
+ * Race it against a 3s timeout that falls back to the raw AsyncStorage value
+ * so a logged-in offline user is still routed to their logs.
+ */
+async function getSessionWithOfflineFallback(): Promise<Session | null> {
+  const fromSupabase = supabase.auth.getSession().then(r => r.data.session);
+
+  const fallback = new Promise<Session | null>(resolve =>
+    setTimeout(async () => {
+      try {
+        const keys = await AsyncStorage.getAllKeys();
+        const authKey = keys.find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+        if (authKey) {
+          const raw = await AsyncStorage.getItem(authKey);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            // Accept the stored session even if the access token is expired —
+            // Supabase will refresh it automatically once connectivity is restored.
+            if (parsed?.user) {
+              resolve(parsed as Session);
+              return;
+            }
+          }
+        }
+      } catch {}
+      resolve(null);
+    }, 3000)
+  );
+
+  return Promise.race([fromSupabase, fallback]);
+}
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -33,7 +68,7 @@ export default function RootLayout() {
   }, [error]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    getSessionWithOfflineFallback().then(session => {
       setSession(session);
     });
 

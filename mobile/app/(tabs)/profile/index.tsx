@@ -93,7 +93,9 @@ export default function ProfileScreen() {
     ? { label: 'CANCELLED', bg: colors.surface2, text: colors.fg3 }
     : inTrial
     ? { label: `TRIAL · ${trialDaysLeft}d left`, bg: colors.skyBg, text: colors.sky }
-    : { label: 'TRIAL EXPIRED', bg: colors.warnBg, text: colors.warn };
+    : trialExpired
+    ? { label: 'TRIAL EXPIRED', bg: colors.warnBg, text: colors.warn }
+    : { label: 'FREE', bg: colors.surface2, text: colors.fg3 };
 
   return (
     <SafeAreaView style={styles.screen}>

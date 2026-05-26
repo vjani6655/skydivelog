@@ -64,7 +64,7 @@ export default function CreateAccountScreen() {
     if (Object.values(e).some(v => v)) return;
     setSubmitError('');
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
       options: {
@@ -78,6 +78,10 @@ export default function CreateAccountScreen() {
     setLoading(false);
     if (error) {
       setSubmitError(error.message);
+    } else if (!data.session) {
+      // Supabase email confirmation is enabled — no session until the link is clicked.
+      // Send the user back to sign-in with a notice so they know what to do next.
+      router.replace({ pathname: '/sign-in', params: { notice: 'Account created! Check your email for a confirmation link, then come back and sign in.' } });
     } else {
       router.push('/paywall');
     }

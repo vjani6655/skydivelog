@@ -10,7 +10,7 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
-import { router, useNavigation } from 'expo-router';
+import { router, useNavigation, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
@@ -23,6 +23,7 @@ export default function SignInScreen() {
   const [loading, setLoading] = useState(false);
   const navigation = useNavigation();
   const canGoBack = navigation.canGoBack();
+  const { notice } = useLocalSearchParams<{ notice?: string }>();
 
   const handleSignIn = async () => {
     if (!email || !password) return;
@@ -58,6 +59,13 @@ export default function SignInScreen() {
             <Text style={styles.title}>Welcome back.</Text>
             <Text style={styles.subtitle}>Sign in to keep your logbook in sync.</Text>
           </View>
+
+          {notice ? (
+            <View style={styles.noticeBanner}>
+              <Ionicons name="mail-outline" size={16} color={colors.sky} style={{ marginTop: 1 }} />
+              <Text style={styles.noticeText}>{notice}</Text>
+            </View>
+          ) : null}
 
           <View style={styles.form}>
             {/* Email */}
@@ -147,7 +155,23 @@ const styles = StyleSheet.create({
     marginBottom: spacing[6],
   },
   header: {
-    marginBottom: spacing[8],
+    marginBottom: spacing[6],
+  },
+  noticeBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing[2],
+    backgroundColor: colors.skyBg,
+    borderRadius: radii.md,
+    padding: spacing[4],
+    marginBottom: spacing[6],
+  },
+  noticeText: {
+    flex: 1,
+    fontFamily: 'InterTight-Regular',
+    fontSize: 13,
+    color: colors.sky,
+    lineHeight: 19,
   },
   title: {
     fontFamily: 'InterTight-Bold',
