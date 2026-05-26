@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic"
 
 import { createClient } from "@/lib/supabase/server"
-import { Briefcase, Umbrella, Cpu, Bell, AlertTriangle, CheckCircle } from "lucide-react"
+import { Briefcase, Umbrella, Cpu, AlertTriangle } from "lucide-react"
 import GearActions from "./GearActions"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
