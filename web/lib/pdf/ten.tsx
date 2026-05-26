@@ -8,7 +8,7 @@ import {
 } from '@react-pdf/renderer'
 import path from 'path'
 import type { JumperProfile, PdfJump } from './types'
-import { fmtJumpDate, fmtDateShort, fmtAlt, fmtMSS, fmtExportedAt, fmtTotalTime, truncate } from './helpers'
+import { fmtDateShort, fmtMSS, fmtExportedAt, fmtTotalTime, truncate } from './helpers'
 
 // ─── Fonts (registered once; react-pdf deduplicates) ─────────────────────────
 

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { TriangleAlert, Plus, Gift, X } from 'lucide-react'
 import { Badge } from '@/components/admin/ui'
@@ -64,7 +63,6 @@ function timeAgo(s: string) {
 }
 
 export default function OverrideForm({ subscription: sub, user, auditEntries }: Props) {
-  const router = useRouter()
   const [selectedAction, setSelectedAction] = useState<string>('extend')
   const [reason, setReason] = useState('')
   const [notify, setNotify] = useState(true)

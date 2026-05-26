@@ -85,7 +85,7 @@ export default function FlaggedTable({ entries, openCount, resolved30d, dismisse
             <span key={h}>{h}</span>
           ))}
         </div>
-        {displayed.map((f, idx) => (
+        {displayed.map((f) => (
           <div key={f.id}
             className="grid px-4 py-3 gap-3 items-center border-b border-border last:border-0 hover:bg-surface-2 transition-colors"
             style={{ gridTemplateColumns: '72px 72px 100px 100px 160px 64px 150px 110px 72px' }}>

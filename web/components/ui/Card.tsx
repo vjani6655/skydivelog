@@ -28,9 +28,6 @@ export default function Card({
   children,
   className   = '',
 }: CardProps) {
-  const paddingStyle =
-    padding === 'none' ? '' : `p-[${padding}px]`;
-
   // Use a fixed padding map to keep Tailwind purging happy
   const paddingClass =
     padding === 'none'  ? ''

@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Users, ShieldAlert, CreditCard, Repeat, Tag, Percent,
-  BarChart2, Download, Mail, Bell, Settings, ChevronRight, Search,
+  BarChart2, Download, Mail, Bell, Settings, ChevronRight,
 } from 'lucide-react'
 
 const NAV_GROUPS = [
