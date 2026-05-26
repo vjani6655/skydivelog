@@ -181,7 +181,7 @@ export default async function JumpDetailPage({ params }: Props) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tags: Array<{ id: string; name: string; color: string }> = ((raw.jump_tags ?? []) as any[])
     .map((jt: { tags: { id: string; name: string; color: string } | null }) => jt.tags)
-    .filter(Boolean)
+    .filter((t): t is { id: string; name: string; color: string } => t !== null)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sig: {
