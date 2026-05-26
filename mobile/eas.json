@@ -11,6 +11,10 @@
     "preview": {
       "distribution": "internal"
     },
+    "adhoc": {
+      "distribution": "internal",
+      "ios": { "buildConfiguration": "Release" }
+    },
     "production": {
       "autoIncrement": true
     }

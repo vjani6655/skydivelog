@@ -1,0 +1,2 @@
+# Include .env even though it's in .gitignore — EAS cloud builds need EXPO_PUBLIC_* vars
+!.env
