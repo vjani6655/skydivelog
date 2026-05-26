@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { colors, spacing, radii } from '@/constants/tokens';
 import type { JumpFull } from '@/lib/types';
 
-const JUMP_TYPES = ['Belly', 'Tracking', 'Wingsuit', 'Freefly', 'CRW', 'AFF', 'Tandem', 'Coach', 'Demo', 'Night'];
+const JUMP_TYPES = ['Belly', 'Tracking', 'Wingsuit', 'Freefly', 'CRW', 'AFF', 'Tandem', 'Coach', 'Demo', 'Night', 'Camera Flying'];
 
 function sanitizeJumpType(text: string): string | null {
   if (!text.trim()) return null;

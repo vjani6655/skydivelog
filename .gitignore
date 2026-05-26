@@ -22,3 +22,5 @@ Logs (*)/
 
 # AI tool config
 .claude/
+.vercel
+.env*

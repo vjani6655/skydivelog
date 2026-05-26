@@ -27,6 +27,7 @@ export interface PdfJump {
   landing_accuracy_value: string | null
   landing_accuracy_unit: string | null
   notes: string | null
+  people_on_jump: number | null
   signer_name: string | null
   signer_licence_number: string | null
   signer_licence_rating: string | null

@@ -72,7 +72,7 @@ export default async function LogbookPage({ searchParams }: { searchParams: Prom
     .from("jumps").select("date").eq("user_id", uid).is("deleted_at", null)
   const years = Array.from(new Set((yearRows ?? []).map((r: { date: string }) => new Date(r.date).getFullYear()))).sort((a, b) => (b as number) - (a as number))
 
-  const TYPES = ["Belly", "Freefly", "Tracking", "Wingsuit", "AFF", "Tandem", "CRW", "Coach", "Demo"]
+  const TYPES = ["Belly", "Freefly", "Tracking", "Wingsuit", "AFF", "Tandem", "CRW", "Coach", "Demo", "Camera Flying"]
 
   const buildLink = (overrides: Record<string, string | undefined>) => {
     const p = new URLSearchParams()
@@ -91,14 +91,14 @@ export default async function LogbookPage({ searchParams }: { searchParams: Prom
   const now = new Date().getFullYear()
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="max-w-[1400px] mx-auto">
       {/* Header */}
       <div className="mb-5 flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <p className="text-overline font-semibold tracking-widest uppercase text-fg-4 mb-1">
+          <p className="font-mono text-[11px] tracking-widest uppercase text-fg-3 mb-1">
             Logbook · <span className="text-danger">Read-only</span>
           </p>
-          <h1 className="text-h1 font-bold text-fg tracking-tight">{totalCount.toLocaleString()} jumps</h1>
+          <h1 className="text-[28px] font-bold text-fg tracking-tight">{totalCount.toLocaleString()} jumps</h1>
         </div>
         <LogbookBulkExportButton jumpIds={(jumps ?? []).map((j: JumpRow) => j.id)} />
       </div>
@@ -111,7 +111,7 @@ export default async function LogbookPage({ searchParams }: { searchParams: Prom
         {/* Year */}
         <Link
           href={buildLink({ year: year ? undefined : String(now), page: "1" })}
-          className={`text-xs px-3 py-1.5 rounded-sm border transition-colors flex items-center gap-1.5 ${
+          className={`text-xs px-3 py-1.5 rounded-lg border transition-colors flex items-center gap-1.5 ${
             year ? "border-sky bg-sky/10 text-sky" : "border-border text-fg-3 hover:border-border-strong hover:text-fg"
           }`}
         >
@@ -122,7 +122,7 @@ export default async function LogbookPage({ searchParams }: { searchParams: Prom
         <div className="flex items-center gap-1 flex-wrap">
           <Link
             href={buildLink({ type: "", page: "1" })}
-            className={`text-xs px-2.5 py-1.5 rounded-sm border transition-colors ${
+            className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
               !jumpType ? "border-sky bg-sky/10 text-sky" : "border-border text-fg-3 hover:text-fg"
             }`}
           >
@@ -132,7 +132,7 @@ export default async function LogbookPage({ searchParams }: { searchParams: Prom
             <Link
               key={t}
               href={buildLink({ type: t, page: "1" })}
-              className={`text-xs px-2.5 py-1.5 rounded-sm border transition-colors ${
+              className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
                 jumpType === t ? "border-sky bg-sky/10 text-sky" : "border-border text-fg-3 hover:text-fg"
               }`}
             >
@@ -144,7 +144,7 @@ export default async function LogbookPage({ searchParams }: { searchParams: Prom
         {/* Signed filter */}
         <Link
           href={buildLink({ signed: signed ? undefined : "1", page: "1" })}
-          className={`text-xs px-2.5 py-1.5 rounded-sm border transition-colors flex items-center gap-1 ${
+          className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors flex items-center gap-1 ${
             signed ? "border-sky bg-sky/10 text-sky" : "border-border text-fg-3 hover:text-fg"
           }`}
         >
@@ -154,7 +154,7 @@ export default async function LogbookPage({ searchParams }: { searchParams: Prom
         {/* Favs filter */}
         <Link
           href={buildLink({ fav: fav ? undefined : "1", page: "1" })}
-          className={`text-xs px-2.5 py-1.5 rounded-sm border transition-colors flex items-center gap-1 ${
+          className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors flex items-center gap-1 ${
             fav ? "border-warn bg-warn/10 text-warn" : "border-border text-fg-3 hover:text-fg"
           }`}
         >
@@ -166,7 +166,7 @@ export default async function LogbookPage({ searchParams }: { searchParams: Prom
       <div className="flex items-center gap-1 flex-wrap mb-5">
         <Link
           href={buildLink({ year: "", page: "1" })}
-          className={`text-xs px-2.5 py-1 rounded-sm border transition-colors ${
+          className={`text-xs px-2.5 py-1 rounded-lg border transition-colors ${
             !year ? "border-sky bg-sky/10 text-sky" : "border-border text-fg-3 hover:text-fg"
           }`}
         >
@@ -176,7 +176,7 @@ export default async function LogbookPage({ searchParams }: { searchParams: Prom
           <Link
             key={y}
             href={buildLink({ year: String(y), page: "1" })}
-            className={`text-xs px-2.5 py-1 rounded-sm border transition-colors ${
+            className={`text-xs px-2.5 py-1 rounded-lg border transition-colors ${
               year === String(y) ? "border-sky bg-sky/10 text-sky" : "border-border text-fg-3 hover:text-fg"
             }`}
           >
@@ -192,7 +192,7 @@ export default async function LogbookPage({ searchParams }: { searchParams: Prom
         </div>
       ) : (
         <>
-          <div className="bg-surface border border-border rounded-lg overflow-hidden">
+          <div className="bg-surface border border-border rounded-xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -250,11 +250,11 @@ export default async function LogbookPage({ searchParams }: { searchParams: Prom
             <p className="text-xs text-fg-4">Showing {from}–{to} of {totalCount.toLocaleString()}</p>
             <div className="flex items-center gap-1">
               {page > 1 ? (
-                <Link href={buildLink({ page: String(page - 1) })} className="p-1.5 rounded-sm border border-border text-fg-3 hover:text-fg hover:border-border-strong transition-colors">
+                <Link href={buildLink({ page: String(page - 1) })} className="p-1.5 rounded-lg border border-border text-fg-3 hover:text-fg hover:border-border-strong transition-colors">
                   <ChevronLeft className="w-4 h-4" />
                 </Link>
               ) : (
-                <span className="p-1.5 rounded-sm border border-border text-fg-4 opacity-40 cursor-not-allowed">
+                <span className="p-1.5 rounded-lg border border-border text-fg-4 opacity-40 cursor-not-allowed">
                   <ChevronLeft className="w-4 h-4" />
                 </span>
               )}
@@ -268,7 +268,7 @@ export default async function LogbookPage({ searchParams }: { searchParams: Prom
                   <Link
                     key={pageNum}
                     href={buildLink({ page: String(pageNum) })}
-                    className={`min-w-[32px] text-center px-2 py-1 rounded-sm border text-xs transition-colors ${
+                    className={`min-w-[32px] text-center px-2 py-1 rounded-lg border text-xs transition-colors ${
                       pageNum === page
                         ? "border-sky bg-sky/10 text-sky font-semibold"
                         : "border-border text-fg-3 hover:text-fg hover:border-border-strong"
@@ -282,18 +282,18 @@ export default async function LogbookPage({ searchParams }: { searchParams: Prom
               {totalPages > 5 && page < totalPages - 2 && (
                 <>
                   <span className="px-1 text-fg-4 text-xs">…</span>
-                  <Link href={buildLink({ page: String(totalPages) })} className="min-w-[32px] text-center px-2 py-1 rounded-sm border border-border text-xs text-fg-3 hover:text-fg hover:border-border-strong transition-colors">
+                  <Link href={buildLink({ page: String(totalPages) })} className="min-w-[32px] text-center px-2 py-1 rounded-lg border border-border text-xs text-fg-3 hover:text-fg hover:border-border-strong transition-colors">
                     {totalPages}
                   </Link>
                 </>
               )}
 
               {page < totalPages ? (
-                <Link href={buildLink({ page: String(page + 1) })} className="p-1.5 rounded-sm border border-border text-fg-3 hover:text-fg hover:border-border-strong transition-colors">
+                <Link href={buildLink({ page: String(page + 1) })} className="p-1.5 rounded-lg border border-border text-fg-3 hover:text-fg hover:border-border-strong transition-colors">
                   <ChevronRight className="w-4 h-4" />
                 </Link>
               ) : (
-                <span className="p-1.5 rounded-sm border border-border text-fg-4 opacity-40 cursor-not-allowed">
+                <span className="p-1.5 rounded-lg border border-border text-fg-4 opacity-40 cursor-not-allowed">
                   <ChevronRight className="w-4 h-4" />
                 </span>
               )}

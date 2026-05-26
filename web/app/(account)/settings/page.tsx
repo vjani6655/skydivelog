@@ -79,37 +79,37 @@ export default async function SettingsPage({
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="max-w-[1400px] mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <p className="text-overline font-semibold tracking-widest uppercase text-fg-4 mb-1.5">Settings</p>
-        <h1 className="text-h1 font-bold text-fg tracking-tight">Account</h1>
+        <p className="font-mono text-[11px] tracking-widest uppercase text-fg-3 mb-1.5">Settings</p>
+        <h1 className="text-[28px] font-bold text-fg tracking-tight">Account</h1>
       </div>
 
       <div className="flex gap-6">
         {/* Left nav */}
-        <nav className="w-44 flex-shrink-0 space-y-0.5">
+        <nav className="w-48 flex-shrink-0 space-y-0.5">
           {TABS.map(({ id, label, icon: Icon, href }) => (
             <Link
               key={id}
               href={href}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-sm text-sm transition-colors ${
+              className={`flex items-center gap-3 px-3 py-[10px] rounded-lg text-body font-medium transition-colors ${
                 (id === "profile" && activeTab === "profile") ||
                 (id !== "profile" && activeTab === id)
-                  ? "bg-sky/10 text-sky font-medium"
+                  ? "bg-sky-bg text-sky"
                   : id === "delete"
-                  ? "text-danger hover:bg-danger-bg"
-                  : "text-fg-3 hover:text-fg hover:bg-surface-2"
+                  ? "text-danger hover:bg-danger-bg rounded-lg"
+                  : "text-fg-2 hover:text-fg hover:bg-surface-2"
               }`}
             >
-              <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+              <Icon className="w-[17px] h-[17px] flex-shrink-0" />
               {label}
             </Link>
           ))}
         </nav>
 
         {/* Content */}
-        <div className="flex-1 min-w-0 bg-surface border border-border rounded-lg p-6">
+        <div className="flex-1 min-w-0 bg-surface border border-border rounded-[14px] p-7">
           {activeTab === "profile" && (
             <SettingsProfileForm profile={profileData} userId={uid} />
           )}

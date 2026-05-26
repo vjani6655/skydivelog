@@ -58,12 +58,12 @@ export default async function BillingPage({
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="max-w-[1400px] mx-auto">
       {/* Header */}
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <p className="text-overline font-semibold tracking-widest uppercase text-fg-4 mb-1.5">Billing</p>
-          <h1 className="text-h1 font-bold text-fg tracking-tight">Invoice history</h1>
+          <p className="font-mono text-[11px] tracking-widest uppercase text-fg-3 mb-1.5">Billing</p>
+          <h1 className="text-[28px] font-bold text-fg tracking-tight">Invoice history</h1>
         </div>
         {invoices.length > 0 && (() => {
           const latest = invoices[0]
@@ -91,7 +91,7 @@ export default async function BillingPage({
       )}
 
       {invoices.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg px-6 py-14 text-center">
+        <div className="bg-surface border border-border rounded-[14px] px-6 py-14 text-center">
           <p className="text-sm text-fg-3">No invoices yet.</p>
           {!sub && (
             <a href="/subscription" className="mt-3 inline-block text-xs text-sky hover:text-sky/80">
@@ -100,7 +100,7 @@ export default async function BillingPage({
           )}
         </div>
       ) : (
-        <div className="bg-surface border border-border rounded-lg overflow-hidden">
+        <div className="bg-surface border border-border rounded-[14px] overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left">

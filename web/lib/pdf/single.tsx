@@ -292,12 +292,18 @@ function SinglePage({
           { label: 'Canopy type',      value: jump.canopy_type ?? '—', flex: 1 },
           { label: 'Landing accuracy', value: accLabel, flex: 1 },
         ]} />
+        {jump.people_on_jump != null && (
+          <DataRow cells={[
+            { label: 'People on jump', value: String(jump.people_on_jump), flex: 1 },
+            { label: '', value: '', flex: 3 },
+          ]} />
+        )}
 
-        {/* Notes */}
+        {/* Description of jump */}
         {jump.notes ? (
           <View style={{ marginTop: 4, marginBottom: 8 }}>
             <Text style={[s.mono, { fontSize: 8, color: INK_3, letterSpacing: 1, marginBottom: 4 }]}>
-              {isStudent ? 'JUMPER NOTES' : 'NOTES'}
+              {isStudent ? 'STUDENT DESCRIPTION' : 'DESCRIPTION OF JUMP'}
             </Text>
             <View style={{
               backgroundColor: CREAM,

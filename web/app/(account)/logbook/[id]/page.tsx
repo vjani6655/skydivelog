@@ -40,12 +40,12 @@ function fmtSignerShort(name: string): string {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function TelCell({ label, value, unit }: { label: string; value: string; unit?: string }) {
+function TelCell({ label, value, unit, highlight }: { label: string; value: string; unit?: string; highlight?: boolean }) {
   return (
     <div className="px-5 py-4 flex-1">
       <p className="text-overline font-mono uppercase tracking-wider text-fg-3 mb-2">{label}</p>
       <div className="flex items-baseline gap-1.5">
-        <span className="text-num font-mono font-medium text-fg">{value}</span>
+        <span className={`text-num font-mono font-medium ${highlight ? "text-cyan" : "text-fg"}`}>{value}</span>
         {unit && <span className="text-overline font-mono text-fg-3 uppercase">{unit}</span>}
       </div>
     </div>
@@ -54,9 +54,9 @@ function TelCell({ label, value, unit }: { label: string; value: string; unit?: 
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div>
-      <p className="text-overline font-mono uppercase tracking-wider text-fg-3 mb-1">{label}</p>
-      <div className="text-base font-sans text-fg leading-snug">{children}</div>
+    <div className="grid grid-cols-[160px_1fr] gap-4 py-3 items-start">
+      <p className="text-overline font-mono uppercase tracking-wider text-fg-3 pt-px">{label}</p>
+      <div className="text-body text-fg leading-snug">{children}</div>
     </div>
   )
 }
@@ -131,7 +131,7 @@ export default async function JumpDetailPage({ params }: Props) {
       freefall_seconds, canopy_seconds, canopy_type,
       landing_accuracy_value, landing_accuracy_unit,
       coordinates_lat, coordinates_lng,
-      notes, photo_url,
+      notes, people_on_jump, photo_url,
       is_favourite, is_draft,
       created_at, updated_at,
       dropzone:dropzones(id, name, region),
@@ -212,46 +212,44 @@ export default async function JumpDetailPage({ params }: Props) {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="p-6 max-w-[1400px] mx-auto">
+    <div className="max-w-[1400px] mx-auto">
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <div className="mb-6">
 
         {/* Breadcrumb */}
         <div className="flex items-center gap-1.5 mb-3">
-          <Link href="/logbook" className="text-[10px] font-semibold tracking-widest uppercase text-fg-4 hover:text-fg-2 transition-colors">
+          <Link href="/logbook" className="text-[10px] font-mono tracking-widest uppercase text-fg-3 hover:text-fg-2 transition-colors">
             Logbook
           </Link>
           <span className="text-fg-4 text-xs">/</span>
-          <span className="text-[10px] font-semibold tracking-widest uppercase text-fg-4">
+          <span className="text-[10px] font-mono tracking-widest uppercase text-fg-3">
             Jump #{raw.jump_number}
           </span>
         </div>
 
-        {/* Title + badges */}
-        <div className="flex items-start gap-4 flex-wrap justify-between">
-          <div className="flex items-baseline gap-3 flex-wrap">
-            <h1 className="text-[2rem] font-bold text-fg tracking-tight leading-none">
-              #{raw.jump_number}
-            </h1>
-            {(raw.jump_type || dz?.name) && (
-              <span className="text-xl font-medium text-fg-2">
-                {[raw.jump_type, raw.jump_stage ? raw.jump_stage : null, dz?.name]
-                  .filter(Boolean).join(" · ")}
-              </span>
-            )}
-            {isFav && <Star className="w-5 h-5 text-amber-400 fill-amber-400 flex-shrink-0" />}
-          </div>
+        {/* Title */}
+        <div className="flex items-baseline gap-3 flex-wrap mb-2">
+          <h1 className="text-[2rem] font-bold text-fg tracking-tight leading-none">
+            #{raw.jump_number}
+          </h1>
+          {(raw.jump_type || dz?.name) && (
+            <span className="text-xl font-medium text-fg-2">
+              {[raw.jump_type, raw.jump_stage ? raw.jump_stage : null, dz?.name]
+                .filter(Boolean).join(" · ")}
+            </span>
+          )}
+          {isFav && <Star className="w-5 h-5 text-amber-400 fill-amber-400 flex-shrink-0" />}
+        </div>
 
-          {/* Status badges */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {isStudent && <Badge kind="warn">STUDENT</Badge>}
-            {isDraft && <Badge kind="warn">DRAFT</Badge>}
-            {isSigned && <Badge kind="ok" icon="check">SIGNED</Badge>}
-            {sig?.outcome === "pass"   && <Badge kind="ok" icon="check">PASS</Badge>}
-            {sig?.outcome === "repeat" && <Badge kind="warn">REPEAT</Badge>}
-            {!isSigned && !isDraft && <Badge kind="danger">UNSIGNED</Badge>}
-          </div>
+        {/* Status badges (inline, below title) */}
+        <div className="flex items-center gap-2 flex-wrap mb-2">
+          {isStudent && <Badge kind="warn">STUDENT</Badge>}
+          {isDraft && <Badge kind="warn">DRAFT</Badge>}
+          {isSigned && <Badge kind="ok" icon="check">SIGNED</Badge>}
+          {sig?.outcome === "pass"   && <Badge kind="ok" icon="check">PASS</Badge>}
+          {sig?.outcome === "repeat" && <Badge kind="warn">REPEAT</Badge>}
+          {!isSigned && !isDraft && <Badge kind="danger">UNSIGNED</Badge>}
         </div>
 
         {/* Date subtitle */}
@@ -262,7 +260,7 @@ export default async function JumpDetailPage({ params }: Props) {
         {/* Action bar */}
         <div className="flex items-center gap-2 mt-4 flex-wrap">
           {/* Prev / Next */}
-          <div className="flex items-center gap-1 border border-border rounded-sm overflow-hidden text-sm">
+          <div className="flex items-center gap-1 border border-border rounded-lg overflow-hidden text-sm">
             {prevJump ? (
               <Link
                 href={`/logbook/${prevJump.id}`}
@@ -305,7 +303,7 @@ export default async function JumpDetailPage({ params }: Props) {
         <div className="space-y-4">
 
           {/* Telemetry card */}
-          <div className="bg-surface border border-border rounded-md overflow-hidden">
+          <div className="bg-surface border border-border rounded-[14px] overflow-hidden">
             <div className="px-4 py-3 border-b border-border flex items-center justify-between">
               <p className="text-overline font-mono uppercase tracking-wider text-fg-3">
                 Jump Telemetry
@@ -323,50 +321,53 @@ export default async function JumpDetailPage({ params }: Props) {
               <div className="grid grid-cols-3 divide-x divide-border">
                 <TelCell label="Exit Altitude" value={fmtAltNum(raw.exit_altitude_ft, altUnit)} unit={altUnit} />
                 <TelCell label="Pull Altitude" value={fmtAltNum(raw.pull_altitude_ft, altUnit)} unit={altUnit} />
-                <TelCell label="Freefall"      value={fmtTime(raw.freefall_seconds)} unit="min:s" />
+                <TelCell label="Deploy" value={fmtAltNum(raw.deploy_altitude_ft ?? null, altUnit)} unit={altUnit} />
               </div>
               <div className="grid grid-cols-3 divide-x divide-border">
-                <TelCell label="Canopy" value={fmtTime(raw.canopy_seconds)} unit="min:s" />
+                <TelCell label="Freefall" value={fmtTime(raw.freefall_seconds)} unit="min:s" highlight />
+                <TelCell label="Canopy"   value={fmtTime(raw.canopy_seconds)}   unit="min:s" highlight />
                 {raw.landing_accuracy_value
                   ? <TelCell label="Landing Accuracy" value={`${raw.landing_accuracy_value}${raw.landing_accuracy_unit ? ' ' + raw.landing_accuracy_unit : ''}`} />
-                  : <div className="px-4 py-4" />}
-                <div className="px-4 py-4" />
+                  : <div className="px-5 py-4" />}
               </div>
             </div>
           </div>
 
           {/* Flight Details card */}
-          <div className="bg-surface border border-border rounded-md overflow-hidden">
+          <div className="bg-surface border border-border rounded-[14px] overflow-hidden">
             <div className="px-4 py-3 border-b border-border">
               <p className="text-overline font-mono uppercase tracking-wider text-fg-3">Flight Details</p>
             </div>
-            <div className="p-5 space-y-5">
+            <div className="px-6 divide-y divide-border">
               <Row label="Date &amp; Time">
-                <span className="font-mono"><JumpDateDisplay iso={raw.date} /></span>
+                <span className="font-mono text-sm"><JumpDateDisplay iso={raw.date} /></span>
               </Row>
               {raw.jump_type && (
-                <div>
-                  <p className="text-overline font-mono uppercase tracking-wider text-fg-3 mb-1.5">Jump Type</p>
+                <Row label="Jump Type">
                   <div className="flex items-center gap-2 flex-wrap">
                     <Badge kind="sky">{raw.jump_type}</Badge>
                     {raw.jump_stage && <Badge kind="muted">{raw.jump_stage}</Badge>}
                     {isStudent && <Badge kind="warn">Student</Badge>}
                   </div>
-                </div>
+                </Row>
               )}
               {dzLabel && <Row label="Dropzone">{dzLabel}</Row>}
               {aircraft && <Row label="Aircraft">{aircraft}</Row>}
               {(raw as Record<string, unknown>).canopy_type && (
                 <Row label="Canopy Type">{String((raw as Record<string, unknown>).canopy_type)}</Row>
               )}
+              {isFav && (
+                <Row label="Favourite">
+                  <span className="inline-flex items-center gap-1 text-amber-400 text-sm">
+                    <Star className="w-3.5 h-3.5 fill-amber-400" /> Starred
+                  </span>
+                </Row>
+              )}
               {isSigned && (raw.signatures as Array<{signer_name: string; signer_licence_rating?: string}>).length > 0 && (
-                <div>
-                  <p className="text-overline font-mono uppercase tracking-wider text-fg-3 mb-1.5">
-                    {isStudent ? "Instructors" : "Signed By"}
-                  </p>
-                  <div className="space-y-1">
+                <Row label={isStudent ? "Instructors" : "Signed By"}>
+                  <div className="space-y-0.5">
                     {((raw.signatures as Array<{signer_name: string; signer_licence_rating?: string}>) ?? []).map((s, i: number) => (
-                      <div key={i} className="text-sm">
+                      <div key={i} className="text-body">
                         <span className="font-medium text-fg">{s.signer_name}</span>
                         {s.signer_licence_rating && (
                           <span className="text-fg-3"> · {s.signer_licence_rating}</span>
@@ -374,10 +375,15 @@ export default async function JumpDetailPage({ params }: Props) {
                       </div>
                     ))}
                   </div>
-                </div>
+                </Row>
+              )}
+              {(raw as Record<string, unknown>).people_on_jump != null && (
+                <Row label="People on jump">
+                  <span className="font-mono text-sm">{String((raw as Record<string, unknown>).people_on_jump)}</span>
+                </Row>
               )}
               {raw.coordinates_lat != null && raw.coordinates_lng != null && (
-                <Row label="GPS Coordinates">
+                <Row label="GPS">
                   <span className="font-mono text-xs flex items-center gap-1">
                     <MapPin className="w-3 h-3 text-fg-4" />
                     {fmtCoords(raw.coordinates_lat, raw.coordinates_lng)}
@@ -385,24 +391,26 @@ export default async function JumpDetailPage({ params }: Props) {
                 </Row>
               )}
               {tags.length > 0 && (
-                <div>
-                  <p className="text-overline font-mono uppercase tracking-wider text-fg-3 mb-2">Tags</p>
+                <Row label="Tags">
                   <div className="flex flex-wrap gap-1.5">
                     {tags.map((t) => <TagPill key={t.id} name={t.name} color={t.color} />)}
                   </div>
-                </div>
+                </Row>
               )}
             </div>
           </div>
 
           {/* Student / jumper notes */}
           {raw.notes && (
-            <div className="bg-surface border border-border rounded-md overflow-hidden">
-              <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+            <div className="bg-surface border border-border rounded-[14px] overflow-hidden">
+              <div className="px-5 py-3 border-b border-border flex items-center justify-between">
                 <p className="text-overline font-mono uppercase tracking-wider text-fg-3">
-                  {isStudent ? "Student Notes" : "Notes"}
+                  {isStudent ? "Student Notes" : "Description of jump"}
                 </p>
-                {isStudent && <Badge kind="muted">Self</Badge>}
+                <div className="flex items-center gap-2">
+                  {raw.notes && <span className="font-mono text-[10px] text-fg-4">{raw.notes.length} CHARS</span>}
+                  {isStudent && <Badge kind="muted">Self</Badge>}
+                </div>
               </div>
               <div className="p-5">
                 <p className="text-body text-fg-2 leading-relaxed whitespace-pre-wrap">{raw.notes}</p>
@@ -412,7 +420,7 @@ export default async function JumpDetailPage({ params }: Props) {
 
           {/* Instructor notes — student jump, blue accent */}
           {isStudent && sig?.notes && (
-            <div className="bg-surface border border-sky/20 rounded-md overflow-hidden">
+            <div className="bg-surface border border-sky/20 rounded-[14px] overflow-hidden">
               <div className="px-4 py-3 border-b border-sky/20 flex items-center justify-between">
                 <p className="text-overline font-mono uppercase tracking-wider text-sky">
                   Instructor Notes
@@ -434,13 +442,13 @@ export default async function JumpDetailPage({ params }: Props) {
             <img
               src={raw.photo_url}
               alt={`Jump #${raw.jump_number} photo`}
-              className="w-full rounded-md object-cover max-h-80 border border-border"
+              className="w-full rounded-[14px] object-cover max-h-80 border border-border"
             />
           )}
 
           {/* Edit history */}
           {edits.length > 0 && (
-            <div className="bg-surface border border-border rounded-md overflow-hidden">
+            <div className="bg-surface border border-border rounded-[14px] overflow-hidden">
               <div className="px-4 py-3 border-b border-border">
                 <p className="text-overline font-mono uppercase tracking-wider text-fg-3">Edit History</p>
               </div>
@@ -472,17 +480,15 @@ export default async function JumpDetailPage({ params }: Props) {
 
           {/* Signed off card */}
           {isSigned && sig ? (
-            <div className="bg-surface border border-sky/20 ring-1 ring-sky/10 rounded-md overflow-hidden">
+            <div className="bg-surface border border-sky/20 ring-1 ring-sky/10 rounded-[14px] overflow-hidden">
               <div className="px-4 py-3 border-b border-sky/20 flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-ok">
                   <Check className="w-3.5 h-3.5" />
                   <p className="text-overline font-mono uppercase tracking-wider">Signed Off</p>
                 </div>
-                <div className="flex gap-1.5">
-                  {sig.outcome === "pass"   && <Badge kind="ok" icon="check">Pass</Badge>}
-                  {sig.outcome === "repeat" && <Badge kind="warn">Repeat</Badge>}
-                  {isStudent                && <Badge kind="warn">Student</Badge>}
-                </div>
+                <p className="text-overline font-mono uppercase tracking-wider text-fg-3">
+                  {isStudent ? "On · Instructor" : "On · Self"}
+                </p>
               </div>
               <div className="p-4">
                 <p className="text-overline font-mono uppercase tracking-wider text-fg-3 mb-1">
@@ -494,7 +500,7 @@ export default async function JumpDetailPage({ params }: Props) {
                   {sig.signer_licence_rating ? ` · ${sig.signer_licence_rating}` : ""}
                 </p>
                 {sig.signature_data && (
-                  <div className="mt-3 rounded-md bg-surface-2 border border-border px-2 pt-1 pb-0">
+                  <div className="mt-3 rounded-[14px] bg-surface-2 border border-border px-2 pt-1 pb-0">
                     <svg
                       viewBox="0 0 320 200"
                       className="w-full"
@@ -531,7 +537,7 @@ export default async function JumpDetailPage({ params }: Props) {
               </div>
             </div>
           ) : (
-            <div className="bg-surface border border-border rounded-md overflow-hidden">
+            <div className="bg-surface border border-border rounded-[14px] overflow-hidden">
               <div className="px-4 py-3 border-b border-border flex items-center gap-1.5">
                 <AlertTriangle className="w-3.5 h-3.5 text-warn" />
                 <p className="text-overline font-mono uppercase tracking-wider text-fg-3">
@@ -549,7 +555,7 @@ export default async function JumpDetailPage({ params }: Props) {
           )}
 
           {/* Audit Trail */}
-          <div className="bg-surface border border-border rounded-md overflow-hidden">
+          <div className="bg-surface border border-border rounded-[14px] overflow-hidden">
             <div className="px-4 py-3 border-b border-border">
               <p className="text-overline font-mono uppercase tracking-wider text-fg-3">Audit Trail</p>
             </div>
@@ -581,47 +587,53 @@ export default async function JumpDetailPage({ params }: Props) {
           </div>
 
           {/* Adjacent Jumps */}
-          {(prevJump || nextJump) && (
-            <div className="bg-surface border border-border rounded-md overflow-hidden">
-              <div className="px-4 py-3 border-b border-border">
-                <p className="text-overline font-mono uppercase tracking-wider text-fg-3">
-                  Adjacent Jumps
-                </p>
-              </div>
-              <div className="divide-y divide-border">
-                {prevJump && (
-                  <Link
-                    href={`/logbook/${prevJump.id}`}
-                    className="flex items-center gap-3 px-4 py-3 hover:bg-surface-2 transition-colors"
-                  >
-                    <ChevronLeft className="w-4 h-4 text-fg-4 shrink-0" />
-                    <div>
-                      <p className="text-overline font-mono uppercase tracking-wider text-fg-3">← Prev</p>
-                      <p className="text-base font-medium text-fg">
-                        #{prevJump.jump_number}
-                        {prevJump.jump_type ? ` · ${prevJump.jump_type}` : ""}
-                      </p>
-                    </div>
-                  </Link>
-                )}
-                {nextJump && (
-                  <Link
-                    href={`/logbook/${nextJump.id}`}
-                    className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-surface-2 transition-colors"
-                  >
-                    <div>
-                      <p className="text-overline font-mono uppercase tracking-wider text-fg-3">Next →</p>
-                      <p className="text-base font-medium text-fg">
-                        #{nextJump.jump_number}
-                        {nextJump.jump_type ? ` · ${nextJump.jump_type}` : ""}
-                      </p>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-fg-4 shrink-0" />
-                  </Link>
-                )}
-              </div>
+          <div className="bg-surface border border-border rounded-[14px] overflow-hidden">
+            <div className="px-4 py-3 border-b border-border">
+              <p className="text-overline font-mono uppercase tracking-wider text-fg-3">
+                Adjacent Jumps
+              </p>
             </div>
-          )}
+            <div className="divide-y divide-border">
+              {prevJump ? (
+                <Link
+                  href={`/logbook/${prevJump.id}`}
+                  className="flex items-center justify-between px-4 py-3 hover:bg-surface-2 transition-colors"
+                >
+                  <div>
+                    <p className="text-overline font-mono uppercase tracking-wider text-fg-3">← Prev</p>
+                    <p className="text-body font-medium text-fg mt-0.5">
+                      #{prevJump.jump_number}{prevJump.jump_type ? ` · ${prevJump.jump_type}` : ""}
+                    </p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-fg-4 shrink-0" />
+                </Link>
+              ) : (
+                <div className="px-4 py-3 opacity-40">
+                  <p className="text-overline font-mono uppercase tracking-wider text-fg-3">← Prev</p>
+                  <p className="text-body text-fg-4 mt-0.5">—</p>
+                </div>
+              )}
+              {nextJump ? (
+                <Link
+                  href={`/logbook/${nextJump.id}`}
+                  className="flex items-center justify-between px-4 py-3 hover:bg-surface-2 transition-colors"
+                >
+                  <div>
+                    <p className="text-overline font-mono uppercase tracking-wider text-fg-3">Next →</p>
+                    <p className="text-body font-medium text-fg mt-0.5">
+                      #{nextJump.jump_number}{nextJump.jump_type ? ` · ${nextJump.jump_type}` : ""}
+                    </p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-fg-4 shrink-0" />
+                </Link>
+              ) : (
+                <div className="px-4 py-3 opacity-40">
+                  <p className="text-overline font-mono uppercase tracking-wider text-fg-3">Next →</p>
+                  <p className="text-body text-fg-4 mt-0.5">Most recent</p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
       </div>

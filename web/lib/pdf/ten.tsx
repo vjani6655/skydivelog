@@ -225,8 +225,13 @@ function JumpCard({ jump }: { jump: PdfJump }) {
           {'CANOPY: '}{jump.canopy_type.toUpperCase()}
         </Text>
       ) : null}
+      {jump.people_on_jump != null ? (
+        <Text style={[s.mono, { fontSize: 7, color: INK_2, letterSpacing: 0.4, marginBottom: 3 }]}>
+          {'PEOPLE: '}{jump.people_on_jump}
+        </Text>
+      ) : null}
 
-      {/* Notes — fixed height, clipped */}
+      {/* Description of jump — fixed height, clipped */}
       <View style={{ flex: 1, overflow: 'hidden', minHeight: 18 }}>
         {jump.notes ? (
           <Text style={[s.ui, {

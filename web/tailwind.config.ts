@@ -27,23 +27,23 @@ const config: Config = {
 
         // ─── Accents ───────────────────────────────────────────
         sky: {
-          DEFAULT: 'var(--c-sky)',
+          DEFAULT: 'rgb(var(--c-sky-ch) / <alpha-value>)',
           dim:     'var(--c-sky-dim)',
           bg:      'var(--c-sky-bg)',
         },
-        cyan:   'var(--c-cyan)',
+        cyan:   'rgb(var(--c-cyan-ch) / <alpha-value>)',
 
-        // ─── Status ────────────────────────────────────────────
+        // ─── Status ─────────────────────────────────────────────────
         warn: {
-          DEFAULT: 'var(--c-warn)',
+          DEFAULT: 'rgb(var(--c-warn-ch) / <alpha-value>)',
           bg:      'var(--c-warn-bg)',
         },
         danger: {
-          DEFAULT: 'var(--c-danger)',
+          DEFAULT: 'rgb(var(--c-danger-ch) / <alpha-value>)',
           bg:      'var(--c-danger-bg)',
         },
         ok: {
-          DEFAULT: 'var(--c-ok)',
+          DEFAULT: 'rgb(var(--c-ok-ch) / <alpha-value>)',
           bg:      'var(--c-ok-bg)',
         },
 

@@ -24,7 +24,7 @@ export default function ManageBillingButton({ label = "Manage billing" }: { labe
       <button
         onClick={handleManage}
         disabled={loading}
-        className="text-xs border border-border text-fg-2 hover:bg-surface-2 px-3 py-1.5 rounded-sm transition-colors disabled:opacity-50"
+        className="w-full h-11 px-4 rounded-lg bg-sky text-on-sky text-sm font-medium hover:bg-sky/90 transition-colors disabled:opacity-50"
       >
         {loading ? "Loading…" : label}
       </button>

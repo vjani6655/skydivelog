@@ -7,6 +7,8 @@ import BrandMark from "@/components/BrandMark"
 import {
   LayoutDashboard,
   BookOpen,
+  Package,
+  Shield,
   Settings,
   CreditCard,
   Receipt,
@@ -21,11 +23,13 @@ interface SidebarProps {
 }
 
 const NAV = [
-  { href: "/dashboard",    label: "Dashboard",    icon: LayoutDashboard },
-  { href: "/logbook",      label: "Logbook",      icon: BookOpen },
-  { href: "/settings",     label: "Settings",     icon: Settings },
-  { href: "/subscription", label: "Subscription", icon: CreditCard },
-  { href: "/billing",      label: "Billing",      icon: Receipt },
+  { href: "/dashboard",     label: "Dashboard",    icon: LayoutDashboard },
+  { href: "/logbook",       label: "Logbook",      icon: BookOpen },
+  { href: "/gear",          label: "Gear",         icon: Package },
+  { href: "/certificates",  label: "Certificates", icon: Shield },
+  { href: "/settings",      label: "Settings",     icon: Settings },
+  { href: "/subscription",  label: "Subscription", icon: CreditCard },
+  { href: "/billing",       label: "Billing",      icon: Receipt },
 ]
 
 function fmtRenews(iso: string | null) {

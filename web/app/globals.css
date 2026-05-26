@@ -30,6 +30,13 @@
   --c-ok-bg:         rgba(74, 222, 128, 0.12);
 
   --c-on-sky:        #001426;
+
+  /* RGB channels — enables Tailwind /opacity modifiers (e.g. bg-sky/25) */
+  --c-sky-ch:        74 158 255;
+  --c-cyan-ch:       52 210 214;
+  --c-ok-ch:         74 222 128;
+  --c-warn-ch:       255 183 74;
+  --c-danger-ch:     255 107 107;
 }
 
 /* Light theme */
@@ -59,6 +66,13 @@ html.light {
   --c-ok-bg:         rgba(26, 128, 64, 0.10);
 
   --c-on-sky:        #FFFFFF;
+
+  /* RGB channels — enables Tailwind /opacity modifiers */
+  --c-sky-ch:        26 125 232;
+  --c-cyan-ch:       15 168 174;
+  --c-ok-ch:         26 128 64;
+  --c-warn-ch:       184 112 16;
+  --c-danger-ch:     204 59 59;
 }
 
 body {

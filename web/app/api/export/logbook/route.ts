@@ -85,6 +85,7 @@ export async function POST(request: Request) {
       landing_accuracy_value,
       landing_accuracy_unit,
       notes,
+      people_on_jump,
       dropzones ( name, region ),
       signatures ( signer_name, signer_licence_number, signer_licence_rating, signature_data, outcome, notes )
     `)
@@ -159,6 +160,7 @@ export async function POST(request: Request) {
       landing_accuracy_value:  raw.landing_accuracy_value  ?? null,
       landing_accuracy_unit:   raw.landing_accuracy_unit   ?? null,
       notes:                   raw.notes                   ?? null,
+      people_on_jump:          raw.people_on_jump          ?? null,
       signer_name:             sig?.signer_name             ?? null,
       signer_licence_number:   sig?.signer_licence_number  ?? null,
       signer_licence_rating:   sig?.signer_licence_rating  ?? null,

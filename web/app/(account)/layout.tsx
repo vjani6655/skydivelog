@@ -45,7 +45,7 @@ export default async function AccountLayout({
         plan={isPro ? (sub?.plan?.startsWith('price_') ? 'annual' : (sub?.plan ?? 'annual')) : null}
         renewsAt={isPro ? sub?.renews_at ?? null : null}
       />
-      <main className="flex-1 min-w-0 overflow-auto">
+      <main className="flex-1 min-w-0 overflow-auto px-12 py-8">
         {children}
       </main>
     </div>

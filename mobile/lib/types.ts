@@ -20,6 +20,7 @@ export interface JumpFull {
   is_favourite: boolean
   is_draft: boolean
   notes: string | null
+  people_on_jump: number | null
   landing_accuracy_value: string | null
   landing_accuracy_unit: string | null
   photo_url: string | null

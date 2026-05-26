@@ -111,6 +111,9 @@ export default function DetailStandard({ jump, signatures, tags, edits }: JumpDe
             value={`${jump.landing_accuracy_value}${jump.landing_accuracy_unit ? ' ' + jump.landing_accuracy_unit : ''}`}
           />
         )}
+        {(jump as any).people_on_jump != null && (
+          <Field label="PEOPLE ON JUMP" value={String((jump as any).people_on_jump)} />
+        )}
         {tags.length > 0 && (
           <Field
             label="TAGS"
@@ -125,10 +128,10 @@ export default function DetailStandard({ jump, signatures, tags, edits }: JumpDe
         )}
       </View>
 
-      {/* Notes */}
+      {/* Description of jump */}
       {jump.notes ? (
         <View style={styles.notesCard}>
-          <Text style={[typography.overline, styles.sectionLabel]}>NOTES</Text>
+          <Text style={[typography.overline, styles.sectionLabel]}>DESCRIPTION OF JUMP</Text>
           <Text style={[typography.body, { color: colors.fg2, lineHeight: 22 }]}>
             {jump.notes}
           </Text>

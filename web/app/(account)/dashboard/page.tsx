@@ -177,10 +177,10 @@ export default async function DashboardPage({
   const isPro = sub?.status === "active"
 
   return (
-    <div className="px-12 py-8 max-w-5xl">
+    <div className="max-w-[1400px] mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <p className="text-overline font-semibold tracking-widest uppercase text-fg-4 mb-2">Dashboard</p>
+        <p className="font-mono text-[11px] tracking-widest uppercase text-fg-3 mb-2">Dashboard</p>
         <div className="flex items-center gap-3 flex-wrap">
           <h1 className="text-h1 font-bold text-fg tracking-tight">Hi, {firstName}.</h1>
           {isCurrent && (
@@ -237,7 +237,7 @@ export default async function DashboardPage({
       {/* Activity chart + recent */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
         {/* Chart */}
-        <div className="lg:col-span-2 bg-surface border border-border rounded-[14px] p-6">
+        <div className="lg:col-span-2 bg-surface border border-border rounded-[14px] p-6 flex flex-col">
           <div className="flex items-center justify-between mb-5">
             <div>
               <p className="font-mono text-[10px] font-semibold tracking-widest uppercase text-fg-3">
@@ -262,18 +262,38 @@ export default async function DashboardPage({
               ))}
             </div>
           </div>
-          <div className="flex items-end gap-1.5 h-[120px]">
-            {chartBars.map(({ label, count }, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                <div
-                  className="w-full bg-sky/25 hover:bg-sky/45 rounded-sm transition-colors min-h-[2px]"
-                  style={{ height: `${Math.max((count / maxBar) * 100, count > 0 ? 4 : 2)}px` }}
-                  title={`${count} jumps`}
-                />
-                <span className="font-mono text-[9px] text-fg-4">{label}</span>
-              </div>
-            ))}
-          </div>
+          {/* SVG bar chart */}
+          {(() => {
+            const svgW = 600
+            const svgH = 160
+            const n = chartBars.length
+            const slot = svgW / n
+            const barW = slot * 0.6
+            return (
+              <svg viewBox={`0 0 ${svgW} ${svgH + 18}`} className="w-full flex-1" preserveAspectRatio="none" style={{ minHeight: 120 }}>
+                {chartBars.map(({ label, count }, i) => {
+                  const barH = count > 0 ? Math.max((count / maxBar) * svgH, 4) : 2
+                  const x = i * slot + (slot - barW) / 2
+                  const y = svgH - barH
+                  return (
+                    <g key={i}>
+                      <rect
+                        x={x} y={y} width={barW} height={barH} rx="3"
+                        fill={count > 0 ? 'rgba(74,158,255,0.40)' : 'rgba(74,158,255,0.10)'}
+                      />
+                      <text
+                        x={x + barW / 2} y={svgH + 13}
+                        textAnchor="middle"
+                        style={{ fontSize: 9, fontFamily: 'var(--font-mono, monospace)', fill: 'var(--c-fg-3)' }}
+                      >
+                        {label}
+                      </text>
+                    </g>
+                  )
+                })}
+              </svg>
+            )
+          })()}
         </div>
 
         {/* Recent jumps */}
@@ -352,7 +372,7 @@ export default async function DashboardPage({
             {[
               { icon: Download, label: "Export logbook", href: "/logbook" },
               { icon: BookOpen, label: "View jumps", href: "/logbook" },
-              { icon: Package, label: "Manage gear", href: "/settings" },
+              { icon: Package, label: "Manage gear", href: "/gear" },
               { icon: Award, label: "Add certificate", href: "/settings" },
             ].map(({ icon: Icon, label, href }) => (
               <Link

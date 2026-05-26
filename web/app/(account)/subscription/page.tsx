@@ -66,48 +66,41 @@ export default async function SubscriptionPage() {
       .replace(/^./, (c: string) => c.toUpperCase())
 
     return (
-      <div className="p-6 max-w-3xl mx-auto">
+      <div className="max-w-[1400px] mx-auto">
         <div className="mb-6">
-          <p className="text-overline font-semibold tracking-widest uppercase text-fg-4 mb-1.5">Subscription</p>
-          <h1 className="text-h1 font-bold text-fg tracking-tight">Your plan</h1>
+          <p className="font-mono text-[11px] tracking-widest uppercase text-fg-3 mb-1.5">Subscription</p>
+          <h1 className="text-[28px] font-bold text-fg tracking-tight">Your plan</h1>
         </div>
 
         {/* Main plan card */}
-        <div className="bg-surface border border-sky/20 rounded-lg p-5 mb-4 ring-1 ring-sky/10">
-          <div className="flex items-start justify-between gap-4">
-            {/* Left: badges + price */}
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-sm bg-sky/10 border border-sky/25 text-xs font-semibold text-sky">
+        <div
+          className="border border-sky rounded-[14px] p-8 mb-5"
+          style={{background: 'linear-gradient(135deg, rgba(74,158,255,0.18) 0%, transparent 100%)'}}
+        >
+          <div className="flex items-start justify-between gap-8">
+            {/* Left: badge + price */}
+            <div className="flex-1">
+              <div className="mb-[14px]">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-sky/10 border border-sky/30 font-mono text-xs font-semibold text-sky uppercase tracking-wide">
                   <svg className="w-3 h-3" viewBox="0 0 32 32" fill="none">
                     <path d="M16 4C9.37 4 4 9.37 4 16s5.37 12 12 12 12-5.37 12-12S22.63 4 16 4zm0 2c5.52 0 10 4.48 10 10s-4.48 10-10 10S6 21.52 6 16 10.48 6 16 6z" fill="currentColor" opacity="0.5"/>
                     <path d="M22 10.5l-8 3.5-3.5 8 8-3.5 3.5-8z" fill="currentColor"/>
                   </svg>
-                  {planLabel.toUpperCase()}
-                </span>
-                <span className={`text-xs font-semibold px-2 py-1 rounded-sm border ${
-                  isActive
-                    ? "bg-ok/10 border-ok/20 text-ok"
-                    : "bg-sky/10 border-sky/20 text-sky"
-                }`}>
-                  {sub.status.toUpperCase()}
+                  {planLabel.toUpperCase()} · {isActive ? "ACTIVE" : "TRIAL"}
                 </span>
               </div>
 
-              <div className="flex items-baseline gap-1.5 mb-1.5">
-                <span className="text-5xl font-bold text-fg tracking-tight">
-                  ${Number(sub.price_at_signup ?? 5).toFixed(0)}
-                </span>
-                <span className="text-xl text-fg-3 font-medium">/ year</span>
+              <div className="font-mono text-[40px] font-medium tracking-tight text-fg leading-none mb-[6px]">
+                ${Number(sub.price_at_signup ?? 5).toFixed(0)} / year
               </div>
-              <p className="text-xs text-fg-3">
-                Renews {fmtDate(sub.renews_at)}
+              <p className="text-sm text-fg-2">
+                Renews <span className="text-fg font-medium">{fmtDate(sub.renews_at)}</span>
                 {sub.started_at && <> · started {fmtDate(sub.started_at)}</>}
               </p>
             </div>
 
             {/* Right: actions */}
-            <div className="flex flex-col gap-2 flex-shrink-0 min-w-[140px]">
+            <div className="flex flex-col gap-2 flex-shrink-0 min-w-[200px]">
               <ManageBillingButton label="Update card" />
               <CancelSubscriptionButton />
             </div>
@@ -116,11 +109,11 @@ export default async function SubscriptionPage() {
 
         {/* Payment method + Billing address */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-          <div className="bg-surface border border-border rounded-lg p-5">
-            <p className="text-overline font-semibold tracking-widest uppercase text-fg-4 mb-4">Payment method</p>
+          <div className="bg-surface border border-border rounded-[14px] p-6">
+            <p className="font-mono text-[10px] tracking-widest uppercase text-fg-3 mb-4">Payment method</p>
             <div className="flex items-center gap-3">
-              <div className="w-12 h-7 bg-surface-2 border border-border rounded flex items-center justify-center">
-                <span className="text-[10px] font-bold text-fg-2 tracking-wide">
+              <div className="w-12 h-8 rounded-md flex items-center justify-center" style={{background: 'linear-gradient(135deg, #555 0%, #222 100%)'}}>
+                <span className="text-[10px] font-bold text-white tracking-widest">
                   {(sub.payment_method_brand ?? "CC").slice(0, 4).toUpperCase()}
                 </span>
               </div>
@@ -136,9 +129,9 @@ export default async function SubscriptionPage() {
           </div>
 
           {(billingName || billingAddress) ? (
-            <div className="bg-surface border border-border rounded-lg p-5">
-              <p className="text-overline font-semibold tracking-widest uppercase text-fg-4 mb-4">Billing address</p>
-              <div className="text-sm text-fg-2 space-y-0.5 font-mono text-xs">
+            <div className="bg-surface border border-border rounded-[14px] p-6">
+              <p className="font-mono text-[10px] tracking-widest uppercase text-fg-3 mb-4">Billing address</p>
+              <div className="font-mono text-sm text-fg-2 leading-relaxed">
                 {billingName && <p>{billingName}</p>}
                 {billingAddress?.line1 && <p>{billingAddress.line1}</p>}
                 {billingAddress?.line2 && <p>{billingAddress.line2}</p>}
@@ -149,7 +142,7 @@ export default async function SubscriptionPage() {
               </div>
             </div>
           ) : (
-            <div className="bg-surface border border-border rounded-lg p-5 flex items-center justify-center">
+            <div className="bg-surface border border-border rounded-[14px] p-6 flex items-center justify-center">
               <ManageBillingButton label="Add billing address" />
             </div>
           )}
@@ -165,10 +158,10 @@ export default async function SubscriptionPage() {
 
   // Non-subscribed user — upgrade view
   return (
-    <div className="p-6 max-w-xl mx-auto">
+    <div className="max-w-[1400px] mx-auto">
       <div className="mb-6">
-        <p className="text-overline font-semibold tracking-widest uppercase text-fg-4 mb-1.5">Subscription</p>
-        <h1 className="text-h1 font-bold text-fg tracking-tight">Your plan</h1>
+        <p className="font-mono text-[11px] tracking-widest uppercase text-fg-3 mb-1.5">Subscription</p>
+        <h1 className="text-[28px] font-bold text-fg tracking-tight">Your plan</h1>
       </div>
 
       <div className="bg-surface border border-border rounded-xl overflow-hidden">

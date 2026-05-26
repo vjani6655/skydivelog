@@ -197,11 +197,19 @@ export default function DetailPhotoLed({ jump, signatures, tags, edits }: JumpDe
           </Text>
         </View>
       ) : null}
+      {(jump as any).people_on_jump != null ? (
+        <View style={styles.section}>
+          <Text style={[typography.overline, { color: colors.fg3 }]}>PEOPLE ON JUMP</Text>
+          <Text style={[typography.base, { color: colors.fg, marginTop: 4, fontWeight: '600' }]}>
+            {String((jump as any).people_on_jump)}
+          </Text>
+        </View>
+      ) : null}
 
       {jump.notes ? (
         <View style={styles.section}>
           <Text style={[typography.overline, { color: colors.fg3, marginBottom: 8 }]}>
-            NOTES
+            DESCRIPTION OF JUMP
           </Text>
           <Text style={[typography.body, { color: colors.fg2, lineHeight: 22 }]}>
             {jump.notes}

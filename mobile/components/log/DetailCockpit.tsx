@@ -219,9 +219,14 @@ export default function DetailCockpit({ jump, signatures, tags, edits }: JumpDet
         </View>
       </View>
 
-      {/* ── Notes card ────────────────────────────────────────── */}
-      {(jump.notes || tags.length > 0) && (
+      {/* ── Description / Notes card ────────────────────────── */}
+      {(jump.notes || (jump as any).people_on_jump != null || tags.length > 0) && (
         <View style={styles.card}>
+          {(jump as any).people_on_jump != null ? (
+            <Text style={[typography.overline, { color: colors.fg3, marginBottom: 4 }]}>
+              {`PEOPLE ON JUMP: ${(jump as any).people_on_jump}`}
+            </Text>
+          ) : null}
           {jump.notes ? (
             <Text style={[typography.body, { color: colors.fg2, lineHeight: 22 }]}>
               {jump.notes}
