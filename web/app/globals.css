@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Design tokens ─────────────────────────────────────────────────────────── */
+/* Dark theme (default) */
+:root {
+  --c-bg:            #0A1220;
+  --c-surface:       #121C2E;
+  --c-surface-2:     #1A2740;
+  --c-surface-3:     #243349;
+  --c-border:        #243349;
+  --c-border-strong: #2F4060;
+
+  --c-fg:            #E8EEF8;
+  --c-fg-2:          #8B9BB5;
+  --c-fg-3:          #5A6B85;
+  --c-fg-4:          #3D4E6A;
+
+  --c-sky:           #4A9EFF;
+  --c-sky-dim:       #2A6FB8;
+  --c-sky-bg:        rgba(74, 158, 255, 0.12);
+  --c-cyan:          #34D2D6;
+
+  --c-warn:          #FFB74A;
+  --c-warn-bg:       rgba(255, 183, 74, 0.12);
+  --c-danger:        #FF6B6B;
+  --c-danger-bg:     rgba(255, 107, 107, 0.12);
+  --c-ok:            #4ADE80;
+  --c-ok-bg:         rgba(74, 222, 128, 0.12);
+
+  --c-on-sky:        #001426;
+}
+
+/* Light theme */
+html.light {
+  --c-bg:            #F2F5FA;
+  --c-surface:       #FFFFFF;
+  --c-surface-2:     #EDF0F7;
+  --c-surface-3:     #E4E9F2;
+  --c-border:        #D4DCE9;
+  --c-border-strong: #B8C4D8;
+
+  --c-fg:            #0D1B31;
+  --c-fg-2:          #2E4168;
+  --c-fg-3:          #5A6B85;
+  --c-fg-4:          #8B9BB5;
+
+  --c-sky:           #1A7DE8;
+  --c-sky-dim:       #1460B0;
+  --c-sky-bg:        rgba(26, 125, 232, 0.10);
+  --c-cyan:          #0FA8AE;
+
+  --c-warn:          #B87010;
+  --c-warn-bg:       rgba(184, 112, 16, 0.10);
+  --c-danger:        #CC3B3B;
+  --c-danger-bg:     rgba(204, 59, 59, 0.10);
+  --c-ok:            #1A8040;
+  --c-ok-bg:         rgba(26, 128, 64, 0.10);
+
+  --c-on-sky:        #FFFFFF;
+}
+
+body {
+  color: var(--c-fg);
+  background-color: var(--c-bg);
+  font-family: var(--font-sans), 'Inter Tight', -apple-system, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #243349 transparent;
+  }
+}

@@ -1,0 +1,279 @@
+export const dynamic = 'force-dynamic'
+
+import { createAdminClient } from '@/lib/supabase/admin'
+import { KPI, AdminCard, LineChart, AdminPageHeader } from '@/components/admin/ui'
+import { Download, Calendar } from 'lucide-react'
+import Link from 'next/link'
+
+function fmt(n: number): string {
+  return n >= 1_000_000
+    ? (n / 1_000_000).toFixed(1) + 'M'
+    : n >= 1_000
+    ? n.toLocaleString()
+    : String(n)
+}
+
+function fmtMoney(n: number) {
+  return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 0 })
+}
+
+function timeAgo(s: string | null): string {
+  if (!s) return ''
+  const diff = Date.now() - new Date(s).getTime()
+  const m = Math.floor(diff / 60000)
+  if (m < 60) return `${m}m ago`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h ago`
+  return `${Math.floor(h / 24)}d ago`
+}
+
+export default async function AdminDashboardPage() {
+  const db = createAdminClient()
+
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString()
+  const sixtyDaysAgo  = new Date(Date.now() - 60 * 86400000).toISOString()
+
+  const [
+    { count: totalUsers },
+    { count: activeSubsCount },
+    { count: overdueCount },
+    { count: totalJumps },
+    { count: totalDZs },
+    { count: totalAircraft },
+    { count: totalCerts },
+    { count: openFlagsCount },
+    { count: openTicketsCount },
+    { count: bugTicketsCount },
+    { data: activeSubs },
+    { data: signups30d },
+    { data: signupsPrior30d },
+    { data: jumpStats },
+    { data: recentUsers },
+    { data: recentJumps },
+    { data: incidentTickets },
+    { data: recentPayments },
+  ] = await Promise.all([
+    db.from('users').select('*', { count: 'exact', head: true }),
+    db.from('subscriptions').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+    db.from('subscriptions').select('*', { count: 'exact', head: true }).eq('status', 'overdue'),
+    db.from('jumps').select('*', { count: 'exact', head: true }).is('deleted_at', null),
+    db.from('dropzones').select('*', { count: 'exact', head: true }),
+    db.from('aircraft').select('*', { count: 'exact', head: true }),
+    db.from('certificates').select('*', { count: 'exact', head: true }),
+    db.from('flagged_entries').select('*', { count: 'exact', head: true }).eq('status', 'open'),
+    db.from('support_tickets').select('*', { count: 'exact', head: true }).eq('status', 'open'),
+    db.from('support_tickets').select('*', { count: 'exact', head: true }).eq('category', 'bug').eq('status', 'open'),
+    db.from('subscriptions').select('price_at_signup').eq('status', 'active'),
+    db.from('users').select('created_at').gte('created_at', thirtyDaysAgo),
+    db.from('users').select('created_at').gte('created_at', sixtyDaysAgo).lt('created_at', thirtyDaysAgo),
+    db.from('jumps').select('freefall_seconds').is('deleted_at', null),
+    db.from('users').select('id, email, full_name, created_at').order('created_at', { ascending: false }).limit(3),
+    db.from('jumps').select('user_id, jump_number, jump_type, created_at').is('deleted_at', null).order('created_at', { ascending: false }).limit(3),
+    db.from('support_tickets').select('id, subject, category, status, created_at').eq('status', 'open').order('created_at', { ascending: false }).limit(3),
+    db.from('subscriptions').select('price_at_signup, started_at, users(email)').eq('status', 'active').order('started_at', { ascending: false }).limit(3),
+  ])
+
+  // MRR / ARR
+  const totalAnnual = activeSubs?.reduce((s, sub) => s + Number(sub.price_at_signup), 0) ?? 0
+  const mrr = Math.round(totalAnnual / 12)
+  const arr = totalAnnual
+
+  // Churn rate
+  const churnRate = totalUsers ? ((overdueCount ?? 0) / (totalUsers ?? 1) * 100).toFixed(1) : '0.0'
+
+  // Sign-up chart (30d daily buckets)
+  const dayCounts: Record<string, number> = {}
+  const now = new Date()
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(now); d.setDate(d.getDate() - i)
+    dayCounts[d.toISOString().slice(0, 10)] = 0
+  }
+  signups30d?.forEach(u => {
+    const day = (u.created_at as string).slice(0, 10)
+    if (day in dayCounts) dayCounts[day]++
+  })
+  const chartData = Object.values(dayCounts).map(v => ({ v }))
+
+  const prior30 = signupsPrior30d?.length ?? 0
+  const current30 = signups30d?.length ?? 0
+  const signupDelta = prior30 ? Math.round((current30 - prior30) / prior30 * 100) : 0
+
+  // Freefall hours
+  const ffTotal = jumpStats?.reduce((sum, j) => sum + (j.freefall_seconds ?? 0), 0) ?? 0
+  const ffHours = Math.floor(ffTotal / 3600)
+
+  // Live activity feed
+  const activities: { icon: string; color: string; text: string; sub: string; time: string; rawMs: number }[] = []
+  recentUsers?.forEach(u => {
+    activities.push({
+      icon: '+', color: 'bg-ok/10 text-ok',
+      text: 'New signup', sub: u.email,
+      time: timeAgo(u.created_at),
+      rawMs: new Date(u.created_at).getTime(),
+    })
+  })
+  recentJumps?.forEach(j => {
+    activities.push({
+      icon: 'J', color: 'bg-surface-2 text-fg-2',
+      text: `Jump #${j.jump_number} logged`, sub: j.jump_type ?? 'Jump',
+      time: timeAgo(j.created_at),
+      rawMs: new Date(j.created_at).getTime(),
+    })
+  })
+  recentPayments?.forEach(p => {
+    const user = p.users as { email: string } | null
+    activities.push({
+      icon: '$', color: 'bg-ok/10 text-ok',
+      text: `Payment received · $${Number(p.price_at_signup).toFixed(0)}/yr`,
+      sub: user?.email ?? '',
+      time: timeAgo(p.started_at),
+      rawMs: new Date(p.started_at).getTime(),
+    })
+  })
+  activities.sort((a, b) => b.rawMs - a.rawMs)
+
+  const incidentColor: Record<string, string> = {
+    open: 'text-warn', waiting: 'text-sky', closed: 'text-ok',
+  }
+  const incidentLabel: Record<string, string> = {
+    open: 'INVESTIGATING', waiting: 'MONITORING', closed: 'RESOLVED',
+  }
+
+  return (
+    <div>
+      <AdminPageHeader title="Dashboard" sub="Overview · 24h" actions={
+        <div className="flex gap-2">
+          <button className="flex items-center gap-1.5 px-3 py-1.5 bg-surface border border-border rounded-sm text-xs text-fg-2 font-medium">
+            <Calendar size={12} /> Last 30 days
+          </button>
+          <button className="flex items-center gap-1.5 px-3 py-1.5 bg-sky text-on-sky rounded-sm text-xs font-semibold">
+            <Download size={12} /> Export
+          </button>
+        </div>
+      } />
+
+      {/* Top 5 KPIs */}
+      <div className="grid grid-cols-5 gap-3 mb-4">
+        <KPI label="Total users"
+          value={fmt(totalUsers ?? 0)}
+          sub={`${(totalUsers ?? 0).toLocaleString()} accounts`}
+          trend={`▲ +${fmt(current30)} / 30D`} />
+        <KPI label="Active subs"
+          value={fmt(activeSubsCount ?? 0)}
+          sub={totalUsers ? `${Math.round((activeSubsCount ?? 0) / totalUsers * 100)}%` : '—'} />
+        <KPI label="MRR"
+          value={fmtMoney(mrr)}
+          sub="annual ÷ 12"
+          accent="#4A9EFF"
+          tooltip="Monthly Recurring Revenue: annual subscription value normalized to a monthly figure (ARR ÷ 12). All plans are billed annually." />
+        <KPI label="ARR"
+          value={fmtMoney(arr)}
+          sub="run-rate"
+          tooltip="Annual Recurring Revenue: total value of all active subscriptions over a 12-month period." />
+        <KPI label="Churn 30D"
+          value={`${churnRate}%`}
+          sub="net"
+          accent="#FFB74A" />
+      </div>
+
+      <div className="grid grid-cols-[2fr_1fr] gap-3.5 mb-3.5">
+        {/* Sign-up chart */}
+        <AdminCard title="NEW SIGN-UPS · LAST 30 DAYS" action={
+          <div className="flex gap-0.5">
+            {['7D', '30D', '90D'].map((t, i) => (
+              <button key={t} className={`font-mono text-[10px] px-2 py-1 rounded-sm transition-colors ${i === 1 ? 'bg-sky/20 text-sky' : 'text-fg-3 hover:text-fg-2'}`}>{t}</button>
+            ))}
+          </div>
+        }>
+          <div className="flex items-baseline gap-3 mb-2">
+            <span className="font-mono text-3xl font-medium">{fmt(current30)}</span>
+            <span className="text-xs text-ok">{signupDelta >= 0 ? '+' : ''}{signupDelta}% vs. prior 30D</span>
+          </div>
+          <LineChart data={chartData} height={160} />
+        </AdminCard>
+
+        {/* Live activity */}
+        <AdminCard title="LIVE ACTIVITY" action={
+          <span className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-ok" />
+            <span className="font-mono text-[10px] text-ok">LIVE</span>
+          </span>
+        }>
+          <div>
+            {activities.slice(0, 6).map((a, i) => (
+              <div key={i} className="flex items-start gap-2.5 py-2 border-b border-border last:border-0">
+                <div className={`w-6 h-6 rounded font-mono text-[11px] font-semibold flex items-center justify-center shrink-0 mt-0.5 ${a.color}`}>
+                  {a.icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-medium text-fg leading-tight">{a.text}</div>
+                  <div className="font-mono text-[10px] text-fg-3 truncate mt-0.5">{a.sub}</div>
+                </div>
+                <span className="font-mono text-[10px] text-fg-3 whitespace-nowrap shrink-0">{a.time}</span>
+              </div>
+            ))}
+            {activities.length === 0 && (
+              <div className="py-4 text-xs text-fg-3 text-center">No recent activity</div>
+            )}
+          </div>
+        </AdminCard>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3.5">
+        {/* Platform totals */}
+        <AdminCard title="PLATFORM TOTALS">
+          {[
+            { label: 'Jumps logged',      value: fmt(totalJumps ?? 0),    delta: null },
+            { label: 'Hours of freefall', value: fmt(ffHours),             delta: null },
+            { label: 'Dropzones tracked', value: fmt(totalDZs ?? 0),       delta: null },
+            { label: 'Aircraft tracked',  value: fmt(totalAircraft ?? 0),  delta: null },
+            { label: 'Certs registered',  value: fmt(totalCerts ?? 0),     delta: null },
+          ].map(({ label, value, delta }) => (
+            <div key={label} className="flex justify-between items-center py-2 border-b border-dashed border-border last:border-0">
+              <span className="text-xs text-fg-2">{label}</span>
+              <div className="text-right">
+                <div className="font-mono text-sm font-medium">{value}</div>
+                {delta && <div className="font-mono text-[10px] text-ok">{delta}</div>}
+              </div>
+            </div>
+          ))}
+        </AdminCard>
+
+        {/* Open incidents */}
+        <AdminCard title={`OPEN INCIDENTS · ${incidentTickets?.length ?? 0}`}>
+          {incidentTickets && incidentTickets.length > 0 ? incidentTickets.map(t => (
+            <div key={t.id} className="py-2.5 border-b border-dashed border-border last:border-0">
+              <div className="flex justify-between items-start gap-2 mb-1">
+                <span className="text-xs text-fg leading-snug">{t.subject}</span>
+                <span className="font-mono text-[10px] text-fg-3 whitespace-nowrap">{timeAgo(t.created_at)}</span>
+              </div>
+              <span className={`font-mono text-[10px] ${incidentColor[t.status] ?? 'text-fg-3'}`}>
+                ● {incidentLabel[t.status] ?? t.status.toUpperCase()}
+              </span>
+            </div>
+          )) : (
+            <div className="py-6 flex flex-col items-center gap-1.5">
+              <span className="font-mono text-[10px] text-ok">● ALL SYSTEMS NOMINAL</span>
+              <span className="text-xs text-fg-3">No open incidents</span>
+            </div>
+          )}
+        </AdminCard>
+
+        {/* Queue: needs human */}
+        <AdminCard title="QUEUE · NEEDS HUMAN">
+          {[
+            { label: 'Flagged entries',               value: openFlagsCount ?? 0,  href: '/admin/flagged',               color: 'text-warn' },
+            { label: 'Support tickets · open',        value: openTicketsCount ?? 0, href: '/admin/support',              color: 'text-sky' },
+            { label: 'User-reported bugs',            value: bugTicketsCount ?? 0, href: '/admin/support',               color: 'text-danger' },
+          ].map(({ label, value, href, color }) => (
+            <Link key={label} href={href}
+              className="flex justify-between items-center py-2.5 border-b border-dashed border-border last:border-0 hover:bg-surface-2 -mx-4 px-4 transition-colors">
+              <span className="text-xs text-fg-2">{label}</span>
+              <span className={`font-mono text-lg font-semibold ${color}`}>{value}</span>
+            </Link>
+          ))}
+        </AdminCard>
+      </div>
+    </div>
+  )
+}

@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SkydiveLog — Logo Explorations</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="lib/tokens.css">
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; }
+  body { font-family: var(--font-ui); }
+  .logo-frame {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg);
+    position: relative; padding: 32px;
+    box-sizing: border-box;
+  }
+  .logo-frame.lite { background: #F5F3EE; color: #0A1220; }
+  .logo-frame.duo  { display: grid; grid-template-columns: 1fr 1fr; padding: 0; }
+  .logo-frame.duo > div { display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .logo-frame.duo .a { background: var(--bg); }
+  .logo-frame.duo .b { background: #F5F3EE; }
+  .logo-meta {
+    position: absolute; bottom: 12px; left: 16px;
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--fg-3); letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .lite .logo-meta { color: rgba(10,18,32,0.4); }
+
+  .marks-row { display: flex; gap: 28px; align-items: center; }
+  .scale-row { display: flex; gap: 32px; align-items: center; }
+  .scale-row .lbl { font-family: var(--font-mono); font-size: 9px; color: var(--fg-3); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 6px; text-align: center; }
+  .scale-row > div { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+
+  .wm { display: flex; align-items: center; gap: 12px; }
+  .wm-text {
+    font-family: 'Inter Tight', sans-serif; font-weight: 700;
+    color: var(--fg); letter-spacing: -0.02em;
+  }
+  .lite .wm-text { color: #0A1220; }
+
+  /* mark styles */
+  .mark-canopy svg path { stroke-linecap: round; stroke-linejoin: round; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="lib/design-canvas.jsx"></script>
+<script type="text/babel" src="logos/marks.jsx"></script>
+
+<script type="text/babel">
+
+const PRIMARY = '#4A9EFF';
+const DARK_BG_FG  = '#E8EEF8';
+const LITE_BG_FG  = '#0A1220';
+
+function Wordmark({ Mark, size = 40, color = 'var(--fg)' }) {
+  return (
+    <div className="wm">
+      <Mark size={size} primary={PRIMARY} secondary={color} />
+      <span className="wm-text" style={{ color, fontSize: size * 0.62 }}>SkydiveLog</span>
+    </div>
+  );
+}
+
+function FrameDark({ children, meta }) {
+  return (
+    <div className="logo-frame">
+      {children}
+      {meta && <div className="logo-meta">{meta}</div>}
+    </div>
+  );
+}
+function FrameLite({ children, meta }) {
+  return (
+    <div className="logo-frame lite">
+      {children}
+      {meta && <div className="logo-meta">{meta}</div>}
+    </div>
+  );
+}
+
+function MarkSection({ id, title, subtitle, Mark }) {
+  const slug = id;
+  const sizes = [16, 24, 32, 64, 120];
+  return (
+    <DCSection id={slug} title={title} subtitle={subtitle}>
+      <DCArtboard width={400} height={300} id={`${slug}-mark-dark`} label={`${slug} · mark · dark`}>
+        <FrameDark meta="navy bg">
+          <Mark size={140} primary={PRIMARY} secondary={DARK_BG_FG} />
+        </FrameDark>
+      </DCArtboard>
+
+      <DCArtboard width={400} height={300} id={`${slug}-mark-light`} label={`${slug} · mark · light`}>
+        <FrameLite meta="paper bg">
+          <Mark size={140} primary={PRIMARY} secondary={LITE_BG_FG} />
+        </FrameLite>
+      </DCArtboard>
+
+      <DCArtboard width={520} height={200} id={`${slug}-wordmark-dark`} label={`${slug} · wordmark · dark`}>
+        <FrameDark>
+          <Wordmark Mark={Mark} size={48} color={DARK_BG_FG} />
+        </FrameDark>
+      </DCArtboard>
+
+      <DCArtboard width={520} height={200} id={`${slug}-wordmark-light`} label={`${slug} · wordmark · light`}>
+        <FrameLite>
+          <Wordmark Mark={Mark} size={48} color={LITE_BG_FG} />
+        </FrameLite>
+      </DCArtboard>
+
+      <DCArtboard width={620} height={300} id={`${slug}-scale`} label={`${slug} · scale 16→120 px`}>
+        <FrameDark>
+          <div className="scale-row">
+            {sizes.map(s => (
+              <div key={s}>
+                <Mark size={s} primary={PRIMARY} secondary={DARK_BG_FG} />
+                <div className="lbl">{s}px</div>
+              </div>
+            ))}
+          </div>
+        </FrameDark>
+      </DCArtboard>
+    </DCSection>
+  );
+}
+
+function App() {
+  const directions = [
+    ['01', '01 · Canopy Pin', 'Refined version of the current mark — tighter geometry, square arch, plumb line.', MarkCanopyPin],
+    ['02', '02 · Open Canopy', 'Cell-segmented ram-air silhouette with line-set converging on a body.', MarkOpenCanopy],
+    ['03', '03 · Altimeter', 'Round instrument bezel with needle and major / minor ticks. Pure cockpit.', MarkAltimeter],
+    ['04', '04 · Monogram S+L', 'Bold geometric letterform in a squircle. Most ownable as an app icon.', MarkMonogram],
+    ['05', '05 · Tracking Triangle', 'Body in tracking position seen from above. Single bold delta shape.', MarkTracking],
+    ['06', '06 · Compass / Heading', 'North-arrow + bearing ring. Reads as navigation + altitude.', MarkCompass],
+  ];
+
+  return (
+    <DesignCanvas>
+      {directions.map(([id, title, sub, M]) => (
+        <MarkSection key={id} id={id} title={title} subtitle={sub} Mark={M} />
+      ))}
+
+      <DCSection id="appicon" title="App icon · 1024px squares" subtitle="How each candidate looks as the actual iOS / Android icon.">
+        {[
+          ['01 · Pin',      MarkCanopyPin],
+          ['02 · Open',     MarkOpenCanopy],
+          ['03 · Altimeter',MarkAltimeter],
+          ['04 · Monogram', MarkMonogram],
+          ['05 · Tracking', MarkTracking],
+          ['06 · Compass',  MarkCompass],
+        ].map(([label, M]) => (
+          <DCArtboard key={label} width={320} height={320} id={`icon-${label.split(' ')[0]}`} label={`icon · ${label}`}>
+            <div style={{
+              width: '100%', height: '100%',
+              background: 'linear-gradient(135deg, #0A1220 0%, #1A2A4A 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              borderRadius: 64,
+            }}>
+              <M size={180} primary={PRIMARY} secondary={DARK_BG_FG} />
+            </div>
+          </DCArtboard>
+        ))}
+      </DCSection>
+
+      <DCPostIt top={60} left={60} rotate={-3} width={260}>
+        <b>SkydiveLog · Logo explorations</b><br/>
+        6 directions — refined current + 5 alternates. Each shown as mark (dark + light), wordmark (dark + light), scale set, and app icon.<br/><br/>
+        Tell me which to lock in and I'll ship the final SVG / PNG set.
+      </DCPostIt>
+    </DesignCanvas>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SkydiveLog — Prototype</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="lib/tokens.css">
+<style>
+  html, body { margin: 0; padding: 0; min-height: 100vh;
+    background: radial-gradient(ellipse at center top, #1a2438 0%, #0a0e18 70%);
+    font-family: var(--font-ui); color: var(--fg);
+  }
+  .stage {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    gap: 60px; padding: 40px 24px; flex-wrap: wrap;
+  }
+  .phone {
+    position: relative;
+    width: 414px; height: 868px;
+    background: #000; border-radius: 52px;
+    padding: 12px; box-sizing: border-box;
+    box-shadow: 0 60px 120px rgba(0,0,0,0.5), 0 0 0 1.5px #2a2a2a, inset 0 0 0 1px #1a1a1a;
+  }
+  .phone-screen {
+    width: 100%; height: 100%; border-radius: 40px; overflow: hidden;
+    position: relative; background: var(--bg);
+  }
+  .phone-island {
+    position: absolute; top: 22px; left: 50%; transform: translateX(-50%);
+    width: 122px; height: 35px; border-radius: 20px; background: #000;
+    z-index: 100;
+  }
+  /* tappable navigation chrome */
+  .nav-panel {
+    width: 280px; color: #e8eef8; font-size: 13px;
+  }
+  .nav-panel h1 { font-size: 16px; font-weight: 700; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .nav-panel .sub { color: #8b9bb5; font-size: 12px; margin-bottom: 18px; font-family: var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; }
+  .nav-group { margin-bottom: 18px; }
+  .nav-group-title { font-family: var(--font-mono); font-size: 10px; color: #5a6b85; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+  .nav-btn {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; padding: 9px 12px; border-radius: 8px;
+    background: transparent; border: 1px solid transparent;
+    color: #c5d0e0; font-family: inherit; font-size: 13px;
+    cursor: pointer; text-align: left; margin-bottom: 2px;
+    transition: all .12s;
+  }
+  .nav-btn:hover { background: rgba(255,255,255,0.04); color: #fff; }
+  .nav-btn.active { background: rgba(74,158,255,0.12); color: #4A9EFF; border-color: rgba(74,158,255,0.3); }
+  .nav-btn .num { font-family: var(--font-mono); font-size: 10px; color: #5a6b85; min-width: 22px; }
+  .nav-btn.active .num { color: #4A9EFF; }
+  .hint {
+    color: #5a6b85; font-size: 11px; line-height: 1.5;
+    border-top: 1px solid #1f2d47; padding-top: 14px; margin-top: 20px;
+    font-family: var(--font-mono);
+  }
+  .topnav { position: absolute; top: 20px; left: 24px; right: 24px; display: flex; justify-content: space-between; z-index: 5; }
+  .topnav a {
+    color: #8b9bb5; font-family: var(--font-mono); font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.1em; text-decoration: none;
+  }
+  .topnav a:hover { color: #4A9EFF; }
+  @media (max-width: 800px) {
+    .stage { flex-direction: column; gap: 24px; padding: 24px 16px; }
+    .phone { transform: scale(0.85); transform-origin: top center; }
+  }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="topnav">
+  <a href="index.html">← All views</a>
+  <a href="Mobile Designs.html">Open design canvas →</a>
+</div>
+<div id="root"></div>
+<script type="text/babel" src="lib/skydive-ui.jsx"></script>
+<script type="text/babel" src="screens/onboarding.jsx"></script>
+<script type="text/babel" src="screens/log.jsx"></script>
+<script type="text/babel" src="screens/stats.jsx"></script>
+<script type="text/babel" src="screens/rest.jsx"></script>
+
+<script type="text/babel">
+const SCREENS = {
+  'splash':   { fn: () => <ScreenSplash />,     label: 'Splash',           group: 'Onboarding' },
+  'welcome':  { fn: () => <ScreenWelcome />,    label: 'Welcome',          group: 'Onboarding' },
+  'signin':   { fn: () => <ScreenSignIn />,     label: 'Sign in',          group: 'Onboarding' },
+  'create':   { fn: () => <ScreenCreate />,     label: 'Create account',   group: 'Onboarding' },
+  'paywall':  { fn: () => <ScreenPaywall />,    label: 'Paywall',          group: 'Onboarding' },
+  'forgot':   { fn: () => <ScreenForgot />,     label: 'Forgot password',  group: 'Onboarding' },
+
+  'log':      { fn: () => <JumpListA />,        label: 'Jump list',        group: 'Log' },
+  'log-b':    { fn: () => <JumpListB />,        label: '↳ data cards',     group: 'Log' },
+  'log-c':    { fn: () => <JumpListC />,        label: '↳ timeline',       group: 'Log' },
+  'filter':   { fn: () => <FilterSheet />,      label: 'Filter sheet',     group: 'Log' },
+  'detail':   { fn: () => <JumpDetailA />,      label: 'Jump detail',      group: 'Log' },
+  'detail-b': { fn: () => <JumpDetailB />,      label: '↳ instrument',     group: 'Log' },
+  'detail-c': { fn: () => <JumpDetailC />,      label: '↳ photo-led',      group: 'Log' },
+  'c1':       { fn: () => <CreateStep1 />,      label: 'Create · basics',  group: 'Log' },
+  'c2':       { fn: () => <CreateStep2 />,      label: 'Create · alt',     group: 'Log' },
+  'c3':       { fn: () => <CreateStep3 />,      label: 'Create · tags',    group: 'Log' },
+  'sig':      { fn: () => <CreateSig />,        label: 'Create · sign',    group: 'Log' },
+  'saved':    { fn: () => <ScreenSaved />,      label: 'Jump saved',       group: 'Log' },
+  'edit':     { fn: () => <EditJump />,         label: 'Edit jump',        group: 'Log' },
+  'favs':     { fn: () => <ScreenFavourites />, label: 'Favourites',       group: 'Log' },
+  'tags-b':   { fn: () => <ScreenTags />,       label: 'Browse by tag',    group: 'Log' },
+  'qr':       { fn: () => <ScreenQR />,         label: 'QR sign-off',      group: 'Log' },
+  'scan':     { fn: () => <ScreenScanSign />,   label: 'Scan & sign',      group: 'Log' },
+
+  'stats':    { fn: () => <StatsA />,           label: 'Stats overview',   group: 'Stats' },
+  'stats-b':  { fn: () => <StatsB />,           label: '↳ cockpit',        group: 'Stats' },
+  'stats-c':  { fn: () => <StatsC />,           label: '↳ photo story',    group: 'Stats' },
+  'jt':       { fn: () => <ScreenJumpsTime />,  label: 'Jumps over time',  group: 'Stats' },
+  'pie':      { fn: () => <ScreenTypePie />,    label: 'Type breakdown',   group: 'Stats' },
+  'dz':       { fn: () => <ScreenAircraftDZ />, label: 'Aircraft & DZs',   group: 'Stats' },
+
+  'gear':     { fn: () => <ScreenGearList />,   label: 'Gear list',        group: 'Gear' },
+  'gear-d':   { fn: () => <ScreenGearDetail />, label: 'Gear detail',      group: 'Gear' },
+  'gear-add': { fn: () => <ScreenAddGear />,    label: 'Add gear',         group: 'Gear' },
+
+  'certs':    { fn: () => <ScreenCerts />,      label: 'Certificates',     group: 'Certs' },
+  'cert-add': { fn: () => <ScreenAddCert />,    label: 'Add certificate',  group: 'Certs' },
+
+  'profile':  { fn: () => <ScreenProfile />,    label: 'Profile',          group: 'Profile' },
+  'ep':       { fn: () => <ScreenEditProfile />,label: 'Edit profile',     group: 'Profile' },
+  'set':      { fn: () => <ScreenSettings />,   label: 'Settings',         group: 'Profile' },
+  'sub':      { fn: () => <ScreenSubMgmt />,    label: 'Subscription',     group: 'Profile' },
+  'exp':      { fn: () => <ScreenExport />,     label: 'Export logbook',   group: 'Profile' },
+  'tags':     { fn: () => <ScreenManageTags />, label: 'Manage tags',      group: 'Profile' },
+  'notif':    { fn: () => <ScreenNotif />,      label: 'Notifications',    group: 'Profile' },
+};
+
+const GROUPS = ['Onboarding', 'Log', 'Stats', 'Gear', 'Certs', 'Profile'];
+
+function Prototype() {
+  // Persist screen via URL hash so refresh keeps your place
+  const [current, setCurrent] = React.useState(() => {
+    const h = location.hash.replace('#', '');
+    return SCREENS[h] ? h : 'welcome';
+  });
+  React.useEffect(() => {
+    location.hash = current;
+  }, [current]);
+
+  let n = 0;
+  for (const k in SCREENS) { n++; if (k === current) break; }
+
+  return (
+    <div className="stage">
+      <div className="nav-panel">
+        <h1>SkydiveLog · Prototype</h1>
+        <div className="sub">{n} / {Object.keys(SCREENS).length} · {SCREENS[current].group}</div>
+        {GROUPS.map(g => (
+          <div key={g} className="nav-group">
+            <div className="nav-group-title">{g}</div>
+            {Object.entries(SCREENS).filter(([_, s]) => s.group === g).map(([k, s], i) => (
+              <button key={k} className={'nav-btn ' + (k === current ? 'active' : '')} onClick={() => setCurrent(k)}>
+                <span className="num">{String(i+1).padStart(2,'0')}</span>
+                <span>{s.label}</span>
+              </button>
+            ))}
+          </div>
+        ))}
+        <div className="hint">
+          Tap any screen in the list to view it<br/>
+          on the device. Bottom tabs and back<br/>
+          chrome are visual mockups.
+        </div>
+      </div>
+      <div className="phone">
+        <div className="phone-island" />
+        <div className="phone-screen">
+          {SCREENS[current].fn()}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<Prototype />);
+</script>
+</body>
+</html>

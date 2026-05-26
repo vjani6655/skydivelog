@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SkydiveLog — Admin Designs</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="lib/tokens.css">
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; }
+  body { font-family: var(--font-ui); }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="lib/design-canvas.jsx"></script>
+<script type="text/babel" src="lib/skydive-ui.jsx"></script>
+<script type="text/babel" src="lib/admin-ui.jsx"></script>
+<script type="text/babel" src="screens/stats.jsx"></script>
+<script type="text/babel" src="admin/dashboard-users.jsx"></script>
+<script type="text/babel" src="admin/revenue-data.jsx"></script>
+<script type="text/babel" src="admin/pricing-discounts.jsx"></script>
+<script type="text/babel" src="admin/support-settings.jsx"></script>
+
+<script type="text/babel">
+const W = 1440;
+const BG = { background: '#06090F' };
+
+function App() {
+  return (
+    <DesignCanvas>
+      <DCSection id="dashboard" title="Dashboard" subtitle="Overview · KPIs · live activity">
+        <DCArtboard style={BG} width={W} height={960} id="dash" label="01 · Admin dashboard"><AdminDashboard /></DCArtboard>
+      </DCSection>
+
+      <DCSection id="users" title="Users · 3 screens" subtitle="List, detail, jump log">
+        <DCArtboard style={BG} width={W} height={960}  id="ulist"  label="02 · User list"><AdminUserList /></DCArtboard>
+        <DCArtboard style={BG} width={W} height={1100} id="udetail" label="03 · User detail"><AdminUserDetail /></DCArtboard>
+        <DCArtboard style={BG} width={W} height={1050} id="ujumps"  label="04 · User jump log (read-only)"><AdminUserJumps /></DCArtboard>
+      </DCSection>
+
+      <DCSection id="revenue" title="Revenue · 5 screens" subtitle="MRR, ARR, subs, plan price, discounts">
+        <DCArtboard style={BG} width={W} height={960}  id="rev"    label="05 · Revenue dashboard"><AdminRevenue /></DCArtboard>
+        <DCArtboard style={BG} width={W} height={960}  id="subs"   label="06 · Subscriptions list"><AdminSubscriptions /></DCArtboard>
+        <DCArtboard style={BG} width={W} height={1180} id="sub-ov" label="07 · Extend / revoke subscription"><AdminSubOverride /></DCArtboard>
+        <DCArtboard style={BG} width={W} height={1480} id="pricing" label="08 · Plans & pricing · edit price"><AdminPricing /></DCArtboard>
+        <DCArtboard style={BG} width={W} height={1180} id="disc"   label="09 · Discounts · coupons & manual"><AdminDiscounts /></DCArtboard>
+        <DCArtboard style={BG} width={W} height={1240} id="apply"  label="09b · Apply discount to user"><AdminApplyDiscount /></DCArtboard>
+      </DCSection>
+
+      <DCSection id="data" title="Data & platform · 3 screens" subtitle="Aggregates, flags, exports">
+        <DCArtboard style={BG} width={W} height={960}  id="plat"   label="10 · Platform stats"><AdminPlatform /></DCArtboard>
+        <DCArtboard style={BG} width={W} height={960}  id="flags"  label="11 · Flagged entries"><AdminFlagged /></DCArtboard>
+        <DCArtboard style={BG} width={W} height={960}  id="exp"    label="12 · Data export (CSV)"><AdminDataExport /></DCArtboard>
+      </DCSection>
+
+      <DCSection id="support" title="Support & settings · 3 screens" subtitle="Tickets, announcements, admin accounts">
+        <DCArtboard style={BG} width={W} height={1020} id="tx"    label="13 · Support tickets"><AdminTickets /></DCArtboard>
+        <DCArtboard style={BG} width={W} height={1100} id="ann"   label="14 · Announcements"><AdminAnnouncements /></DCArtboard>
+        <DCArtboard style={BG} width={W} height={1100} id="adm"   label="15 · Admin settings"><AdminSettings /></DCArtboard>
+      </DCSection>
+
+      <DCPostIt top={60} left={60} rotate={-3} width={260}>
+        <b>SkydiveLog · Admin</b><br/>
+        15 screens — dashboard, users (3), revenue + pricing + discounts (6), data (3), support &amp; settings (3).<br/><br/>
+        Admin can edit the global price (currently $5/yr) and apply discounts per user or via coupon codes.
+      </DCPostIt>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

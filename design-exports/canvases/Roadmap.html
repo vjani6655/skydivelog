@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SkydiveLog · Implementation Roadmap</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="lib/tokens.css">
+<style>
+  html, body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-ui); }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 80px 32px 120px; }
+
+  .eyebrow { font-family: var(--font-mono); font-size: 11px; color: var(--sky); letter-spacing: 0.16em; text-transform: uppercase; }
+  h1 { font-size: 56px; font-weight: 700; letter-spacing: -0.035em; line-height: 1.02; margin: 14px 0 18px; }
+  .lede { font-size: 18px; color: var(--fg-2); line-height: 1.55; max-width: 700px; margin: 0; }
+
+  .topnav { display: flex; align-items: center; gap: 14px; margin-bottom: 48px; }
+  .topnav .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; }
+  .topnav .crumb { font-family: var(--font-mono); font-size: 11px; color: var(--fg-3); letter-spacing: 0.1em; }
+  .topnav a { color: var(--fg-3); text-decoration: none; font-size: 13px; }
+  .topnav a:hover { color: var(--sky); }
+
+  .principles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 56px 0 80px; }
+  .principle { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 22px; }
+  .principle .icon { color: var(--sky); margin-bottom: 12px; }
+  .principle h4 { font-size: 15px; font-weight: 600; margin: 0 0 6px; }
+  .principle p { font-size: 13px; color: var(--fg-2); line-height: 1.55; margin: 0; }
+
+  .stage {
+    border-left: 2px solid var(--border);
+    padding: 0 0 56px 32px;
+    margin-left: 12px;
+    position: relative;
+  }
+  .stage::before {
+    content: ''; position: absolute; left: -10px; top: 4px;
+    width: 18px; height: 18px; border-radius: 9px;
+    background: var(--bg); border: 2px solid var(--sky);
+  }
+  .stage.done::before { background: var(--sky); }
+  .stage.foundation::before { border-color: var(--cyan); }
+  .stage-head { display: flex; gap: 14px; align-items: baseline; margin-bottom: 6px; }
+  .stage-num {
+    font-family: var(--font-mono); font-size: 11px; color: var(--sky);
+    letter-spacing: 0.12em; text-transform: uppercase;
+  }
+  .stage-time { font-family: var(--font-mono); font-size: 11px; color: var(--fg-3); letter-spacing: 0.08em; }
+  .stage h2 { font-size: 28px; font-weight: 700; letter-spacing: -0.025em; margin: 4px 0 12px; }
+  .stage .why { font-size: 15px; color: var(--fg-2); max-width: 640px; margin: 0 0 20px; line-height: 1.55; }
+  .stage-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 22px;
+  }
+  .stage-grid h5 {
+    font-family: var(--font-mono); font-size: 10px; color: var(--fg-3);
+    letter-spacing: 0.1em; text-transform: uppercase; margin: 0 0 10px;
+  }
+  .stage-grid ul { list-style: none; padding: 0; margin: 0; }
+  .stage-grid li {
+    font-size: 13px; color: var(--fg-2); padding: 6px 0;
+    border-bottom: 1px dashed var(--border);
+    display: flex; gap: 8px; align-items: flex-start;
+  }
+  .stage-grid li:last-child { border-bottom: 0; }
+  .stage-grid li .k {
+    font-family: var(--font-mono); font-size: 10px; color: var(--sky);
+    letter-spacing: 0.06em; min-width: 30px; padding-top: 1px;
+  }
+  .stage-grid li b { color: var(--fg); font-weight: 500; }
+  .ac {
+    margin-top: 14px; padding: 14px 18px;
+    background: var(--ok-bg); border: 1px solid var(--ok);
+    border-radius: 10px;
+  }
+  .ac .l {
+    font-family: var(--font-mono); font-size: 10px; color: var(--ok);
+    letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px;
+  }
+  .ac ul { list-style: none; padding: 0; margin: 0; }
+  .ac li {
+    font-size: 13px; color: var(--fg); padding: 4px 0; line-height: 1.5;
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .ac li::before {
+    content: '✓'; color: var(--ok); font-size: 14px; flex: 0 0 auto;
+  }
+
+  .handoff {
+    margin-top: 80px; padding: 32px;
+    background: linear-gradient(135deg, rgba(74,158,255,0.12), transparent);
+    border: 1px solid var(--sky); border-radius: 16px;
+  }
+  .handoff h3 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 10px; }
+  .handoff p { font-size: 14px; color: var(--fg-2); line-height: 1.6; margin: 0 0 14px; max-width: 720px; }
+  .handoff code {
+    font-family: var(--font-mono); font-size: 12px;
+    background: var(--bg); border: 1px solid var(--border);
+    color: var(--sky); padding: 2px 8px; border-radius: 5px;
+  }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 9px; border-radius: 5px;
+    font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .badge-foundation { background: rgba(52,210,214,0.12); color: var(--cyan); }
+  .badge-core       { background: var(--sky-bg); color: var(--sky); }
+  .badge-platform   { background: rgba(167,139,250,0.12); color: #A78BFA; }
+  .badge-polish     { background: var(--warn-bg); color: var(--warn); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topnav">
+    <a href="index.html" class="logo">
+      <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
+        <path d="M4 12a12 12 0 0124 0" stroke="#4A9EFF" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M4 12l12 7 12-7" stroke="#4A9EFF" stroke-width="2.2" stroke-linejoin="round"/>
+        <path d="M16 19v9" stroke="#E8EEF8" stroke-width="2.2" stroke-linecap="round"/>
+        <circle cx="16" cy="29" r="2" fill="#E8EEF8"/>
+      </svg>
+      SkydiveLog
+    </a>
+    <span class="crumb">/ ROADMAP</span>
+    <div style="flex: 1"></div>
+    <a href="index.html">← All designs</a>
+  </div>
+
+  <div class="eyebrow">Implementation · 6 stages</div>
+  <h1>Ship a vertical slice<br/>at the end of every stage.</h1>
+  <p class="lede">
+    69 designs is a menu, not a build order. Below is the sequence that minimises
+    rework, lets real jumpers test the app within 2&ndash;3 weeks of starting, and
+    keeps each stage independently shippable. Hand each stage to Claude Code as a
+    single scoped job.
+  </p>
+
+  <div class="principles">
+    <div class="principle">
+      <svg class="icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M12 3v18"/></svg>
+      <h4>Vertical slices, not horizontal</h4>
+      <p>Each stage ships a working UI + backend + auth slice. Never "build all the UIs, then wire up the data."</p>
+    </div>
+    <div class="principle">
+      <svg class="icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>
+      <h4>Real jumpers in stage 2</h4>
+      <p>By the end of stage 2 (≈ week 3) you should be able to put TestFlight builds in front of 5&ndash;10 friendly skydivers and let them log jumps.</p>
+    </div>
+    <div class="principle">
+      <svg class="icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-4 8-8 9-4-1-8-4-8-9V6l8-3z"/></svg>
+      <h4>Admin gates everything</h4>
+      <p>Stage 1's admin shell only needs price + feature flags + manual user creation. Build it minimal — flesh out in stage 5.</p>
+    </div>
+  </div>
+
+  <!-- STAGE 1 -->
+  <div class="stage foundation">
+    <div class="stage-head">
+      <span class="badge badge-foundation">FOUNDATION</span>
+      <span class="stage-num">Stage 01</span>
+      <span class="stage-time">≈ 1 week</span>
+    </div>
+    <h2>Foundation &mdash; auth, schema, billing</h2>
+    <p class="why">
+      Nothing else works without this. Get Supabase Postgres + auth + Stripe webhooks
+      working end-to-end with a single seed user. No real UI needed beyond a "you're logged
+      in" placeholder and the most basic admin pages.
+    </p>
+
+    <div class="stage-grid">
+      <div>
+        <h5>Build</h5>
+        <ul>
+          <li><span class="k">DB</span><span><b>Schema:</b> users, sessions, subscriptions, audit_log, app_settings (price lives here)</span></li>
+          <li><span class="k">API</span><span><b>Supabase auth:</b> email/password, JWT, password reset, magic-link option</span></li>
+          <li><span class="k">$$</span><span><b>Stripe:</b> webhook for invoice.paid / failed / refunded; subscription enforcement middleware</span></li>
+          <li><span class="k">RBAC</span><span><b>Roles:</b> user, support, finance, admin, super-admin (just super-admin needed live)</span></li>
+          <li><span class="k">UI</span><span>Mobile: Splash, Welcome, Sign in, Create, Forgot, Reset, Paywall (screens 01&ndash;06)</span></li>
+          <li><span class="k">UI</span><span>Web: Sign up, Payment, Success, Log in, Forgot, Reset (screens 08&ndash;13)</span></li>
+          <li><span class="k">UI</span><span>Admin: Login + bare Admin Settings (screen 15) for setting the price</span></li>
+        </ul>
+      </div>
+      <div>
+        <h5>Skip (for now)</h5>
+        <ul>
+          <li><span class="k">—</span><span>Push notifications · QR sign-off · gear / certs · stats · offline sync</span></li>
+          <li><span class="k">—</span><span>All marketing pages except a minimal homepage placeholder</span></li>
+          <li><span class="k">—</span><span>Admin discounts, flagged entries, announcements — comes later</span></li>
+        </ul>
+        <h5 style="margin-top: 20px">Reality check</h5>
+        <ul>
+          <li><span class="k">!</span><span>Use Stripe Sandbox + test cards. Don't take real money yet.</span></li>
+          <li><span class="k">!</span><span>Price &amp; trial length come from app_settings table — never hardcode <code>$5</code></span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="ac">
+      <div class="l">Stage 1 is done when</div>
+      <ul>
+        <li>A new user can sign up via web, get a 30-day trial, pay $5 via Stripe test card, and the subscription status reflects in Postgres within 5 sec.</li>
+        <li>That same user can sign in on iOS / Android and see a "you're logged in" stub.</li>
+        <li>A super-admin can sign in, change the price from $5 to any other value, and the next signup pays the new price.</li>
+        <li>Audit log records every price change, signup, payment, password reset.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- STAGE 2 -->
+  <div class="stage">
+    <div class="stage-head">
+      <span class="badge badge-core">CORE LOOP</span>
+      <span class="stage-num">Stage 02</span>
+      <span class="stage-time">≈ 2 weeks</span>
+    </div>
+    <h2>The mobile core loop &mdash; log a jump</h2>
+    <p class="why">
+      This is the entire value of the product. By the end of this stage, a real skydiver
+      can install the app, log a jump in under a minute, see it in their list, view its
+      detail, and sync it across devices. Nothing else matters as much as this.
+    </p>
+
+    <div class="stage-grid">
+      <div>
+        <h5>Build</h5>
+        <ul>
+          <li><span class="k">DB</span><span><b>Schema:</b> jumps (24 cols), tags, jump_tags, signatures, dropzones, aircraft</span></li>
+          <li><span class="k">API</span><span>CRUD jumps + soft delete + edit history; tag autocomplete; DZ / aircraft search</span></li>
+          <li><span class="k">UI</span><span>Jump list (screen 07A &mdash; default; B / C available behind Settings toggle)</span></li>
+          <li><span class="k">UI</span><span>Filter &amp; sort bottom sheet (screen 08)</span></li>
+          <li><span class="k">UI</span><span>Create jump 1 / 2 / 3 / signature (screens 10&ndash;13) + saved confirmation (14)</span></li>
+          <li><span class="k">UI</span><span>Jump detail A (15) + Edit (15)</span></li>
+          <li><span class="k">UI</span><span>Favourites (16), Browse by tag (17), Manage tags (34)</span></li>
+          <li><span class="k">UI</span><span>Profile (29) + Edit profile (30) — minimum needed to show "who you are"</span></li>
+        </ul>
+      </div>
+      <div>
+        <h5>Skip (for now)</h5>
+        <ul>
+          <li><span class="k">—</span><span>QR sign-off (18) + instructor scan (19) — defer to stage 6</span></li>
+          <li><span class="k">—</span><span>Jump detail B / C and Stats overview B / C variants — wait for user vote</span></li>
+          <li><span class="k">—</span><span>Offline sync — defer to stage 6; for now assume always-online</span></li>
+        </ul>
+        <h5 style="margin-top: 20px">Reality check</h5>
+        <ul>
+          <li><span class="k">!</span><span>TestFlight + internal Play Store track. Recruit 5–10 friendly jumpers from your home DZ now.</span></li>
+          <li><span class="k">!</span><span>Instrument log_jump events — you want to know how long it actually takes.</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="ac">
+      <div class="l">Stage 2 is done when</div>
+      <ul>
+        <li>A jumper can log a complete jump (signature included) in &lt; 60 seconds on a phone.</li>
+        <li>The same jump appears on their list within 2 seconds, on a second device within 10.</li>
+        <li>5+ external testers have logged at least one real jump and given feedback.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- STAGE 3 -->
+  <div class="stage">
+    <div class="stage-head">
+      <span class="badge badge-core">CORE LOOP</span>
+      <span class="stage-num">Stage 03</span>
+      <span class="stage-time">≈ 1.5 weeks</span>
+    </div>
+    <h2>Stats, gear, certificates</h2>
+    <p class="why">
+      Round out the mobile app. None of these are blockers for "can I log a jump" but they
+      turn the app from a logger into a logbook companion. Currency &amp; repack alerts are
+      the single most-requested feature from licensed jumpers.
+    </p>
+
+    <div class="stage-grid">
+      <div>
+        <h5>Build</h5>
+        <ul>
+          <li><span class="k">DB</span><span><b>Schema:</b> gear, gear_service_log, certificates, currency_window</span></li>
+          <li><span class="k">API</span><span>Materialised views for stats (avoid re-computing on every request)</span></li>
+          <li><span class="k">UI</span><span>Stats overview A (20), jumps over time (21), type pie (22), aircraft/DZ (23)</span></li>
+          <li><span class="k">UI</span><span>Gear list (24), Gear detail (25), Add gear (26)</span></li>
+          <li><span class="k">UI</span><span>Certificates list (27), Add cert (28)</span></li>
+          <li><span class="k">UI</span><span>Settings (31) — needed for units toggle, display-layout picker, currency thresholds</span></li>
+          <li><span class="k">UI</span><span>Subscription management on mobile (32)</span></li>
+        </ul>
+      </div>
+      <div>
+        <h5>Skip (for now)</h5>
+        <ul>
+          <li><span class="k">—</span><span>Notification settings (35) — wait for stage 6 push infra</span></li>
+          <li><span class="k">—</span><span>Document attachment for certs (PDFs) — out of scope until stage 6</span></li>
+        </ul>
+        <h5 style="margin-top: 20px">Reality check</h5>
+        <ul>
+          <li><span class="k">!</span><span>Currency rules vary by jurisdiction (APF / USPA / BPA / CSPA differ). Make thresholds admin-configurable.</span></li>
+          <li><span class="k">!</span><span>Gear service intervals are configurable too — Cypres 2 = 4yr, M2 = "lifetime," etc.</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="ac">
+      <div class="l">Stage 3 is done when</div>
+      <ul>
+        <li>Stats reflect every logged jump within 10 seconds of save.</li>
+        <li>A user with overdue gear sees a red badge on the gear list within 24h of due date passing.</li>
+        <li>Cert expiry stages (30d / 7d / day-of) trigger the right UI state.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- STAGE 4 -->
+  <div class="stage">
+    <div class="stage-head">
+      <span class="badge badge-platform">PLATFORM</span>
+      <span class="stage-num">Stage 04</span>
+      <span class="stage-time">≈ 1 week</span>
+    </div>
+    <h2>Public website + web logbook</h2>
+    <p class="why">
+      Now you have something worth marketing. Build the public site, the read-only web
+      logbook (for desktop review and instructor verification), and the basic account
+      area.
+    </p>
+
+    <div class="stage-grid">
+      <div>
+        <h5>Build</h5>
+        <ul>
+          <li><span class="k">UI</span><span>Marketing pages 01&ndash;07 (Homepage, Features, Pricing, About, Contact, Privacy, Terms)</span></li>
+          <li><span class="k">API</span><span>Live stats endpoint for homepage counter (cached 5 min)</span></li>
+          <li><span class="k">UI</span><span>Account dashboard (14), Logbook viewer (15) — read-only, search + filter + pagination</span></li>
+          <li><span class="k">UI</span><span>Account settings (16), Web subscription (17), Billing history (18), Delete account (19)</span></li>
+          <li><span class="k">API</span><span>Account deletion: soft-delete + 30-day grace window + final purge cron</span></li>
+        </ul>
+      </div>
+      <div>
+        <h5>Skip (for now)</h5>
+        <ul>
+          <li><span class="k">—</span><span>Blog / changelog / press kit — nice-to-haves, not in the 22-page brief</span></li>
+        </ul>
+        <h5 style="margin-top: 20px">Reality check</h5>
+        <ul>
+          <li><span class="k">!</span><span>Homepage stats need a job that aggregates platform totals nightly — don't query live tables.</span></li>
+          <li><span class="k">!</span><span>Open SEO + Plausible analytics. App Store / Play Store deep links work from the homepage.</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- STAGE 5 -->
+  <div class="stage">
+    <div class="stage-head">
+      <span class="badge badge-platform">PLATFORM</span>
+      <span class="stage-num">Stage 05</span>
+      <span class="stage-time">≈ 1.5 weeks</span>
+    </div>
+    <h2>The full admin panel</h2>
+    <p class="why">
+      You've been operating with stage-1's minimal admin. Now build it out so you can
+      actually support users, respond to billing issues, run promos, and watch the
+      business.
+    </p>
+
+    <div class="stage-grid">
+      <div>
+        <h5>Build</h5>
+        <ul>
+          <li><span class="k">UI</span><span>Dashboard (01) with KPIs + signups chart + live activity</span></li>
+          <li><span class="k">UI</span><span>Users (02), User detail (03), User jump log (04)</span></li>
+          <li><span class="k">UI</span><span>Revenue (05), Subscriptions (06), Manual override (07)</span></li>
+          <li><span class="k">UI</span><span>Plans &amp; pricing editor (08), Discounts (09), Apply discount (09b)</span></li>
+          <li><span class="k">UI</span><span>Platform stats (10), Flagged entries (11), Data export (12)</span></li>
+          <li><span class="k">UI</span><span>Support tickets (13), Announcements (14), Admin settings (15)</span></li>
+          <li><span class="k">API</span><span>Flagging algorithm: implausible FF, exit-alt &gt; ceiling, future-dated, duplicate #</span></li>
+        </ul>
+      </div>
+      <div>
+        <h5>Reality check</h5>
+        <ul>
+          <li><span class="k">!</span><span>Every admin action logs to <code>audit_log</code> with admin_id, reason, timestamp — non-negotiable.</span></li>
+          <li><span class="k">!</span><span>Discount + price changes flow through the same <code>app_settings</code> + <code>coupons</code> tables that stage 1 stubbed.</span></li>
+          <li><span class="k">!</span><span>Announcements need a push provider — sets you up for stage 6 if not already.</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- STAGE 6 -->
+  <div class="stage">
+    <div class="stage-head">
+      <span class="badge badge-polish">FINISH</span>
+      <span class="stage-num">Stage 06</span>
+      <span class="stage-time">≈ 1.5 weeks</span>
+    </div>
+    <h2>Finishing touches</h2>
+    <p class="why">
+      The features that turn this from "works" into "the one jumpers actually use." Save
+      these for last — each one is meaningful but none block launch. Ship them in any
+      order based on user feedback.
+    </p>
+
+    <div class="stage-grid">
+      <div>
+        <h5>Build</h5>
+        <ul>
+          <li><span class="k">PDF</span><span>Export logbook (33): APF / USPA / CSPA / BPA layouts, CSV, share sheet</span></li>
+          <li><span class="k">SYNC</span><span>Offline-first: local SQLite, sync queue with conflict resolution</span></li>
+          <li><span class="k">PUSH</span><span>FCM / APNs: currency, repack, cert expiry, instructor sign-off requests</span></li>
+          <li><span class="k">QR</span><span>QR sign-off (18) + instructor scan (19) — signed JWT, 5-min expiry</span></li>
+          <li><span class="k">UI</span><span>Notification settings (35), Hero-screen variants (B/C), Jump-detail variants (B/C), Stats variants (B/C)</span></li>
+        </ul>
+      </div>
+      <div>
+        <h5>Reality check</h5>
+        <ul>
+          <li><span class="k">!</span><span>Offline sync is hard. Budget 2&times; your estimate. Test on actual DZ wifi.</span></li>
+          <li><span class="k">!</span><span>QR sign-off is the only marketing-differentiating feature — ship it well or don't ship it.</span></li>
+          <li><span class="k">!</span><span>The 6 hero-screen variants are user-pickable in Settings → Display layout, per the design.</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="ac">
+      <div class="l">All six stages done when</div>
+      <ul>
+        <li>You can stop the dev work and the app keeps running for 30 days without your intervention.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- HANDOFF -->
+  <div class="handoff">
+    <h3>How to hand each stage to Claude Code</h3>
+    <p>
+      Open this roadmap on a stage. Then run the <b>Handoff to Claude Code</b>
+      flow from the project menu, scoped to that stage only — for example:
+    </p>
+    <pre style="background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 18px; font-family: var(--font-mono); font-size: 12px; color: var(--fg-2); line-height: 1.7; overflow-x: auto;">Build <b style="color: var(--sky)">stage 02</b> of the SkydiveLog roadmap. Scope:
+  • Mobile screens 07, 08, 10–17, 29–30 from Mobile Designs.html
+  • Postgres schema: jumps, tags, jump_tags, signatures, dropzones, aircraft
+  • Supabase RLS so users can only see their own data
+  • Don't touch QR sign-off, stats, gear, or offline sync — those are stage 3 / 6
+Acceptance: a TestFlight build a real jumper can log a jump in &lt; 60 seconds.</pre>
+    <p>
+      Then review the resulting PR per stage. Don't move on to the next stage until
+      the current one passes its acceptance criteria, has a deploy on a real environment,
+      and ideally has at least one user smoke-testing it.
+    </p>
+    <p style="margin-top: 18px;">
+      The full set of design files is in <code>index.html</code>. Every screen ID referenced here matches the labels on the design canvases.
+    </p>
+  </div>
+</div>
+</body>
+</html>

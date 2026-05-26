@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SkydiveLog — Mobile Designs</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="lib/tokens.css">
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; }
+  body { font-family: var(--font-ui); }
+  .frame-stage {
+    position: relative;
+    width: 390px;
+    height: 844px;
+  }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="lib/design-canvas.jsx"></script>
+<script type="text/babel" src="lib/skydive-ui.jsx"></script>
+<script type="text/babel" src="screens/onboarding.jsx"></script>
+<script type="text/babel" src="screens/log.jsx"></script>
+<script type="text/babel" src="screens/stats.jsx"></script>
+<script type="text/babel" src="screens/rest.jsx"></script>
+
+<script type="text/babel">
+const W = 390, H = 844;
+const ABP = { width: W, height: H };
+
+function App() {
+  return (
+    <DesignCanvas>
+      <DCSection id="onboarding" title="Onboarding" subtitle="First-run flow · 6 screens">
+        <DCArtboard {...ABP} id="splash"  label="01 · Splash"><ScreenSplash /></DCArtboard>
+        <DCArtboard {...ABP} id="welcome" label="02 · Welcome"><ScreenWelcome /></DCArtboard>
+        <DCArtboard {...ABP} id="signin"  label="03 · Sign in"><ScreenSignIn /></DCArtboard>
+        <DCArtboard {...ABP} id="create"  label="04 · Create account"><ScreenCreate /></DCArtboard>
+        <DCArtboard {...ABP} id="paywall" label="05 · Paywall · $5/yr"><ScreenPaywall /></DCArtboard>
+        <DCArtboard {...ABP} id="forgot"  label="06 · Forgot password"><ScreenForgot /></DCArtboard>
+      </DCSection>
+
+      <DCSection id="log-list" title="Log · Jump list (variations)" subtitle="3 directions for the home screen">
+        <DCArtboard {...ABP} id="list-a" label="07A · Compact rows"><JumpListA /></DCArtboard>
+        <DCArtboard {...ABP} id="list-b" label="07B · Data cards"><JumpListB /></DCArtboard>
+        <DCArtboard {...ABP} id="list-c" label="07C · Timeline"><JumpListC /></DCArtboard>
+      </DCSection>
+
+      <DCSection id="log-detail" title="Log · Jump detail (variations)" subtitle="3 takes on the read-mode view">
+        <DCArtboard {...ABP} id="detail-a" label="09A · Standard"><JumpDetailA /></DCArtboard>
+        <DCArtboard {...ABP} id="detail-b" label="09B · Instrument panel"><JumpDetailB /></DCArtboard>
+        <DCArtboard {...ABP} id="detail-c" label="09C · Photo-led"><JumpDetailC /></DCArtboard>
+      </DCSection>
+
+      <DCSection id="log-rest" title="Log · The rest" subtitle="Filter, create, signature, favourites, tags, sign-off">
+        <DCArtboard {...ABP} id="filter"  label="08 · Filter & sort sheet"><FilterSheet /></DCArtboard>
+        <DCArtboard {...ABP} id="create1" label="10 · Create · 1 basics"><CreateStep1 /></DCArtboard>
+        <DCArtboard {...ABP} id="create2" label="11 · Create · 2 altitudes"><CreateStep2 /></DCArtboard>
+        <DCArtboard {...ABP} id="create3" label="12 · Create · 3 tags & notes"><CreateStep3 /></DCArtboard>
+        <DCArtboard {...ABP} id="sig"     label="13 · Create · 4 signature"><CreateSig /></DCArtboard>
+        <DCArtboard {...ABP} id="saved"   label="14 · Jump saved"><ScreenSaved /></DCArtboard>
+        <DCArtboard {...ABP} id="edit"    label="15 · Edit jump"><EditJump /></DCArtboard>
+        <DCArtboard {...ABP} id="favs"    label="16 · Favourites"><ScreenFavourites /></DCArtboard>
+        <DCArtboard {...ABP} id="tags"    label="17 · Browse by tag"><ScreenTags /></DCArtboard>
+        <DCArtboard {...ABP} id="qr"      label="18 · QR sign-off"><ScreenQR /></DCArtboard>
+        <DCArtboard {...ABP} id="scan"    label="19 · Instructor scan & sign"><ScreenScanSign /></DCArtboard>
+      </DCSection>
+
+      <DCSection id="stats-overview" title="Stats · Overview (variations)" subtitle="3 takes on the stats home">
+        <DCArtboard {...ABP} id="stats-a" label="20A · Cards"><StatsA /></DCArtboard>
+        <DCArtboard {...ABP} id="stats-b" label="20B · Cockpit"><StatsB /></DCArtboard>
+        <DCArtboard {...ABP} id="stats-c" label="20C · Photo story"><StatsC /></DCArtboard>
+      </DCSection>
+
+      <DCSection id="stats-rest" title="Stats · Detail views">
+        <DCArtboard {...ABP} id="stats-time" label="21 · Jumps over time"><ScreenJumpsTime /></DCArtboard>
+        <DCArtboard {...ABP} id="stats-pie"  label="22 · Type breakdown"><ScreenTypePie /></DCArtboard>
+        <DCArtboard {...ABP} id="stats-dz"   label="23 · Aircraft & DZs"><ScreenAircraftDZ /></DCArtboard>
+      </DCSection>
+
+      <DCSection id="gear" title="Gear" subtitle="Rigs, canopies, AADs with service tracking">
+        <DCArtboard {...ABP} id="gear-list"   label="24 · Gear list"><ScreenGearList /></DCArtboard>
+        <DCArtboard {...ABP} id="gear-detail" label="25 · Gear detail"><ScreenGearDetail /></DCArtboard>
+        <DCArtboard {...ABP} id="gear-add"    label="26 · Add gear"><ScreenAddGear /></DCArtboard>
+      </DCSection>
+
+      <DCSection id="certs" title="Certificates" subtitle="Licences, ratings, medicals — with expiry">
+        <DCArtboard {...ABP} id="cert-list" label="27 · Certificates"><ScreenCerts /></DCArtboard>
+        <DCArtboard {...ABP} id="cert-add"  label="28 · Add certificate"><ScreenAddCert /></DCArtboard>
+      </DCSection>
+
+      <DCSection id="profile" title="Profile" subtitle="Account, settings, subscription, export">
+        <DCArtboard {...ABP} id="profile"     label="29 · Profile"><ScreenProfile /></DCArtboard>
+        <DCArtboard {...ABP} id="edit-profile" label="30 · Edit profile"><ScreenEditProfile /></DCArtboard>
+        <DCArtboard {...ABP} id="settings"    label="31 · Settings"><ScreenSettings /></DCArtboard>
+        <DCArtboard {...ABP} id="sub"         label="32 · Subscription"><ScreenSubMgmt /></DCArtboard>
+        <DCArtboard {...ABP} id="export"      label="33 · Export logbook"><ScreenExport /></DCArtboard>
+        <DCArtboard {...ABP} id="manage-tags" label="34 · Manage tags"><ScreenManageTags /></DCArtboard>
+        <DCArtboard {...ABP} id="notif"       label="35 · Notification settings"><ScreenNotif /></DCArtboard>
+      </DCSection>
+
+      <DCPostIt top={60} left={60} rotate={-3} width={220}>
+        <b>SkydiveLog · Mobile</b><br/>
+        v1 · 34 screens with 6 variations on hero screens (jump list, jump detail, stats overview).<br/><br/>
+        <b>Direction:</b> aviation-instrument. JetBrains Mono for telemetry, Inter Tight for UI, sky-blue accent on deep navy.
+      </DCPostIt>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

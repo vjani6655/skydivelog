@@ -1,0 +1,24 @@
+# environment
+.env
+.env.local
+.env.*.local
+
+# dependencies
+node_modules
+
+# build outputs
+.next
+dist
+out
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# design tool artifacts
+Logs*/
+Logs (*)/
+
+# AI tool config
+.claude/

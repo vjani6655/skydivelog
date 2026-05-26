@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SkydiveLog · Design</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="lib/tokens.css">
+<style>
+  html, body { margin: 0; min-height: 100vh; background: #0A1220; color: var(--fg); font-family: var(--font-ui); }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 80px 32px 120px; }
+  .eyebrow {
+    font-family: var(--font-mono); font-size: 11px; color: var(--sky);
+    letter-spacing: 0.16em; text-transform: uppercase;
+  }
+  h1 { font-size: 56px; font-weight: 700; letter-spacing: -0.035em; line-height: 1.02; margin: 14px 0 18px; }
+  .lede { font-size: 18px; color: var(--fg-2); max-width: 580px; line-height: 1.5; }
+
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; margin-top: 56px; }
+  @media (max-width: 720px) { .cards { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+    padding: 28px; text-decoration: none; color: inherit; display: block;
+    transition: all .16s; position: relative; overflow: hidden;
+  }
+  .card:hover { border-color: var(--sky); background: var(--surface-2); }
+  .card .num { font-family: var(--font-mono); font-size: 10px; color: var(--fg-3); letter-spacing: 0.1em; text-transform: uppercase; }
+  .card h3 { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; margin: 8px 0 8px; }
+  .card p { color: var(--fg-2); font-size: 14px; line-height: 1.55; margin: 0 0 18px; }
+  .card .go { color: var(--sky); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; display: flex; align-items: center; gap: 6px; }
+  .card .badge {
+    position: absolute; top: 28px; right: 28px;
+    font-family: var(--font-mono); font-size: 10px; padding: 4px 8px;
+    border-radius: 5px; background: var(--sky-bg); color: var(--sky); letter-spacing: 0.06em;
+  }
+  .meta {
+    margin-top: 56px; padding: 24px; border-top: 1px solid var(--border);
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px;
+  }
+  @media (max-width: 720px) { .meta { grid-template-columns: repeat(2,1fr); } }
+  .meta div .l { font-family: var(--font-mono); font-size: 10px; color: var(--fg-3); letter-spacing: 0.1em; text-transform: uppercase; }
+  .meta div .v { font-family: var(--font-mono); font-size: 18px; margin-top: 4px; }
+  .logo { display: flex; align-items: center; gap: 10px; margin-bottom: 60px; }
+  .logo svg { display: block; }
+  .logo-text { font-weight: 700; font-size: 18px; letter-spacing: -0.01em; }
+  .pal { display: flex; gap: 6px; margin-top: 20px; }
+  .pal span { width: 36px; height: 36px; border-radius: 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo">
+    <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+      <path d="M4 12a12 12 0 0124 0" stroke="#4A9EFF" stroke-width="2.2" stroke-linecap="round"/>
+      <path d="M4 12l12 7 12-7" stroke="#4A9EFF" stroke-width="2.2" stroke-linejoin="round"/>
+      <path d="M16 19v9" stroke="#E8EEF8" stroke-width="2.2" stroke-linecap="round"/>
+      <circle cx="16" cy="29" r="2" fill="#E8EEF8"/>
+    </svg>
+    <span class="logo-text">SkydiveLog</span>
+  </div>
+
+  <div class="eyebrow">Mobile + Web + Admin · v1</div>
+  <h1>69 designs.<br/>Three surfaces.<br/>Built for jumpers.</h1>
+  <p class="lede">
+    High-fidelity SkydiveLog screens covering every surface — mobile app
+    (iOS + Android), marketing &amp; account website, and the internal admin panel.
+    Same design system across all three: JetBrains Mono for telemetry, Inter
+    Tight for UI, sky-blue accent on deep navy.
+  </p>
+
+  <div class="pal">
+    <span style="background:#0A1220" title="bg"></span>
+    <span style="background:#121C2E" title="surface"></span>
+    <span style="background:#1A2740" title="surface-2"></span>
+    <span style="background:#4A9EFF" title="sky"></span>
+    <span style="background:#34D2D6" title="cyan"></span>
+    <span style="background:#FFB74A" title="warn"></span>
+    <span style="background:#4ADE80" title="ok"></span>
+    <span style="background:#FF6B6B" title="danger"></span>
+  </div>
+
+  <div class="cards">
+    <a class="card" href="Roadmap.html" style="grid-column: 1 / -1; border-color: var(--sky); background: linear-gradient(135deg, rgba(74,158,255,0.12), transparent);">
+      <div class="badge">build plan</div>
+      <div class="num">00 · Implementation roadmap</div>
+      <h3>Ship the app in 6 stages.</h3>
+      <p>How to break 69 designs into shippable phases — foundation, mobile core loop, stats/gear/certs, public website, full admin, finishing touches. Each stage is a scoped Claude Code handoff with acceptance criteria.</p>
+      <div class="go">Open roadmap →</div>
+    </a>
+    <a class="card" href="Mobile Designs.html">
+      <div class="num">01 · Mobile · canvas</div>
+      <h3>Mobile design canvas</h3>
+      <p>All 34 screens laid out side-by-side, grouped by tab. Includes 3 variations each on Jump List, Jump Detail, and Stats Overview (now user-selectable in Settings).</p>
+      <div class="go">Open mobile canvas →</div>
+    </a>
+    <a class="card" href="Prototype.html">
+      <div class="badge">interactive</div>
+      <div class="num">02 · Mobile · prototype</div>
+      <h3>Tappable prototype</h3>
+      <p>Single phone frame with a screen index. Click any entry to swap the device's display. Useful for full-resolution review and walking flows in order.</p>
+      <div class="go">Open prototype →</div>
+    </a>
+    <a class="card" href="Website Designs.html">
+      <div class="num">03 · Website · canvas</div>
+      <h3>Website &amp; account</h3>
+      <p>Marketing site (7), auth flow (6) and logged-in account area (6). Read-only web logbook viewer, billing history, Stripe payment, delete account flow.</p>
+      <div class="go">Open website canvas →</div>
+    </a>
+    <a class="card" href="Admin Designs.html">
+      <div class="badge">new</div>
+      <div class="num">04 · Admin · canvas</div>
+      <h3>Admin panel</h3>
+      <p>13 internal screens — dashboard (MRR, churn, signups), users + jump log, revenue with renewal forecast, subscriptions with manual override, flagged entries, data export, support inbox, announcements, admin roles &amp; audit log.</p>
+      <div class="go">Open admin canvas →</div>
+    </a>
+  </div>
+
+  <div class="meta">
+    <div><div class="l">Mobile</div><div class="v">34 + 6</div></div>
+    <div><div class="l">Website</div><div class="v">19</div></div>
+    <div><div class="l">Admin</div><div class="v">16</div></div>
+    <div><div class="l">Status</div><div class="v" style="color:#4ADE80">Complete</div></div>
+  </div>
+</div>
+</body>
+</html>

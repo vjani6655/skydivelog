@@ -1,0 +1,240 @@
+import { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+  ScrollView,
+} from 'react-native';
+import { router, useNavigation } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { supabase } from '@/lib/supabase';
+import { colors, spacing, radii } from '@/constants/tokens';
+
+export default function SignInScreen() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const navigation = useNavigation();
+  const canGoBack = navigation.canGoBack();
+
+  const handleSignIn = async () => {
+    if (!email || !password) return;
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    setLoading(false);
+    if (error) {
+      Alert.alert('Sign in failed', error.message);
+    } else {
+      router.replace('/(tabs)/log');
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Back button — only when there's somewhere to go */}
+          {canGoBack && (
+            <TouchableOpacity style={styles.back} onPress={() => router.back()} activeOpacity={0.7}>
+              <Ionicons name="chevron-back" size={22} color={colors.fg} />
+            </TouchableOpacity>
+          )}
+
+          <View style={styles.header}>
+            <Text style={styles.title}>Welcome back.</Text>
+            <Text style={styles.subtitle}>Sign in to keep your logbook in sync.</Text>
+          </View>
+
+          <View style={styles.form}>
+            {/* Email */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>EMAIL</Text>
+              <View style={styles.inputRow}>
+                <Ionicons name="mail-outline" size={16} color={colors.fg3} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="erin@example.com"
+                  placeholderTextColor={colors.fg4}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  autoComplete="email"
+                  value={email}
+                  onChangeText={setEmail}
+                />
+              </View>
+            </View>
+
+            {/* Password */}
+            <View style={styles.inputGroup}>
+              <View style={styles.labelRow}>
+                <Text style={styles.label}>PASSWORD</Text>
+                <TouchableOpacity onPress={() => router.push('/forgot-password')} activeOpacity={0.7}>
+                  <Text style={styles.forgotLink}>Forgot password?</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.inputRow}>
+                <Ionicons name="lock-closed-outline" size={16} color={colors.fg3} style={styles.inputIcon} />
+                <TextInput
+                  style={[styles.input, styles.inputFlex]}
+                  placeholder="••••••••••"
+                  placeholderTextColor={colors.fg4}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  value={password}
+                  onChangeText={setPassword}
+                />
+                <TouchableOpacity onPress={() => setShowPassword(v => !v)} activeOpacity={0.7} style={styles.eyeBtn}>
+                  <Ionicons
+                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={18}
+                    color={colors.fg3}
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.primaryButton, loading && styles.buttonDisabled]}
+            onPress={handleSignIn}
+            disabled={loading}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.primaryButtonText}>{loading ? 'Signing in…' : 'Sign in'}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => router.push('/create-account')} activeOpacity={0.7} style={styles.footerLink}>
+            <Text style={styles.footerText}>
+              New here?{' '}
+              <Text style={styles.footerLinkText}>Create account</Text>
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.bg },
+  flex: { flex: 1 },
+  container: {
+    flexGrow: 1,
+    paddingHorizontal: spacing[6],
+    paddingTop: spacing[2],
+    paddingBottom: spacing[8],
+  },
+  back: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    marginBottom: spacing[6],
+  },
+  header: {
+    marginBottom: spacing[8],
+  },
+  title: {
+    fontFamily: 'InterTight-Bold',
+    fontSize: 32,
+    letterSpacing: -0.6,
+    color: colors.fg,
+    marginBottom: spacing[2],
+  },
+  subtitle: {
+    fontFamily: 'InterTight-Regular',
+    fontSize: 15,
+    color: colors.fg2,
+    lineHeight: 22,
+  },
+  form: {
+    gap: spacing[4],
+    marginBottom: spacing[8],
+  },
+  inputGroup: {
+    gap: spacing[1.5],
+  },
+  label: {
+    fontFamily: 'JetBrainsMono-Regular',
+    fontSize: 10,
+    letterSpacing: 1.2,
+    color: colors.fg3,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  forgotLink: {
+    fontFamily: 'InterTight-Medium',
+    fontSize: 13,
+    color: colors.sky,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing[3],
+    height: 48,
+  },
+  inputIcon: {
+    marginRight: spacing[2],
+  },
+  input: {
+    flex: 1,
+    fontFamily: 'InterTight-Regular',
+    fontSize: 15,
+    color: colors.fg,
+  },
+  inputFlex: {
+    flex: 1,
+  },
+  eyeBtn: {
+    paddingLeft: spacing[2],
+  },
+  primaryButton: {
+    backgroundColor: colors.sky,
+    borderRadius: radii.lg,
+    paddingVertical: spacing[4],
+    alignItems: 'center',
+    marginBottom: spacing[6],
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  primaryButtonText: {
+    fontFamily: 'InterTight-SemiBold',
+    fontSize: 16,
+    color: colors.onSky,
+  },
+  footerLink: {
+    alignItems: 'center',
+  },
+  footerText: {
+    fontFamily: 'InterTight-Regular',
+    fontSize: 14,
+    color: colors.fg2,
+  },
+  footerLinkText: {
+    fontFamily: 'InterTight-SemiBold',
+    color: colors.sky,
+  },
+});

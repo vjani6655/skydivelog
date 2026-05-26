@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SkydiveLog — Website Designs</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="lib/tokens.css">
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; }
+  body { font-family: var(--font-ui); }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="lib/design-canvas.jsx"></script>
+<script type="text/babel" src="lib/skydive-ui.jsx"></script>
+<script type="text/babel" src="lib/web-ui.jsx"></script>
+<script type="text/babel" src="screens/stats.jsx"></script>
+<script type="text/babel" src="web/marketing.jsx"></script>
+<script type="text/babel" src="web/auth.jsx"></script>
+<script type="text/babel" src="web/account.jsx"></script>
+
+<script type="text/babel">
+const W = 1280;
+const BG = { background: '#0A1220' };
+
+function App() {
+  return (
+    <DesignCanvas>
+      <DCSection id="marketing" title="Marketing · 7 pages" subtitle="Hero stats counter, features, pricing, story, contact, legal">
+        <DCArtboard style={BG} width={W} height={2900} id="home"     label="01 · Homepage"><PageHome /></DCArtboard>
+        <DCArtboard style={BG} width={W} height={2700} id="features" label="02 · Features"><PageFeatures /></DCArtboard>
+        <DCArtboard style={BG} width={W} height={1820} id="pricing"  label="03 · Pricing"><PagePricing /></DCArtboard>
+        <DCArtboard style={BG} width={W} height={1340} id="about"    label="04 · About"><PageAbout /></DCArtboard>
+        <DCArtboard style={BG} width={W} height={1100} id="contact"  label="05 · Contact"><PageContact /></DCArtboard>
+        <DCArtboard style={BG} width={W} height={1450} id="privacy"  label="06 · Privacy"><PageLegal kind="privacy" /></DCArtboard>
+        <DCArtboard style={BG} width={W} height={1450} id="terms"    label="07 · Terms of service"><PageLegal kind="terms" /></DCArtboard>
+      </DCSection>
+
+      <DCSection id="auth" title="Auth · 6 pages" subtitle="Sign up, Stripe payment, success, log in, forgot / reset">
+        <DCArtboard style={BG} width={W} height={900} id="signup"   label="08 · Sign up"><PageWebSignUp /></DCArtboard>
+        <DCArtboard style={BG} width={W} height={900} id="payment"  label="09 · Payment (Stripe)"><PagePayment /></DCArtboard>
+        <DCArtboard style={BG} width={W} height={900} id="success"  label="10 · Sign-up success"><PageSignUpSuccess /></DCArtboard>
+        <DCArtboard style={BG} width={W} height={900} id="login"    label="11 · Log in"><PageWebLogin /></DCArtboard>
+        <DCArtboard style={BG} width={W} height={900} id="forgot"   label="12 · Forgot password"><PageWebForgot /></DCArtboard>
+        <DCArtboard style={BG} width={W} height={900} id="reset"    label="13 · Reset password"><PageWebReset /></DCArtboard>
+      </DCSection>
+
+      <DCSection id="account" title="Account · 6 pages" subtitle="Logged-in surface · sidebar layout">
+        <DCArtboard style={BG} width={W} height={1180} id="dash"     label="14 · Dashboard"><PageDashboard /></DCArtboard>
+        <DCArtboard style={BG} width={W} height={1100} id="logbook"  label="15 · Logbook viewer"><PageLogbookViewer /></DCArtboard>
+        <DCArtboard style={BG} width={W} height={1280} id="settings" label="16 · Account settings"><PageAccountSettings /></DCArtboard>
+        <DCArtboard style={BG} width={W} height={900}  id="websub"   label="17 · Subscription"><PageWebSubMgmt /></DCArtboard>
+        <DCArtboard style={BG} width={W} height={900}  id="bill"     label="18 · Billing history"><PageBilling /></DCArtboard>
+        <DCArtboard style={BG} width={W} height={1100} id="delete"   label="19 · Delete account"><PageDelete /></DCArtboard>
+      </DCSection>
+
+      <DCPostIt top={60} left={60} rotate={-3} width={240}>
+        <b>SkydiveLog · Website</b><br/>
+        19 pages — marketing (7) + auth (6) + account (6).<br/><br/>
+        Same dark-navy + JetBrains-Mono system as the mobile app, scaled up. The web logbook is read-only — the source of truth lives on the phone.
+      </DCPostIt>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+/**
+ * BrandMark — the Jump Logs parachute logo mark.
+ * Source: brand/svg/mark-on-dark.svg  (dark-background version with rib lines)
+ * Use `variant="simple"` to omit the rib lines (brand/svg/mark-simple-on-dark.svg)
+ */
+export default function BrandMark({
+  size = 24,
+  variant = "full",
+}: {
+  size?: number
+  variant?: "full" | "simple"
+}) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 64 64"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      {/* Canopy */}
+      <path
+        d="M6 28 C 8 18, 14 14, 22 14 L 42 14 C 50 14, 56 18, 58 28 L 50 26 L 42 28 L 32 26 L 22 28 L 14 26 Z"
+        fill="#4A9EFF"
+        stroke="#4A9EFF"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      {/* Rib lines (full variant only) */}
+      {variant === "full" && (
+        <>
+          <line x1="14" y1="26" x2="16" y2="14" stroke="#E8EEF8" strokeOpacity="0.35" strokeWidth="1.5" />
+          <line x1="22" y1="28" x2="24" y2="14" stroke="#E8EEF8" strokeOpacity="0.35" strokeWidth="1.5" />
+          <line x1="32" y1="26" x2="32" y2="14" stroke="#E8EEF8" strokeOpacity="0.35" strokeWidth="1.5" />
+          <line x1="42" y1="28" x2="40" y2="14" stroke="#E8EEF8" strokeOpacity="0.35" strokeWidth="1.5" />
+          <line x1="50" y1="26" x2="48" y2="14" stroke="#E8EEF8" strokeOpacity="0.35" strokeWidth="1.5" />
+        </>
+      )}
+      {/* Suspension lines */}
+      <path
+        d="M10 28 L 32 50 L 54 28"
+        stroke="#4A9EFF"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* Container */}
+      <rect x="29" y="48" width="6" height="10" rx="3" fill="#E8EEF8" />
+    </svg>
+  )
+}
