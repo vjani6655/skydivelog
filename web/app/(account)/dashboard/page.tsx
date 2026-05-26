@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { cookies } from "next/headers"
 import { fmtDate } from "@/lib/display"
 import Link from "next/link"
-import { AlertTriangle, ChevronRight, Download, BookOpen, Package, Award } from "lucide-react"
+import { Download, BookOpen, Package, Award } from "lucide-react"
 
 function fmtFreefall(seconds: number) {
   const h = Math.floor(seconds / 3600)
@@ -177,7 +177,7 @@ export default async function DashboardPage({
   const isPro = sub?.status === "active"
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="px-12 py-8 max-w-5xl">
       {/* Header */}
       <div className="mb-6">
         <p className="text-overline font-semibold tracking-widest uppercase text-fg-4 mb-2">Dashboard</p>
@@ -198,35 +198,37 @@ export default async function DashboardPage({
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <div className="bg-surface border border-border rounded-lg p-4">
-          <p className="text-overline font-semibold tracking-widest uppercase text-fg-4 mb-2">Total jumps</p>
-          <p className="text-4xl font-bold text-fg">{jumpCount}</p>
-          {recent30 > 0 && (
-            <p className="text-xs text-fg-3 mt-1">+{recent30} / 30D</p>
+        <div className="bg-surface border border-border rounded-xl p-[22px]">
+          <p className="font-mono text-[10px] font-semibold tracking-widest uppercase text-fg-3">Total jumps</p>
+          <p className="font-mono text-[30px] font-medium leading-none text-fg mt-2">{jumpCount}</p>
+          {recent30 > 0 ? (
+            <p className="text-xs text-ok mt-[6px]">+{recent30} / 30D</p>
+          ) : (
+            <p className="text-xs text-fg-4 mt-[6px]">&nbsp;</p>
           )}
         </div>
-        <div className="bg-surface border border-border rounded-lg p-4">
-          <p className="text-overline font-semibold tracking-widest uppercase text-fg-4 mb-2">Freefall</p>
-          <p className="text-4xl font-bold text-fg">{jumpCount > 0 ? fmtFreefall(totalFreefallSec) : "—"}</p>
-          {jumpCount > 0 && (
-            <p className="text-xs text-fg-3 mt-1">
-              avg {Math.round(totalFreefallSec / jumpCount)}s / jump
-            </p>
+        <div className="bg-surface border border-border rounded-xl p-[22px]">
+          <p className="font-mono text-[10px] font-semibold tracking-widest uppercase text-fg-3">Freefall</p>
+          <p className="font-mono text-[30px] font-medium leading-none text-fg mt-2">{jumpCount > 0 ? fmtFreefall(totalFreefallSec) : "—"}</p>
+          {jumpCount > 0 ? (
+            <p className="text-xs text-fg-3 mt-[6px]">avg {Math.round(totalFreefallSec / jumpCount)}s / jump</p>
+          ) : (
+            <p className="text-xs text-fg-4 mt-[6px]">&nbsp;</p>
           )}
         </div>
-        <div className="bg-surface border border-border rounded-lg p-4">
-          <p className="text-overline font-semibold tracking-widest uppercase text-fg-4 mb-2">Currency</p>
-          <p className="text-4xl font-bold text-fg">
+        <div className="bg-surface border border-border rounded-xl p-[22px]">
+          <p className="font-mono text-[10px] font-semibold tracking-widest uppercase text-fg-3">Currency</p>
+          <p className="font-mono text-[30px] font-medium leading-none text-fg mt-2">
             {currencyDays !== null ? `${currencyDays}D` : "—"}
           </p>
-          <p className={`text-xs mt-1 ${isCurrent ? "text-ok" : currencyDays !== null ? "text-warn" : "text-fg-3"}`}>
-            {currencyDays === null ? "No jumps yet" : isCurrent ? "Current" : "Lapsed"}
+          <p className={`text-xs mt-[6px] ${isCurrent ? "text-ok" : currencyDays !== null ? "text-warn" : "text-fg-4"}`}>
+            {currencyDays === null ? "No jumps yet" : isCurrent ? "Current" : `lapses in ${30 - currencyDays}d`}
           </p>
         </div>
-        <div className="bg-surface border border-border rounded-lg p-4">
-          <p className="text-overline font-semibold tracking-widest uppercase text-fg-4 mb-2">Gear due</p>
-          <p className="text-4xl font-bold text-fg">{needsAttention.length}</p>
-          <p className="text-xs text-fg-3 mt-1">
+        <div className="bg-surface border border-border rounded-xl p-[22px]">
+          <p className="font-mono text-[10px] font-semibold tracking-widest uppercase text-fg-3">Gear due</p>
+          <p className="font-mono text-[30px] font-medium leading-none text-fg mt-2">{needsAttention.length}</p>
+          <p className="text-xs text-fg-3 mt-[6px]">
             {needsAttention.length === 0 ? "All clear" : "repack & service"}
           </p>
         </div>
@@ -235,22 +237,24 @@ export default async function DashboardPage({
       {/* Activity chart + recent */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
         {/* Chart */}
-        <div className="lg:col-span-2 bg-surface border border-border rounded-lg p-5">
-          <div className="flex items-center justify-between mb-4">
+        <div className="lg:col-span-2 bg-surface border border-border rounded-[14px] p-6">
+          <div className="flex items-center justify-between mb-5">
             <div>
-              <p className="text-overline font-semibold tracking-widest uppercase text-fg-4">
+              <p className="font-mono text-[10px] font-semibold tracking-widest uppercase text-fg-3">
                 {period === "year" ? `${now.getFullYear()}` : period === "all" ? "All time" : "Last 12 months"}
               </p>
-              <p className="text-sm font-semibold text-fg mt-0.5">{chartTotal} jumps</p>
+              <p className="font-mono text-2xl font-medium text-fg mt-1">
+                {chartTotal} <span className="text-sm font-normal text-fg-3">jumps</span>
+              </p>
             </div>
             {/* Period toggle */}
-            <div className="flex items-center gap-0.5 border border-border rounded-sm overflow-hidden">
+            <div className="flex items-center bg-surface-2 rounded-lg p-[3px]">
               {(["month", "year", "all"] as const).map((p) => (
                 <Link
                   key={p}
                   href={`/dashboard?period=${p}`}
-                  className={`px-3 py-1 text-xs font-medium capitalize transition-colors ${
-                    period === p ? "bg-sky/15 text-sky" : "text-fg-3 hover:text-fg hover:bg-surface-2"
+                  className={`px-3 py-[6px] text-xs font-medium rounded-md transition-colors ${
+                    period === p ? "bg-surface-3 text-fg" : "text-fg-3 hover:text-fg"
                   }`}
                 >
                   {p === "month" ? "Month" : p === "year" ? "Year" : "All"}
@@ -258,30 +262,30 @@ export default async function DashboardPage({
               ))}
             </div>
           </div>
-          <div className="flex items-end gap-1.5 h-20">
+          <div className="flex items-end gap-1.5 h-[120px]">
             {chartBars.map(({ label, count }, i) => (
               <div key={i} className="flex-1 flex flex-col items-center gap-1">
                 <div
-                  className="w-full bg-sky/30 hover:bg-sky/50 rounded-sm transition-colors min-h-[2px]"
-                  style={{ height: `${Math.max((count / maxBar) * 72, count > 0 ? 4 : 2)}px` }}
+                  className="w-full bg-sky/25 hover:bg-sky/45 rounded-sm transition-colors min-h-[2px]"
+                  style={{ height: `${Math.max((count / maxBar) * 100, count > 0 ? 4 : 2)}px` }}
                   title={`${count} jumps`}
                 />
-                <span className="text-micro text-fg-4">{label}</span>
+                <span className="font-mono text-[9px] text-fg-4">{label}</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* Recent jumps */}
-        <div className="bg-surface border border-border rounded-lg">
-          <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-            <p className="text-overline font-semibold tracking-widest uppercase text-fg-4">Recent</p>
-            <Link href="/logbook" className="text-xs text-sky hover:text-sky/80">
+        <div className="bg-surface border border-border rounded-[14px]">
+          <div className="px-6 pt-6 pb-[14px] flex items-center justify-between">
+            <p className="font-mono text-[10px] font-semibold tracking-widest uppercase text-fg-3">Recent</p>
+            <Link href="/logbook" className="text-xs text-sky hover:text-sky/80 font-medium">
               View all →
             </Link>
           </div>
           {!recentJumps?.length ? (
-            <div className="px-4 py-6 text-center text-xs text-fg-4">No jumps yet.</div>
+            <div className="px-6 py-6 text-center text-xs text-fg-4">No jumps yet.</div>
           ) : (
             <ul className="divide-y divide-border">
               {(recentJumps as unknown as Array<{
@@ -291,17 +295,14 @@ export default async function DashboardPage({
                 jump_type: string | null
                 dropzone: { name: string } | null
               }>).map((j) => (
-                <li key={j.id} className="px-4 py-2.5">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-semibold text-fg">
-                        #{j.jump_number} · {j.jump_type ?? "Jump"}
-                      </p>
-                      <p className="text-xs text-fg-4">
-                        {j.dropzone?.name ?? "Unknown DZ"} · {fmtDate(j.date, dateFormat)}
-                      </p>
-                    </div>
+                <li key={j.id} className="px-6 py-[10px] flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-fg">{j.jump_type ?? "Jump"}</p>
+                    <p className="font-mono text-[11px] text-fg-3">
+                      {j.dropzone?.name ?? "Unknown DZ"} · {fmtDate(j.date, dateFormat)}
+                    </p>
                   </div>
+                  <span className="font-mono text-[11px] text-fg-3">#{j.jump_number}</span>
                 </li>
               ))}
             </ul>
@@ -312,28 +313,28 @@ export default async function DashboardPage({
       {/* Needs attention + Quick actions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Needs attention */}
-        <div className="bg-surface border border-border rounded-lg">
-          <div className="px-4 py-3 border-b border-border">
-            <p className="text-overline font-semibold tracking-widest uppercase text-fg-4">Needs attention</p>
+        <div className="bg-surface border border-border rounded-[14px]">
+          <div className="px-6 pt-6 pb-[14px] border-b border-border">
+            <p className="font-mono text-[10px] font-semibold tracking-widest uppercase text-fg-3">Needs attention</p>
           </div>
           {needsAttention.length === 0 ? (
-            <div className="px-4 py-6 text-center text-xs text-fg-3">
+            <div className="px-6 py-6 text-center text-xs text-fg-3">
               <span className="text-ok">✓</span> All clear
             </div>
           ) : (
             <ul className="divide-y divide-border">
               {needsAttention.slice(0, 5).map((item) => (
-                <li key={item.id} className="px-4 py-2.5 flex items-start justify-between gap-2">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className={`w-3.5 h-3.5 mt-0.5 flex-shrink-0 ${(item as { urgent?: boolean }).urgent ? "text-danger" : "text-warn"}`} />
-                    <div>
-                      <p className="text-xs font-semibold text-fg">{item.label}</p>
-                      {(item as { note?: string }).note && (
-                        <p className="text-xs text-fg-4">{(item as { note?: string }).note}</p>
-                      )}
-                    </div>
+                <li key={item.id} className="px-6 py-3 flex items-center gap-3">
+                  <span
+                    className={`w-2 h-2 rounded-full flex-shrink-0 ${(item as { urgent?: boolean }).urgent ? "bg-danger" : "bg-warn"}`}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-body font-medium text-fg">{item.label}</p>
+                    {(item as { note?: string }).note && (
+                      <p className="font-mono text-[11px] text-fg-3">{(item as { note?: string }).note}</p>
+                    )}
                   </div>
-                  <Link href={item.href} className="text-xs text-sky hover:text-sky/80 flex-shrink-0">
+                  <Link href={item.href} className="text-xs text-sky hover:text-sky/80 font-medium flex-shrink-0">
                     Resolve
                   </Link>
                 </li>
@@ -343,31 +344,27 @@ export default async function DashboardPage({
         </div>
 
         {/* Quick actions */}
-        <div className="bg-surface border border-border rounded-lg">
-          <div className="px-4 py-3 border-b border-border">
-            <p className="text-overline font-semibold tracking-widest uppercase text-fg-4">Quick actions</p>
+        <div className="bg-surface border border-border rounded-[14px]">
+          <div className="px-6 pt-6 pb-[14px] border-b border-border">
+            <p className="font-mono text-[10px] font-semibold tracking-widest uppercase text-fg-3">Quick actions</p>
           </div>
-          <ul className="divide-y divide-border">
+          <div className="p-6 grid grid-cols-2 gap-[10px]">
             {[
               { icon: Download, label: "Export logbook", href: "/logbook" },
               { icon: BookOpen, label: "View jumps", href: "/logbook" },
               { icon: Package, label: "Manage gear", href: "/settings" },
               { icon: Award, label: "Add certificate", href: "/settings" },
             ].map(({ icon: Icon, label, href }) => (
-              <li key={label}>
-                <Link
-                  href={href}
-                  className="flex items-center justify-between px-4 py-2.5 hover:bg-surface-2 transition-colors"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Icon className="w-4 h-4 text-fg-3" />
-                    <span className="text-sm text-fg">{label}</span>
-                  </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-fg-4" />
-                </Link>
-              </li>
+              <Link
+                key={label}
+                href={href}
+                className="flex items-center gap-2.5 p-[14px] bg-surface-2 hover:bg-surface-3 rounded-[10px] transition-colors"
+              >
+                <Icon className="w-4 h-4 text-sky flex-shrink-0" />
+                <span className="text-sm font-medium text-fg">{label}</span>
+              </Link>
             ))}
-          </ul>
+          </div>
         </div>
       </div>
     </div>
