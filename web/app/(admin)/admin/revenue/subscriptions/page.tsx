@@ -39,8 +39,6 @@ export default async function AdminSubscriptionsPage({
     db.from('subscriptions').select('*', { count: 'exact', head: true }).eq('status', 'cancelled'),
   ])
 
-  // Build user display ID mapping
-  const userCreatedAtMap: Record<string, string> = {}
   const { count: totalUsers } = await db.from('users').select('*', { count: 'exact', head: true })
 
   type SubRow = {

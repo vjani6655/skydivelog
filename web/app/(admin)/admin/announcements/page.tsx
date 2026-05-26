@@ -1,7 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import AnnouncementsCompose from '@/components/admin/AnnouncementsCompose'
-import { notFound } from 'next/navigation'
-
 export default async function AdminAnnouncementsPage() {
   const db = createAdminClient()
 

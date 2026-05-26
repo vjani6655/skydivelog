@@ -74,16 +74,16 @@ export async function GET(request: Request) {
     const sub = Array.isArray(u.subscriptions) ? u.subscriptions[0] : u.subscriptions
     const trialEnd = new Date(u.created_at); trialEnd.setDate(trialEnd.getDate() + 14)
     const inTrial  = !sub && Date.now() < trialEnd.getTime()
-    const subStatus = inTrial ? 'trial' : (sub as any)?.status ?? 'expired'
+    const subStatus = inTrial ? 'trial' : (sub as Record<string, unknown>)?.status as string ?? 'expired'
     return [
       escape(u.email),
       escape(u.full_name),
       escape(u.licence_number),
-      escape((u as any).licence_rating),
-      escape((u as any).country),
+      escape((u as Record<string, unknown>).licence_rating as string),
+      escape((u as Record<string, unknown>).country as string),
       escape(subStatus),
       String(jumpMap[u.id] ?? 0),
-      escape(fmtDate((sub as any)?.renews_at ?? null)),
+      escape(fmtDate((sub as Record<string, unknown>)?.renews_at as string ?? null)),
       escape(fmtDate(u.created_at)),
       escape(fmtDate(u.last_sign_in_at)),
     ].join(',')

@@ -48,7 +48,6 @@ export async function POST(request: NextRequest) {
       const pm = subAny.default_payment_method as Stripe.PaymentMethod | null
       const card = pm?.card
 
-      const priceId = stripeSub.items.data[0]?.price?.id
       const unitAmount = stripeSub.items.data[0]?.price?.unit_amount ?? 0
       const startTs = subAny.start_date ?? subAny.created ?? Math.floor(Date.now() / 1000)
       const endTs = subAny.current_period_end ?? Math.floor(Date.now() / 1000) + 365 * 24 * 3600

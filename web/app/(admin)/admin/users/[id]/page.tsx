@@ -14,11 +14,6 @@ function fmtDateShort(s: string | null) {
   if (!s) return '—'
   return new Date(s).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' })
 }
-function fmtMSS(s: number | null): string {
-  if (!s) return '0:00'
-  const m = Math.floor(s / 60); const sec = s % 60
-  return `${m}:${String(sec).padStart(2, '0')}`
-}
 function fmtAge(createdAt: string): string {
   const ms = Date.now() - new Date(createdAt).getTime()
   const days = Math.floor(ms / 86400000)
@@ -39,7 +34,6 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
     { data: ffData },
     { data: recentTickets },
     { count: flaggedCount },
-    { count: pendingCount },
     { count: totalUsers },
   ] = await Promise.all([
     db.from('users').select('*, home_dropzone_id').eq('id', id).single(),
@@ -54,7 +48,6 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
     db.from('flagged_entries').select('*', { count: 'exact', head: true })
       .eq('status', 'open')
       .in('jump_id', (await db.from('jumps').select('id').eq('user_id', id).is('deleted_at', null)).data?.map(j => j.id) ?? []),
-    db.from('jumps').select('*', { count: 'exact', head: true }).eq('user_id', id).is('deleted_at', null),
     db.from('users').select('*', { count: 'exact', head: true }).lte('created_at', (await db.from('users').select('created_at').eq('id', id).single()).data?.created_at ?? ''),
   ])
 
@@ -112,10 +105,6 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
       sub: `Started ${fmtDateShort(sub.started_at)}`,
       time: fmtDateShort(sub.started_at),
     })
-  }
-
-  const jumpTypeIcon: Record<string, string> = {
-    Belly: '↓', Tracking: '↗', Wingsuit: '⟶', Freefly: '↕', CRW: '◎', AFF: 'A', Tandem: 'T', Coach: 'C', Demo: 'D',
   }
 
   return (

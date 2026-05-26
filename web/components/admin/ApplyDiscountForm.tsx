@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ChevronRight, Info } from 'lucide-react'
 import { useState } from 'react'
-import { Avatar, Badge } from '@/components/admin/ui'
+import { Avatar } from '@/components/admin/ui'
 import { createClient } from '@/lib/supabase/client'
 
 type UserRow = {

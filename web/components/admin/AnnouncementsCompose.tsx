@@ -31,7 +31,7 @@ type Props = {
 type Channel  = 'Push' | 'In-app banner' | 'Email'
 type Schedule = 'Send now' | 'Schedule' | 'Draft'
 
-export default function AnnouncementsCompose({ recentSends, segments, recipientCounts, adminId }: Props) {
+export default function AnnouncementsCompose({ recentSends, segments, recipientCounts }: Omit<Props, 'adminId'> & { adminId?: string }) {
   const [channels,  setChannels]  = useState<Channel[]>(['Push'])
   const [title,     setTitle]     = useState('')
   const [body,      setBody]      = useState('')

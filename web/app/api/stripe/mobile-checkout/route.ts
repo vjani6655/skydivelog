@@ -23,7 +23,6 @@ export async function POST(req: NextRequest) {
     .limit(1)
     .maybeSingle()
 
-  const webUrl = process.env.NEXT_PUBLIC_WEB_URL ?? 'https://skydivelog.app'
   const appScheme = 'mobile'
 
   const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {

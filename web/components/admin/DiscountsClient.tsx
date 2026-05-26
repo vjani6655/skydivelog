@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Calendar } from 'lucide-react'
+import { Calendar } from 'lucide-react'
 import { Badge, KPI } from '@/components/admin/ui'
 import { createClient } from '@/lib/supabase/client'
 
@@ -178,7 +178,7 @@ export default function DiscountsClient({ coupons: initial, manualDiscounts, red
             {manualDiscounts.length === 0 && (
               <div className="px-4 py-6 text-xs text-fg-3">No manual discounts recorded in audit log.</div>
             )}
-            {manualDiscounts.map((d, i) => (
+            {manualDiscounts.map((d) => (
               <div key={d.id}
                 className="grid px-4 py-3 gap-3 items-center border-b border-border last:border-0 hover:bg-surface-2 transition-colors text-sm"
                 style={{ gridTemplateColumns: '1.5fr 1.5fr 1fr 40px 80px' }}>

@@ -78,10 +78,6 @@ export default async function SettingsPage({
     marketing_emails_opt_in: (profile as Record<string, unknown>)?.marketing_emails_opt_in as boolean ?? true,
   }
 
-  const privacyData = {
-    offline_mode_enabled: profile?.offline_mode_enabled ?? false,
-  }
-
   return (
     <div className="p-6 max-w-4xl mx-auto">
       {/* Header */}

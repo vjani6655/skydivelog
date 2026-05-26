@@ -81,7 +81,7 @@ export default function ContactPage() {
                 <CheckCircle className="w-10 h-10 text-ok" />
                 <div>
                   <p className="text-sm font-semibold text-fg mb-1">Message sent.</p>
-                  <p className="text-xs text-fg-3">We'll get back to you within a day.</p>
+                  <p className="text-xs text-fg-3">We&apos;ll get back to you within a day.</p>
                 </div>
               </div>
             ) : (
