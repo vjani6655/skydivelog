@@ -63,7 +63,7 @@ export default async function SubscriptionPage() {
   // Subscribed user view
   if (isActive || isTrial) {
     const planLabel = (sub.plan?.startsWith('price_') ? 'Pro' : sub.plan ?? 'Pro')
-      .replace(/^./, (c) => c.toUpperCase())
+      .replace(/^./, (c: string) => c.toUpperCase())
 
     return (
       <div className="p-6 max-w-3xl mx-auto">

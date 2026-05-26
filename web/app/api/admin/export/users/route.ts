@@ -20,7 +20,7 @@ export async function GET(request: Request) {
   const sort = searchParams.get('sort') ?? 'seen'
 
   // Fetch subs for filtering
-  const { data: allSubs } = await db.from('subscriptions').select('user_id, status')
+  const { data: allSubs } = await db.from('subscriptions').select('user_id, status, renews_at')
   const subscribedIds  = allSubs?.map(s => s.user_id) ?? []
   const activeIds      = allSubs?.filter(s => s.status === 'active').map(s => s.user_id) ?? []
   const overdueIds     = allSubs?.filter(s => s.status === 'overdue').map(s => s.user_id) ?? []

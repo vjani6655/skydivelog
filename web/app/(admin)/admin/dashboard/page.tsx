@@ -121,7 +121,7 @@ export default async function AdminDashboardPage() {
     })
   })
   recentPayments?.forEach(p => {
-    const user = p.users as { email: string } | null
+    const user = (Array.isArray(p.users) ? p.users[0] : p.users) as { email: string } | null
     activities.push({
       icon: '$', color: 'bg-ok/10 text-ok',
       text: `Payment received · $${Number(p.price_at_signup).toFixed(0)}/yr`,

@@ -40,7 +40,7 @@ export async function GET() {
   ]
 
   const rows = (jumps ?? []).map((j) => {
-    const dz = (j.dropzones as { name: string } | null)?.name ?? ""
+    const dz = (Array.isArray(j.dropzones) ? j.dropzones[0] : j.dropzones as { name: string } | null)?.name ?? ""
     const dateStr = j.date ? new Date(j.date).toISOString().slice(0, 10) : ""
     const notes = (j.notes ?? "").replace(/"/g, '""')
     return [

@@ -185,7 +185,7 @@ function JumpCard({ jump }: { jump: PdfJump }) {
               borderRadius: 2,
               maxWidth: 120,
             }}>
-              <Text style={[s.mono, { fontSize: 7, letterSpacing: 0.8, color: HIGHLIGHT_FG }]} numberOfLines={1}>
+              <Text style={[s.mono, { fontSize: 7, letterSpacing: 0.8, color: HIGHLIGHT_FG }]}>
                 {'STUDENT'}{jump.jump_stage ? ` · ${truncate(jump.jump_stage.toUpperCase(), 18)}` : (jump.jump_type ? ` · ${jump.jump_type.toUpperCase()}` : '')}
               </Text>
             </View>
