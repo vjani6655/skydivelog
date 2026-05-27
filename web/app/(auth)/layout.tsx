@@ -1,5 +1,6 @@
 import Link from "next/link"
 import BrandMark from "@/components/BrandMark"
+import WebThemeToggle from "@/components/WebThemeToggle"
 
 export default function AuthLayout({
   children,
@@ -7,12 +8,11 @@ export default function AuthLayout({
   children: React.ReactNode
 }) {
   return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-center px-4 py-12"
-      style={{
-        background: "radial-gradient(ellipse at 50% -10%, #13274A 0%, #0A1220 55%)",
-      }}
-    >
+    <div className="hero-gradient min-h-screen flex flex-col items-center justify-center px-4 py-12">
+      {/* Theme toggle */}
+      <div className="fixed top-4 right-4">
+        <WebThemeToggle />
+      </div>
       {/* Logo */}
       <Link href="/" className="flex items-center gap-2.5 mb-10">
         <BrandMark size={26} variant="simple" />

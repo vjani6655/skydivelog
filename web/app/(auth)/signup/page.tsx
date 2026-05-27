@@ -17,14 +17,27 @@ export default function SignupPage() {
   const [rating, setRating] = useState("")
   const [agreed, setAgreed] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
+
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+  const clearField = (key: string) => {
+    if (fieldErrors[key]) setFieldErrors(prev => { const n = { ...prev }; delete n[key]; return n })
+  }
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!agreed) {
-      setError("You must agree to the Terms and Privacy Policy.")
-      return
-    }
+    const errs: Record<string, string> = {}
+    if (!fullName.trim())                      errs.fullName = "Full name is required"
+    if (!email.trim())                         errs.email    = "Email is required"
+    else if (!EMAIL_RE.test(email.trim()))     errs.email    = "Enter a valid email address"
+    if (!password)                             errs.password = "Password is required"
+    else if (password.length < 8)             errs.password = "Must be at least 8 characters"
+    if (!agreed)                               errs.agreed   = "You must agree to the Terms and Privacy Policy"
+    setFieldErrors(errs)
+    if (Object.keys(errs).length > 0) return
+
     setLoading(true)
     setError(null)
 
@@ -76,14 +89,14 @@ export default function SignupPage() {
             <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-4" />
             <input
               type="text"
-              required
               autoComplete="name"
               value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              className="w-full bg-surface-2 border border-border rounded-sm pl-9 pr-4 py-2.5 text-sm text-fg placeholder:text-fg-4 focus:outline-none focus:border-sky transition-colors"
-              placeholder="Erin Morrison"
+              onChange={(e) => { setFullName(e.target.value); clearField("fullName") }}
+              className={`w-full bg-surface-2 border rounded-sm pl-9 pr-4 py-2.5 text-sm text-fg placeholder:text-fg-4 focus:outline-none transition-colors ${fieldErrors.fullName ? "border-danger/60 focus:border-danger" : "border-border focus:border-sky"}`}
+              placeholder="James Smith"
             />
           </div>
+          {fieldErrors.fullName && <p className="mt-1 text-xs text-danger">{fieldErrors.fullName}</p>}
         </div>
 
         <div>
@@ -94,14 +107,14 @@ export default function SignupPage() {
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-4" />
             <input
               type="email"
-              required
               autoComplete="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-surface-2 border border-border rounded-sm pl-9 pr-4 py-2.5 text-sm text-fg placeholder:text-fg-4 focus:outline-none focus:border-sky transition-colors"
+              onChange={(e) => { setEmail(e.target.value); clearField("email") }}
+              className={`w-full bg-surface-2 border rounded-sm pl-9 pr-4 py-2.5 text-sm text-fg placeholder:text-fg-4 focus:outline-none transition-colors ${fieldErrors.email ? "border-danger/60 focus:border-danger" : "border-border focus:border-sky"}`}
               placeholder="you@example.com"
             />
           </div>
+          {fieldErrors.email && <p className="mt-1 text-xs text-danger">{fieldErrors.email}</p>}
         </div>
 
         <div>
@@ -112,12 +125,10 @@ export default function SignupPage() {
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-4" />
             <input
               type={showPass ? "text" : "password"}
-              required
-              minLength={8}
               autoComplete="new-password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-surface-2 border border-border rounded-sm pl-9 pr-10 py-2.5 text-sm text-fg placeholder:text-fg-4 focus:outline-none focus:border-sky transition-colors"
+              onChange={(e) => { setPassword(e.target.value); clearField("password") }}
+              className={`w-full bg-surface-2 border rounded-sm pl-9 pr-10 py-2.5 text-sm text-fg placeholder:text-fg-4 focus:outline-none transition-colors ${fieldErrors.password ? "border-danger/60 focus:border-danger" : "border-border focus:border-sky"}`}
               placeholder="••••••••"
             />
             <button
@@ -128,7 +139,9 @@ export default function SignupPage() {
               {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
-          <p className="mt-1 text-xs text-fg-4">At least 8 characters</p>
+          {fieldErrors.password
+            ? <p className="mt-1 text-xs text-danger">{fieldErrors.password}</p>
+            : <p className="mt-1 text-xs text-fg-4">At least 8 characters</p>}
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -161,25 +174,28 @@ export default function SignupPage() {
           </div>
         </div>
 
-        <label className="flex items-start gap-2.5 cursor-pointer select-none pt-1">
-          <input
-            type="checkbox"
-            checked={agreed}
-            onChange={(e) => setAgreed(e.target.checked)}
-            className="mt-0.5 w-3.5 h-3.5 rounded-sm accent-sky flex-shrink-0"
-          />
-          <span className="text-xs text-fg-3 leading-relaxed">
-            I agree to the{" "}
-            <Link href="/terms" className="text-sky hover:text-sky/80">
-              Terms
-            </Link>{" "}
-            and{" "}
-            <Link href="/privacy" className="text-sky hover:text-sky/80">
-              Privacy Policy
-            </Link>
-            .
-          </span>
-        </label>
+        <div>
+          <label className="flex items-start gap-2.5 cursor-pointer select-none pt-1">
+            <input
+              type="checkbox"
+              checked={agreed}
+              onChange={(e) => { setAgreed(e.target.checked); clearField("agreed") }}
+              className="mt-0.5 w-3.5 h-3.5 rounded-sm accent-sky flex-shrink-0"
+            />
+            <span className="text-xs text-fg-3 leading-relaxed">
+              I agree to the{" "}
+              <Link href="/terms" className="text-sky hover:text-sky/80">
+                Terms
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" className="text-sky hover:text-sky/80">
+                Privacy Policy
+              </Link>
+              .
+            </span>
+          </label>
+          {fieldErrors.agreed && <p className="mt-1 text-xs text-danger">{fieldErrors.agreed}</p>}
+        </div>
 
         {error && (
           <p className="text-xs text-danger bg-danger-bg border border-danger/20 rounded-sm px-3 py-2">

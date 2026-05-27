@@ -1,15 +1,24 @@
 import { useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ImageBackground } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { spacing, radii } from '@/constants/tokens';
 import type { ColorSet } from '@/constants/tokens';
 import { useColors } from '@/lib/theme';
+import { useAppMedia } from '@/lib/useAppMedia';
 
-function StripedHero() {
+function WelcomeHero() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const photoUrl = useAppMedia('welcome_hero');
   const stripes = Array.from({ length: 20 });
+
+  if (photoUrl) {
+    return (
+      <ImageBackground source={{ uri: photoUrl }} style={styles.hero} resizeMode="cover" />
+    );
+  }
+
   return (
     <View style={styles.hero}>
       <View style={styles.stripesContainer}>
@@ -33,7 +42,7 @@ export default function WelcomeScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.container}>
-      <StripedHero />
+      <WelcomeHero />
 
       <View style={styles.content}>
         <Text style={styles.title}>The logbook{'\n'}built for jumpers.</Text>

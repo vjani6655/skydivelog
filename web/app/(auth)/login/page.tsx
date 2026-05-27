@@ -14,10 +14,30 @@ export default function LoginPage() {
   const [showPass, setShowPass] = useState(false)
   const [remember, setRemember] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [emailError, setEmailError] = useState("")
+  const [passwordError, setPasswordError] = useState("")
   const [loading, setLoading] = useState(false)
+
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    // Client-side validation
+    let valid = true
+    if (!email.trim()) {
+      setEmailError("Email is required"); valid = false
+    } else if (!EMAIL_RE.test(email.trim())) {
+      setEmailError("Enter a valid email address"); valid = false
+    } else {
+      setEmailError("")
+    }
+    if (!password) {
+      setPasswordError("Password is required"); valid = false
+    } else {
+      setPasswordError("")
+    }
+    if (!valid) return
+
     setLoading(true)
     setError(null)
 
@@ -48,14 +68,14 @@ export default function LoginPage() {
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-4" />
             <input
               type="email"
-              required
               autoComplete="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-surface-2 border border-border rounded-sm pl-9 pr-4 py-2.5 text-sm text-fg placeholder:text-fg-4 focus:outline-none focus:border-sky transition-colors"
+              onChange={(e) => { setEmail(e.target.value); if (emailError) setEmailError("") }}
+              className={`w-full bg-surface-2 border rounded-sm pl-9 pr-4 py-2.5 text-sm text-fg placeholder:text-fg-4 focus:outline-none transition-colors ${emailError ? "border-danger/60 focus:border-danger" : "border-border focus:border-sky"}`}
               placeholder="you@example.com"
             />
           </div>
+          {emailError && <p className="mt-1 text-xs text-danger">{emailError}</p>}
         </div>
 
         <div>
@@ -66,11 +86,10 @@ export default function LoginPage() {
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-4" />
             <input
               type={showPass ? "text" : "password"}
-              required
               autoComplete="current-password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-surface-2 border border-border rounded-sm pl-9 pr-10 py-2.5 text-sm text-fg placeholder:text-fg-4 focus:outline-none focus:border-sky transition-colors"
+              onChange={(e) => { setPassword(e.target.value); if (passwordError) setPasswordError("") }}
+              className={`w-full bg-surface-2 border rounded-sm pl-9 pr-10 py-2.5 text-sm text-fg placeholder:text-fg-4 focus:outline-none transition-colors ${passwordError ? "border-danger/60 focus:border-danger" : "border-border focus:border-sky"}`}
               placeholder="••••••••"
             />
             <button
@@ -81,6 +100,7 @@ export default function LoginPage() {
               {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
+          {passwordError && <p className="mt-1 text-xs text-danger">{passwordError}</p>}
         </div>
 
         <div className="flex items-center justify-between pt-1">

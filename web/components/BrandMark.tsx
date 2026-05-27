@@ -21,31 +21,31 @@ export default function BrandMark({
       {/* Canopy */}
       <path
         d="M6 28 C 8 18, 14 14, 22 14 L 42 14 C 50 14, 56 18, 58 28 L 50 26 L 42 28 L 32 26 L 22 28 L 14 26 Z"
-        fill="#4A9EFF"
-        stroke="#4A9EFF"
+        fill="var(--c-sky)"
+        stroke="var(--c-sky)"
         strokeWidth="2"
         strokeLinejoin="round"
       />
       {/* Rib lines (full variant only) */}
       {variant === "full" && (
         <>
-          <line x1="14" y1="26" x2="16" y2="14" stroke="#E8EEF8" strokeOpacity="0.35" strokeWidth="1.5" />
-          <line x1="22" y1="28" x2="24" y2="14" stroke="#E8EEF8" strokeOpacity="0.35" strokeWidth="1.5" />
-          <line x1="32" y1="26" x2="32" y2="14" stroke="#E8EEF8" strokeOpacity="0.35" strokeWidth="1.5" />
-          <line x1="42" y1="28" x2="40" y2="14" stroke="#E8EEF8" strokeOpacity="0.35" strokeWidth="1.5" />
-          <line x1="50" y1="26" x2="48" y2="14" stroke="#E8EEF8" strokeOpacity="0.35" strokeWidth="1.5" />
+          <line x1="14" y1="26" x2="16" y2="14" stroke="var(--c-fg)" strokeOpacity="0.35" strokeWidth="1.5" />
+          <line x1="22" y1="28" x2="24" y2="14" stroke="var(--c-fg)" strokeOpacity="0.35" strokeWidth="1.5" />
+          <line x1="32" y1="26" x2="32" y2="14" stroke="var(--c-fg)" strokeOpacity="0.35" strokeWidth="1.5" />
+          <line x1="42" y1="28" x2="40" y2="14" stroke="var(--c-fg)" strokeOpacity="0.35" strokeWidth="1.5" />
+          <line x1="50" y1="26" x2="48" y2="14" stroke="var(--c-fg)" strokeOpacity="0.35" strokeWidth="1.5" />
         </>
       )}
       {/* Suspension lines */}
       <path
         d="M10 28 L 32 50 L 54 28"
-        stroke="#4A9EFF"
+        stroke="var(--c-sky)"
         strokeWidth="3"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       {/* Container */}
-      <rect x="29" y="48" width="6" height="10" rx="3" fill="#E8EEF8" />
+      <rect x="29" y="48" width="6" height="10" rx="3" fill="var(--c-fg)" />
     </svg>
   )
 }

@@ -118,7 +118,7 @@ export default function CreateAccountScreen() {
               <View style={[styles.inputRow, !!errors.fullName && styles.inputRowError]}>
                 <TextInput
                   style={styles.input}
-                  placeholder="Erin Morrison"
+                  placeholder="James Smith"
                   placeholderTextColor={colors.fg4}
                   autoCapitalize="words"
                   autoComplete="name"

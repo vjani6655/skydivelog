@@ -1,5 +1,6 @@
 import Link from "next/link"
 import BrandMark from "@/components/BrandMark"
+import WebThemeToggle from "@/components/WebThemeToggle"
 
 const NAV_LINKS = [
   { href: "/features", label: "Features" },
@@ -31,6 +32,7 @@ export default function MarketingLayout({
           </nav>
 
           <div className="flex items-center gap-2">
+            <WebThemeToggle />
             <Link
               href="/login"
               className="text-sm text-fg-3 hover:text-fg px-3 py-1.5 rounded-sm transition-colors"

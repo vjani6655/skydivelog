@@ -4,8 +4,7 @@ export default function AboutPage() {
   return (
     <>
       <section
-        className="pt-20 pb-14 px-5 text-center"
-        style={{ background: "radial-gradient(ellipse at 50% -10%, #132A50 0%, #0A1220 60%)" }}
+        className="pt-20 pb-14 px-5 text-center hero-gradient"
       >
         <div className="max-w-2xl mx-auto">
           <p className="text-overline font-semibold tracking-widest uppercase text-fg-4 mb-3">About</p>

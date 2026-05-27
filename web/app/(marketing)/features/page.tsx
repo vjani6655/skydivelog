@@ -1,5 +1,20 @@
 import Link from "next/link"
+import Image from "next/image"
 import { BookOpen, BarChart2, Package, Award, Download } from "lucide-react"
+import { createAdminClient } from "@/lib/supabase/admin"
+
+async function getFeatureMedia(): Promise<Record<string, string>> {
+  try {
+    const supabase = createAdminClient()
+    const { data } = await supabase
+      .from("app_media")
+      .select("slot, url")
+      .like("slot", "features_%")
+    const map: Record<string, string> = {}
+    data?.forEach(r => { if (r.url) map[r.slot] = r.url })
+    return map
+  } catch { return {} }
+}
 
 const SECTIONS = [
   {
@@ -44,13 +59,14 @@ const SECTIONS = [
   },
 ]
 
-export default function FeaturesPage() {
+export default async function FeaturesPage() {
+  const media = await getFeatureMedia()
+  const illustrationUrl = (slot: string) => media[slot] ?? media['features_illustration'] ?? null
   return (
     <>
       {/* ── Hero ─────────────────────────────────────────────────────── */}
       <section
-        className="pt-20 pb-14 px-5"
-        style={{ background: "radial-gradient(ellipse at 50% -10%, #132A50 0%, #0A1220 60%)" }}
+        className="pt-20 pb-14 px-5 hero-gradient"
       >
         <div className="max-w-3xl mx-auto">
           <p className="text-overline font-semibold tracking-widest uppercase text-fg-4 mb-4">Features</p>
@@ -64,16 +80,26 @@ export default function FeaturesPage() {
       {/* ── Feature sections ─────────────────────────────────────────── */}
       <section className="py-20 px-5">
         <div className="max-w-5xl mx-auto space-y-28">
-          {SECTIONS.map(({ label, icon: Icon, title, body, illustration, features }, idx) => (
+          {SECTIONS.map(({ label, icon: Icon, title, body, illustration, features }, idx) => {
+            const slot = `features_${label.toLowerCase()}`
+            const imgUrl = illustrationUrl(slot)
+            return (
             <div key={label} className={`grid grid-cols-1 md:grid-cols-2 gap-10 items-center ${idx % 2 === 1 ? "md:grid-flow-dense" : ""}`}>
               {/* Illustration */}
               <div
-                className={`rounded-xl border border-border overflow-hidden ${idx % 2 === 1 ? "md:col-start-2" : ""}`}
-                style={{ height: 260, background: "repeating-linear-gradient(135deg, #1A2740 0 8px, #121C2E 8px 16px)" }}
+                className={`rounded-xl border border-border overflow-hidden relative ${idx % 2 === 1 ? "md:col-start-2" : ""}`}
+                style={{
+                  height: 260,
+                  background: imgUrl ? undefined : "repeating-linear-gradient(135deg, #1A2740 0 8px, #121C2E 8px 16px)",
+                }}
               >
-                <div className="flex items-end justify-center h-full pb-4">
-                  <span className="text-overline font-semibold tracking-widest text-fg-4 uppercase">{illustration}</span>
-                </div>
+                {imgUrl ? (
+                  <Image src={imgUrl} alt={label} fill className="object-cover" unoptimized />
+                ) : (
+                  <div className="flex items-end justify-center h-full pb-4">
+                    <span className="text-overline font-semibold tracking-widest text-fg-4 uppercase">{illustration}</span>
+                  </div>
+                )}
               </div>
 
               {/* Text */}
@@ -96,7 +122,8 @@ export default function FeaturesPage() {
                 </ul>
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       </section>
 

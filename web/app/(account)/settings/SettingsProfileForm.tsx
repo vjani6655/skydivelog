@@ -67,7 +67,7 @@ export default function SettingsProfileForm({ profile, userId }: { profile: Prof
               value={data.full_name ?? ""}
               onChange={set("full_name")}
               className={inputCls}
-              placeholder="Erin Morrison"
+              placeholder="James Smith"
               required
             />
           </FieldGroup>

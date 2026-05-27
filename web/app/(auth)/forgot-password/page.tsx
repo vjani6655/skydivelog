@@ -10,10 +10,22 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
   const [sent, setSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [emailError, setEmailError] = useState("")
   const [loading, setLoading] = useState(false)
+
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!email.trim()) {
+      setEmailError("Email is required")
+      return
+    }
+    if (!EMAIL_RE.test(email.trim())) {
+      setEmailError("Enter a valid email address")
+      return
+    }
+    setEmailError("")
     setLoading(true)
     setError(null)
 
@@ -61,14 +73,14 @@ export default function ForgotPasswordPage() {
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-4" />
                 <input
                   type="email"
-                  required
                   autoComplete="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-surface-2 border border-border rounded-sm pl-9 pr-4 py-2.5 text-sm text-fg placeholder:text-fg-4 focus:outline-none focus:border-sky transition-colors"
+                  onChange={(e) => { setEmail(e.target.value); if (emailError) setEmailError("") }}
+                  className={`w-full bg-surface-2 border rounded-sm pl-9 pr-4 py-2.5 text-sm text-fg placeholder:text-fg-4 focus:outline-none transition-colors ${emailError ? "border-danger/60 focus:border-danger" : "border-border focus:border-sky"}`}
                   placeholder="you@example.com"
                 />
               </div>
+              {emailError && <p className="mt-1 text-xs text-danger">{emailError}</p>}
             </div>
 
             {error && (

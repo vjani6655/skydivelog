@@ -7,7 +7,7 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,14 +23,27 @@ export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const [submitError, setSubmitError] = useState('');
+
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   const handleSend = async () => {
-    if (!email) return;
+    if (!email.trim()) {
+      setEmailError('Email is required');
+      return;
+    }
+    if (!EMAIL_RE.test(email.trim())) {
+      setEmailError('Enter a valid email address');
+      return;
+    }
+    setEmailError('');
+    setSubmitError('');
     setLoading(true);
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
     setLoading(false);
     if (error) {
-      Alert.alert('Error', error.message);
+      setSubmitError(error.message);
     } else {
       setSent(true);
     }
@@ -80,8 +93,8 @@ export default function ForgotPasswordScreen() {
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>EMAIL</Text>
-            <View style={styles.inputRow}>
-              <Ionicons name="mail-outline" size={16} color={colors.fg3} style={styles.inputIcon} />
+            <View style={[styles.inputRow, !!emailError && styles.inputRowError]}>
+              <Ionicons name="mail-outline" size={16} color={emailError ? colors.danger : colors.fg3} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="you@example.com"
@@ -90,10 +103,18 @@ export default function ForgotPasswordScreen() {
                 keyboardType="email-address"
                 autoComplete="email"
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={v => { setEmail(v); if (emailError) setEmailError(''); }}
               />
             </View>
+            {!!emailError && <Text style={styles.errorText}>{emailError}</Text>}
           </View>
+
+          {!!submitError && (
+            <View style={styles.submitErrorBox}>
+              <Ionicons name="alert-circle-outline" size={15} color={colors.danger} />
+              <Text style={styles.submitErrorText}>{submitError}</Text>
+            </View>
+          )}
 
           <TouchableOpacity
             style={[styles.primaryButton, loading && styles.buttonDisabled]}
@@ -101,7 +122,9 @@ export default function ForgotPasswordScreen() {
             disabled={loading}
             activeOpacity={0.8}
           >
-            <Text style={styles.primaryButtonText}>{loading ? 'Sending…' : 'Send reset link'}</Text>
+            {loading
+              ? <ActivityIndicator color={colors.onSky} size="small" />
+              : <Text style={styles.primaryButtonText}>Send reset link</Text>}
           </TouchableOpacity>
 
           <TouchableOpacity onPress={() => router.push('/sign-in')} activeOpacity={0.7} style={styles.footerLink}>
@@ -168,6 +191,31 @@ function makeStyles(c: ColorSet) {
     borderColor: c.border,
     paddingHorizontal: spacing[3],
     height: 48,
+  },
+  inputRowError: {
+    borderColor: c.danger,
+  },
+  errorText: {
+    fontFamily: 'InterTight-Regular',
+    fontSize: 12,
+    color: c.danger,
+    marginTop: 2,
+  },
+  submitErrorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+    backgroundColor: c.dangerBg,
+    borderRadius: radii.md,
+    padding: spacing[3],
+    marginBottom: spacing[4],
+  },
+  submitErrorText: {
+    flex: 1,
+    fontFamily: 'InterTight-Regular',
+    fontSize: 13,
+    color: c.danger,
+    lineHeight: 18,
   },
   inputIcon: {
     marginRight: spacing[2],

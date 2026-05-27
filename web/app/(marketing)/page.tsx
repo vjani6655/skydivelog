@@ -1,6 +1,21 @@
 import Link from "next/link"
+import Image from "next/image"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { BookOpen, BarChart2, Package, Award, Download, Shield } from "lucide-react"
+
+async function getMedia(slot: string): Promise<string | null> {
+  try {
+    const supabase = createAdminClient()
+    const { data } = await supabase
+      .from("app_media")
+      .select("url")
+      .eq("slot", slot)
+      .maybeSingle()
+    return data?.url ?? null
+  } catch {
+    return null
+  }
+}
 
 async function getStats() {
   try {
@@ -36,14 +51,16 @@ const FEATURES = [
 ]
 
 export default async function HomePage() {
-  const stats = await getStats()
+  const [stats, appBannerUrl] = await Promise.all([
+    getStats(),
+    getMedia('marketing_app_banner'),
+  ])
 
   return (
     <>
       {/* ── Hero ─────────────────────────────────────────────────────── */}
       <section
-        className="pt-24 pb-20 px-5"
-        style={{ background: "radial-gradient(ellipse at 50% -10%, #132A50 0%, #0A1220 60%)" }}
+        className="pt-24 pb-20 px-5 hero-gradient"
       >
         <div className="max-w-3xl mx-auto">
           <div className="mb-6">
@@ -104,12 +121,25 @@ export default async function HomePage() {
           <h2 className="text-h1-lg font-bold text-fg tracking-tight mb-3 max-w-xl">Built like cockpit instruments.</h2>
           <p className="text-base text-fg-3 mb-10 max-w-md">Clear at a glance. Honest about your data. No gimmicks, no ads, no upsells.</p>
           <div
-            className="w-full rounded-xl overflow-hidden border border-border"
-            style={{ height: 280, background: "repeating-linear-gradient(135deg, #1A2740 0 8px, #121C2E 8px 16px)" }}
+            className="w-full rounded-xl overflow-hidden border border-border relative"
+            style={{
+              height: 280,
+              background: appBannerUrl ? undefined : "repeating-linear-gradient(135deg, #1A2740 0 8px, #121C2E 8px 16px)",
+            }}
           >
-            <div className="flex items-end justify-center h-full pb-4">
-              <span className="text-overline font-semibold tracking-widest text-fg-4 uppercase">3 Phone mockups · Log · Stats · Gear</span>
-            </div>
+            {appBannerUrl ? (
+              <Image
+                src={appBannerUrl}
+                alt="Jump Logs app screens"
+                fill
+                className="object-cover"
+                unoptimized
+              />
+            ) : (
+              <div className="flex items-end justify-center h-full pb-4">
+                <span className="text-overline font-semibold tracking-widest text-fg-4 uppercase">3 Phone mockups · Log · Stats · Gear</span>
+              </div>
+            )}
           </div>
         </div>
       </section>

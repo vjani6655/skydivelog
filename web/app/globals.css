@@ -82,6 +82,11 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Hero gradient light-mode override */
+html.light .hero-gradient {
+  background: radial-gradient(ellipse at 50% -10%, #D4E4F7 0%, #F2F5FA 70%);
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
@@ -89,5 +94,9 @@ body {
   .scrollbar-thin {
     scrollbar-width: thin;
     scrollbar-color: #243349 transparent;
+  }
+  /* Hero section gradient — dark by default, adapts to light mode */
+  .hero-gradient {
+    background: radial-gradient(ellipse at 50% -10%, #132A50 0%, #0A1220 60%);
   }
 }

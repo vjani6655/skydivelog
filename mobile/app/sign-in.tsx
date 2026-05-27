@@ -7,8 +7,8 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { router, useNavigation, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,6 +18,18 @@ import { spacing, radii } from '@/constants/tokens';
 import type { ColorSet } from '@/constants/tokens';
 import { useColors } from '@/lib/theme';
 
+type Errors = { email: string; password: string };
+const EMPTY_ERRORS: Errors = { email: '', password: '' };
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function validate(email: string, password: string): Errors {
+  const e: Errors = { email: '', password: '' };
+  if (!email.trim())                       e.email    = 'Email is required';
+  else if (!EMAIL_RE.test(email.trim()))   e.email    = 'Enter a valid email address';
+  if (!password)                           e.password = 'Password is required';
+  return e;
+}
+
 export default function SignInScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -25,17 +37,26 @@ export default function SignInScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Errors>(EMPTY_ERRORS);
+  const [submitError, setSubmitError] = useState('');
   const navigation = useNavigation();
   const canGoBack = navigation.canGoBack();
   const { notice } = useLocalSearchParams<{ notice?: string }>();
 
+  const clear = (field: keyof Errors) => {
+    if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }));
+  };
+
   const handleSignIn = async () => {
-    if (!email || !password) return;
+    const e = validate(email, password);
+    setErrors(e);
+    if (Object.values(e).some(v => v)) return;
+    setSubmitError('');
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     setLoading(false);
     if (error) {
-      Alert.alert('Sign in failed', error.message);
+      setSubmitError(error.message);
     } else {
       router.replace('/(tabs)/log');
     }
@@ -75,19 +96,20 @@ export default function SignInScreen() {
             {/* Email */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>EMAIL</Text>
-              <View style={styles.inputRow}>
-                <Ionicons name="mail-outline" size={16} color={colors.fg3} style={styles.inputIcon} />
+              <View style={[styles.inputRow, !!errors.email && styles.inputRowError]}>
+                <Ionicons name="mail-outline" size={16} color={errors.email ? colors.danger : colors.fg3} style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="erin@example.com"
+                  placeholder="james@example.com"
                   placeholderTextColor={colors.fg4}
                   autoCapitalize="none"
                   keyboardType="email-address"
                   autoComplete="email"
                   value={email}
-                  onChangeText={setEmail}
+                  onChangeText={v => { setEmail(v); clear('email'); }}
                 />
               </View>
+              {!!errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
             </View>
 
             {/* Password */}
@@ -98,8 +120,8 @@ export default function SignInScreen() {
                   <Text style={styles.forgotLink}>Forgot password?</Text>
                 </TouchableOpacity>
               </View>
-              <View style={styles.inputRow}>
-                <Ionicons name="lock-closed-outline" size={16} color={colors.fg3} style={styles.inputIcon} />
+              <View style={[styles.inputRow, !!errors.password && styles.inputRowError]}>
+                <Ionicons name="lock-closed-outline" size={16} color={errors.password ? colors.danger : colors.fg3} style={styles.inputIcon} />
                 <TextInput
                   style={[styles.input, styles.inputFlex]}
                   placeholder="••••••••••"
@@ -108,7 +130,7 @@ export default function SignInScreen() {
                   autoCapitalize="none"
                   autoCorrect={false}
                   value={password}
-                  onChangeText={setPassword}
+                  onChangeText={v => { setPassword(v); clear('password'); }}
                 />
                 <TouchableOpacity onPress={() => setShowPassword(v => !v)} activeOpacity={0.7} style={styles.eyeBtn}>
                   <Ionicons
@@ -118,8 +140,16 @@ export default function SignInScreen() {
                   />
                 </TouchableOpacity>
               </View>
+              {!!errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
             </View>
           </View>
+
+          {!!submitError && (
+            <View style={styles.submitErrorBox}>
+              <Ionicons name="alert-circle-outline" size={15} color={colors.danger} />
+              <Text style={styles.submitErrorText}>{submitError}</Text>
+            </View>
+          )}
 
           <TouchableOpacity
             style={[styles.primaryButton, loading && styles.buttonDisabled]}
@@ -127,7 +157,9 @@ export default function SignInScreen() {
             disabled={loading}
             activeOpacity={0.8}
           >
-            <Text style={styles.primaryButtonText}>{loading ? 'Signing in…' : 'Sign in'}</Text>
+            {loading
+              ? <ActivityIndicator color={colors.onSky} size="small" />
+              : <Text style={styles.primaryButtonText}>Sign in</Text>}
           </TouchableOpacity>
 
           <TouchableOpacity onPress={() => router.push('/create-account')} activeOpacity={0.7} style={styles.footerLink}>
@@ -223,6 +255,31 @@ function makeStyles(c: ColorSet) {
     borderColor: c.border,
     paddingHorizontal: spacing[3],
     height: 48,
+  },
+  inputRowError: {
+    borderColor: c.danger,
+  },
+  errorText: {
+    fontFamily: 'InterTight-Regular',
+    fontSize: 12,
+    color: c.danger,
+    marginTop: 2,
+  },
+  submitErrorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+    backgroundColor: c.dangerBg,
+    borderRadius: radii.md,
+    padding: spacing[3],
+    marginBottom: spacing[4],
+  },
+  submitErrorText: {
+    flex: 1,
+    fontFamily: 'InterTight-Regular',
+    fontSize: 13,
+    color: c.danger,
+    lineHeight: 18,
   },
   inputIcon: {
     marginRight: spacing[2],

@@ -44,7 +44,7 @@ export function KPI({
   return (
     <div
       className="bg-surface border border-border border-l-2 rounded-md p-4"
-      style={{ borderLeftColor: accent ?? '#2F4060' }}
+      style={{ borderLeftColor: accent ?? 'var(--c-border-strong)' }}
     >
       <div className="font-mono text-[10px] text-fg-3 tracking-widest uppercase mb-1 flex items-center gap-1">
         {label}
@@ -143,7 +143,7 @@ export function AdminTable({
 // ─── Progress ─────────────────────────────────────────────────────────────────
 
 export function Progress({
-  value, color = '#4A9EFF', height = 4,
+  value, color = 'var(--c-sky)', height = 4,
 }: {
   value: number
   color?: string
@@ -162,7 +162,7 @@ export function Progress({
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 
 export function Avatar({
-  initials, size = 32, color = '#4A9EFF',
+  initials, size = 32, color = 'var(--c-sky)',
 }: {
   initials: string
   size?: number
@@ -173,8 +173,8 @@ export function Avatar({
       className="rounded-full flex items-center justify-center font-mono font-semibold shrink-0"
       style={{
         width: size, height: size,
-        background: `linear-gradient(135deg, ${color}, #2A6FB8)`,
-        color: '#001426',
+        background: `linear-gradient(135deg, ${color}, var(--c-sky-dim))`,
+        color: 'var(--c-on-sky)',
         fontSize: size * 0.35,
       }}
     >
@@ -204,12 +204,12 @@ export function LineChart({ data, height = 160 }: { data: { v: number }[]; heigh
     <svg viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ height }}>
       <defs>
         <linearGradient id="lg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#4A9EFF" stopOpacity="0.18" />
-          <stop offset="100%" stopColor="#4A9EFF" stopOpacity="0" />
+          <stop offset="0%" stopColor="var(--c-sky)" stopOpacity="0.18" />
+          <stop offset="100%" stopColor="var(--c-sky)" stopOpacity="0" />
         </linearGradient>
       </defs>
       <polygon points={area} fill="url(#lg)" />
-      <polyline points={polyline} fill="none" stroke="#4A9EFF" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+      <polyline points={polyline} fill="none" stroke="var(--c-sky)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
     </svg>
   )
 }
@@ -238,13 +238,15 @@ export function BarChart({
           <g key={i}>
             <rect
               x={x} y={y} width={barW} height={barH} rx="3"
-              fill={d.highlight ? '#4A9EFF' : '#4A9EFF44'}
+              fill={d.highlight ? 'var(--c-sky)' : undefined}
+              fillOpacity={d.highlight ? 1 : 0.27}
+              style={d.highlight ? undefined : { fill: 'var(--c-sky)' }}
             />
             <text
               x={x + barW / 2} y={h + 14}
               textAnchor="middle"
               className="fill-fg-3"
-              style={{ fontSize: 9, fontFamily: 'JetBrains Mono, monospace', fill: '#5A6B85' }}
+              style={{ fontSize: 9, fontFamily: 'JetBrains Mono, monospace', fill: 'var(--c-fg-3)' }}
             >
               {d.label}
             </text>
