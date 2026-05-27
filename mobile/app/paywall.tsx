@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Linking,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, radii } from '@/constants/tokens';
@@ -16,7 +16,7 @@ import type { ColorSet } from '@/constants/tokens';
 import { useColors } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
 
-const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'https://skydivelog.app';
+const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'https://jumplogs.com';
 
 const FEATURES = [
   {
@@ -46,6 +46,35 @@ export default function PaywallScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const { skippable, reason } = useLocalSearchParams<{ skippable?: string; reason?: string }>();
+  const canSkip = skippable === '1';
+  const isExpired = reason === 'trial_expired';
+  const isTrialLimit = reason === 'trial_limit';
+
+  const title = isExpired
+    ? 'Your trial has ended.'
+    : 'One subscription.\nEvery jump, forever.';
+
+  const subtitle = isExpired
+    ? 'Subscribe to keep logging your jumps.'
+    : isTrialLimit
+    ? "You've used 5 trial jumps.\nUpgrade for unlimited logging."
+    : null;
+
+  // Close/dismiss: for gated scenarios go back; for post-signup replace to log
+  const handleDismiss = () => {
+    if (reason) {
+      router.back();
+    } else {
+      router.replace('/(tabs)/log');
+    }
+  };
+
+  // Skip (trial-limit only): proceed to add the jump
+  const handleSkip = () => {
+    router.replace('/(tabs)/log/new' as any);
+  };
 
   const handleSubscribe = async () => {
     setLoading(true);
@@ -79,7 +108,7 @@ export default function PaywallScreen() {
         {/* Close button */}
         <TouchableOpacity
           style={styles.closeBtn}
-          onPress={() => router.replace('/(tabs)/log')}
+          onPress={handleDismiss}
           activeOpacity={0.7}
         >
           <Ionicons name="close" size={20} color={colors.fg2} />
@@ -91,7 +120,8 @@ export default function PaywallScreen() {
           <Text style={styles.badgeText}>JUMP LOGS PRO</Text>
         </View>
 
-        <Text style={styles.title}>One subscription.{'\n'}Every jump, forever.</Text>
+        <Text style={styles.title}>{title}</Text>
+        {!!subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
 
         {/* Feature list */}
         <View style={styles.features}>
@@ -142,6 +172,13 @@ export default function PaywallScreen() {
         <Text style={styles.legalCaption}>
           $12.00 USD billed today · Stripe · cancel anytime
         </Text>
+
+        {/* Skip link — trial limit only */}
+        {canSkip && (
+          <TouchableOpacity onPress={handleSkip} activeOpacity={0.7} style={styles.skipLink}>
+            <Text style={styles.skipLinkText}>Not now · continue with trial</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -189,6 +226,13 @@ function makeStyles(c: ColorSet) {
     lineHeight: 38,
     letterSpacing: -0.7,
     color: c.fg,
+    marginBottom: spacing[3],
+  },
+  subtitle: {
+    fontFamily: 'InterTight-Regular',
+    fontSize: 16,
+    color: c.fg2,
+    lineHeight: 22,
     marginBottom: spacing[8],
   },
   features: {
@@ -297,6 +341,17 @@ function makeStyles(c: ColorSet) {
     letterSpacing: 0.5,
     color: c.fg3,
     textAlign: 'center',
+    marginBottom: spacing[4],
+  },
+  skipLink: {
+    alignItems: 'center',
+    paddingVertical: spacing[2],
+  },
+  skipLinkText: {
+    fontFamily: 'InterTight-Regular',
+    fontSize: 14,
+    color: c.fg3,
+    textDecorationLine: 'underline',
   },
   });
 }

@@ -22,8 +22,8 @@ function Label({ text }: { text: string }) {
   return <Text style={{ fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: colors.fg3, marginBottom: spacing[1.5] }}>{text}</Text>;
 }
 
-function DateField({ label, value, onChange, optional }: {
-  label: string; value: Date | null; onChange: (d: Date) => void; optional?: boolean;
+function DateField({ label, value, onChange, optional, error }: {
+  label: string; value: Date | null; onChange: (d: Date) => void; optional?: boolean; error?: string;
 }) {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -39,7 +39,7 @@ function DateField({ label, value, onChange, optional }: {
   return (
     <View style={styles.flex}>
       <Label text={label} />
-      <TouchableOpacity style={styles.dateBtn} onPress={() => { setDraft(value ?? new Date()); setOpen(true); }} activeOpacity={0.7}>
+      <TouchableOpacity style={[styles.dateBtn, !!error && { borderColor: colors.danger }]} onPress={() => { setDraft(value ?? new Date()); setOpen(true); }} activeOpacity={0.7}>
         <Ionicons name="calendar-outline" size={15} color={value ? colors.fg : colors.fg3} style={{ marginRight: spacing[2] }} />
         <Text style={[styles.dateBtnText, !value && { color: colors.fg3 }]}>{display}</Text>
       </TouchableOpacity>
@@ -69,6 +69,7 @@ function DateField({ label, value, onChange, optional }: {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
+      {!!error && <Text style={{ fontFamily: 'InterTight-Regular', fontSize: 12, color: colors.danger, marginTop: 4, marginBottom: spacing[1] }}>{error}</Text>}
     </View>
   );
 }
@@ -83,11 +84,23 @@ export default function NewCertificateScreen() {
   const [expiresDate, setExpiresDate] = useState<Date | null>(null);
   const [referenceNumber, setReferenceNumber] = useState('');
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<{
+    title?: string;
+    issuingBody?: string;
+    issuedDate?: string;
+    expiresDate?: string;
+  }>({});
+
+  const clearError = (field: string) => setErrors(e => ({ ...e, [field]: undefined }));
 
   const handleSave = async () => {
-    if (!title.trim()) { Alert.alert('Title required', 'Please enter a certificate title.'); return; }
-    if (!issuingBody.trim()) { Alert.alert('Issuing body required', 'Please enter the issuing body.'); return; }
-    if (!issuedDate) { Alert.alert('Issue date required', 'Please select an issue date.'); return; }
+    const errs: { title?: string; issuingBody?: string; issuedDate?: string; expiresDate?: string } = {};
+    if (!title.trim())        errs.title        = 'Title is required';
+    if (!issuingBody.trim()) errs.issuingBody   = 'Issuing body is required';
+    if (!issuedDate)         errs.issuedDate    = 'Issue date is required';
+    if (expiresDate && issuedDate && expiresDate < issuedDate)
+      errs.expiresDate = 'Expiry cannot be before the issued date';
+    if (Object.keys(errs).length) { setErrors(errs); return; }
     setSaving(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -139,9 +152,9 @@ export default function NewCertificateScreen() {
 
           <Label text="TITLE" />
           <TextInput
-            style={styles.input}
+            style={[styles.input, !!errors.title && { borderColor: colors.danger }]}
             value={title}
-            onChangeText={setTitle}
+            onChangeText={v => { setTitle(v); clearError('title'); }}
             placeholder={
               category === 'licence' ? 'B Licence, C Licence, D Licence' :
               category === 'rating'  ? 'AFF Instructor, Coach 1, Tandem Instructor' :
@@ -150,12 +163,13 @@ export default function NewCertificateScreen() {
             placeholderTextColor={colors.fg3}
             autoCapitalize="words"
           />
+          {!!errors.title && <Text style={styles.errorText}>{errors.title}</Text>}
 
           <Label text="ISSUING BODY" />
           <TextInput
-            style={styles.input}
+            style={[styles.input, !!errors.issuingBody && { borderColor: colors.danger }]}
             value={issuingBody}
-            onChangeText={setIssuingBody}
+            onChangeText={v => { setIssuingBody(v); clearError('issuingBody'); }}
             placeholder={
               category === 'medical' ? 'CASA, CAA, FAA' : 'APF, USPA, BPA'
             }
@@ -163,10 +177,11 @@ export default function NewCertificateScreen() {
             autoCapitalize="characters"
             autoCorrect={false}
           />
+          {!!errors.issuingBody && <Text style={styles.errorText}>{errors.issuingBody}</Text>}
 
           <View style={styles.row2}>
-            <DateField label="ISSUED" value={issuedDate} onChange={setIssuedDate} />
-            <DateField label="EXPIRES" value={expiresDate} onChange={setExpiresDate} optional />
+            <DateField label="ISSUED" value={issuedDate} onChange={d => { setIssuedDate(d); clearError('issuedDate'); }} error={errors.issuedDate} />
+            <DateField label="EXPIRES" value={expiresDate} onChange={d => { setExpiresDate(d); clearError('expiresDate'); }} optional error={errors.expiresDate} />
           </View>
 
           <Label text="REFERENCE / NUMBER" />
@@ -232,5 +247,6 @@ function makeStyles(c: ColorSet) {
   attachSub: { fontFamily: 'InterTight-Regular', fontSize: 13, color: c.fg3, marginTop: 2 },
   uploadBtn: { backgroundColor: c.surface2, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, paddingHorizontal: spacing[4], paddingVertical: spacing[2] },
   uploadBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 13, color: c.fg },
+  errorText: { fontFamily: 'InterTight-Regular', fontSize: 12, color: c.danger, marginTop: -spacing[3], marginBottom: spacing[3] },
   });
 }

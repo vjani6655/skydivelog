@@ -34,6 +34,8 @@ export default function SignupPage() {
     else if (!EMAIL_RE.test(email.trim()))     errs.email    = "Enter a valid email address"
     if (!password)                             errs.password = "Password is required"
     else if (password.length < 8)             errs.password = "Must be at least 8 characters"
+    if (!licenceNumber.trim())                 errs.licenceNumber = "Licence number is required"
+    if (!rating.trim())                        errs.rating   = "Rating is required"
     if (!agreed)                               errs.agreed   = "You must agree to the Terms and Privacy Policy"
     setFieldErrors(errs)
     if (Object.keys(errs).length > 0) return
@@ -45,6 +47,7 @@ export default function SignupPage() {
       email,
       password,
       options: {
+        emailRedirectTo: `${window.location.origin}/api/auth/callback`,
         data: {
           full_name: fullName,
           licence_number: licenceNumber,
@@ -154,11 +157,12 @@ export default function SignupPage() {
               <input
                 type="text"
                 value={licenceNumber}
-                onChange={(e) => setLicenceNumber(e.target.value)}
-                className="w-full bg-surface-2 border border-border rounded-sm pl-9 pr-3 py-2.5 text-sm text-fg placeholder:text-fg-4 focus:outline-none focus:border-sky transition-colors"
+                onChange={(e) => { setLicenceNumber(e.target.value); clearField("licenceNumber") }}
+                className={`w-full bg-surface-2 border rounded-sm pl-9 pr-3 py-2.5 text-sm text-fg placeholder:text-fg-4 focus:outline-none transition-colors ${fieldErrors.licenceNumber ? "border-danger/60 focus:border-danger" : "border-border focus:border-sky"}`}
                 placeholder="APF 14829"
               />
             </div>
+            {fieldErrors.licenceNumber && <p className="mt-1 text-xs text-danger">{fieldErrors.licenceNumber}</p>}
           </div>
           <div>
             <label className="block text-overline font-semibold tracking-widest uppercase text-fg-3 mb-1.5">
@@ -167,10 +171,11 @@ export default function SignupPage() {
             <input
               type="text"
               value={rating}
-              onChange={(e) => setRating(e.target.value)}
-              className="w-full bg-surface-2 border border-border rounded-sm px-3 py-2.5 text-sm text-fg placeholder:text-fg-4 focus:outline-none focus:border-sky transition-colors"
+              onChange={(e) => { setRating(e.target.value); clearField("rating") }}
+              className={`w-full bg-surface-2 border rounded-sm px-3 py-2.5 text-sm text-fg placeholder:text-fg-4 focus:outline-none transition-colors ${fieldErrors.rating ? "border-danger/60 focus:border-danger" : "border-border focus:border-sky"}`}
               placeholder="B"
             />
+            {fieldErrors.rating && <p className="mt-1 text-xs text-danger">{fieldErrors.rating}</p>}
           </div>
         </div>
 

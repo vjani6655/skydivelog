@@ -60,6 +60,8 @@ export default function LogScreen() {
   const [activeFilter, setActiveFilter] = useState('All');
   const [filterVisible, setFilterVisible] = useState(false);
   const [filter, setFilter] = useState<FilterState>(DEFAULT_FILTER);
+  const [userCreatedAt, setUserCreatedAt] = useState<string | null>(null);
+  const [subActive, setSubActive] = useState(false);
 
   // ── data fetch ────────────────────────────────────────────────────────────
   const fetchAll = async () => {
@@ -71,7 +73,7 @@ export default function LogScreen() {
     // Flush any locally-queued jumps first
     await trySyncQueue(supabase).catch(() => null);
 
-    const [{ data: userData }, { data: jumpData }] = await Promise.all([
+    const [{ data: userData }, { data: jumpData }, { data: subData }] = await Promise.all([
       supabase.from('users').select('display_layout_jump_list').eq('id', user.id).single(),
       supabase
         .from('jumps')
@@ -80,7 +82,17 @@ export default function LogScreen() {
         .is('deleted_at', null)
         .order('date', { ascending: false })
         .order('jump_number', { ascending: false }),
+      supabase
+        .from('subscriptions')
+        .select('status')
+        .eq('user_id', user.id)
+        .order('started_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
     ]);
+
+    setUserCreatedAt(user.created_at);
+    setSubActive(subData?.status === 'active' || subData?.status === 'overdue');
 
     if (userData?.display_layout_jump_list) {
       setLayout(userData.display_layout_jump_list as Layout);
@@ -118,7 +130,22 @@ export default function LogScreen() {
 
   useFocusEffect(useCallback(() => { fetchAll(); }, []));
 
-  // ── derived stats ─────────────────────────────────────────────────────────
+  // ── subscription gate ─────────────────────────────────────────────────────
+  const trialEnd = userCreatedAt
+    ? new Date(new Date(userCreatedAt).getTime() + 14 * 86400000)
+    : null;
+  const inTrial = !subActive && !!trialEnd && Date.now() < trialEnd.getTime();
+  const trialExpired = !subActive && !!trialEnd && Date.now() >= trialEnd.getTime();
+
+  const handleAddJump = () => {
+    if (trialExpired) {
+      router.push({ pathname: '/paywall', params: { reason: 'trial_expired' } } as any);
+    } else if (inTrial && jumps.length >= 5) {
+      router.push({ pathname: '/paywall', params: { skippable: '1', reason: 'trial_limit' } } as any);
+    } else {
+      router.push('/(tabs)/log/new');
+    }
+  };
   const totalFF = useMemo(
     () => jumps.reduce((s, j) => s + (j.freefall_seconds ?? 0), 0),
     [jumps],
@@ -214,7 +241,7 @@ export default function LogScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.iconBtn, styles.addBtn]}
-            onPress={() => router.push('/(tabs)/log/new')}
+            onPress={handleAddJump}
           >
             <Ionicons name="add" size={22} color={colors.onSky} />
           </TouchableOpacity>
@@ -271,7 +298,7 @@ export default function LogScreen() {
       <Text style={styles.emptyBody}>Log your first jump to get started</Text>
       <TouchableOpacity
         style={styles.emptyBtn}
-        onPress={() => router.push('/(tabs)/log/new')}
+        onPress={handleAddJump}
       >
         <Text style={styles.emptyBtnText}>Log a jump</Text>
       </TouchableOpacity>

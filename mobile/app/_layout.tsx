@@ -102,6 +102,7 @@ export default function RootLayout() {
       <Stack.Screen name="sign-in" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="create-account" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="paywall" options={{ animation: 'slide_from_bottom', presentation: 'modal' }} />
+      <Stack.Screen name="subscription-success" options={{ animation: 'fade', gestureEnabled: false }} />
       <Stack.Screen name="forgot-password" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="(auth)" />

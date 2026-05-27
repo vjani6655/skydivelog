@@ -393,7 +393,7 @@ export function SingleDocument({
     <Document
       title={`Jump Logs — ${jumper.full_name}`}
       author="Jump Logs"
-      creator="skydivelog.app"
+      creator="jumplogs.com"
     >
       {jumps.map((jump, i) => (
         <SinglePage

@@ -97,6 +97,8 @@ export default function NewGearScreen() {
     if (!manufacturedDate) errs.manufacturedDate = 'Date of manufacture is required';
     if (gearType === 'canopy' && canopySubType === 'reserve' && !repackDate) {
       errs.repackDate = 'Repack date is required';
+    } else if (gearType === 'canopy' && canopySubType === 'reserve' && repackDate && manufacturedDate && repackDate < manufacturedDate) {
+      errs.repackDate = 'Repack date cannot be before manufacture date';
     }
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setErrors({});

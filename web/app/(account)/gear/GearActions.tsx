@@ -51,6 +51,8 @@ export default function GearActions() {
     if (!manufacturedDate) errs.manufacturedDate = "Required"
     if (gearType === "canopy" && canopySubType === "reserve" && !lastRepack)
       errs.lastRepack = "Required for reserve"
+    if (lastRepack && manufacturedDate && lastRepack < manufacturedDate + "-01")
+      errs.lastRepack = "Repack date cannot be before manufacture date"
     if (Object.keys(errs).length) { setErrors(errs); return }
     setErrors({})
     setSaving(true)

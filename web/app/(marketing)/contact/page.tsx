@@ -26,7 +26,7 @@ export default function ContactPage() {
     if (res.ok) {
       setSent(true)
     } else {
-      setError("Something went wrong. Please email us directly at hello@skydivelog.app")
+      setError("Something went wrong. Please email us directly at support@jumplogs.com")
       setLoading(false)
     }
   }
@@ -48,7 +48,7 @@ export default function ContactPage() {
                 </div>
                 <div>
                   <p className="text-overline font-semibold tracking-widest uppercase text-fg-4 mb-0.5">Email</p>
-                  <a href="mailto:hello@skydivelog.app" className="text-sm text-fg hover:text-sky transition-colors">hello@skydivelog.app</a>
+                  <a href="mailto:support@jumplogs.com" className="text-sm text-fg hover:text-sky transition-colors">support@jumplogs.com</a>
                 </div>
               </div>
 
@@ -58,7 +58,7 @@ export default function ContactPage() {
                 </div>
                 <div>
                   <p className="text-overline font-semibold tracking-widest uppercase text-fg-4 mb-0.5">Press</p>
-                  <a href="mailto:press@skydivelog.app" className="text-sm text-fg hover:text-sky transition-colors">press@skydivelog.app</a>
+                  <a href="mailto:press@jumplogs.com" className="text-sm text-fg hover:text-sky transition-colors">press@jumplogs.com</a>
                 </div>
               </div>
 
@@ -68,7 +68,7 @@ export default function ContactPage() {
                 </div>
                 <div>
                   <p className="text-overline font-semibold tracking-widest uppercase text-fg-4 mb-0.5">Status &amp; incidents</p>
-                  <a href="https://status.skydivelog.app" target="_blank" rel="noopener noreferrer" className="text-sm text-fg hover:text-sky transition-colors">status.skydivelog.app</a>
+                  <a href="https://status.jumplogs.com" target="_blank" rel="noopener noreferrer" className="text-sm text-fg hover:text-sky transition-colors">status.jumplogs.com</a>
                 </div>
               </div>
             </div>

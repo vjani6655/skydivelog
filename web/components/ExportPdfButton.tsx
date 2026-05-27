@@ -167,7 +167,7 @@ export default function ExportPdfButton({ jumpIds, jumperName }: Props) {
             <div className="border-t border-[#D8D4C8] px-6 py-4">
               <p className="text-xs text-[#B6BCC6]">
                 A verification URL will be printed on each page at{' '}
-                <span className="font-mono">skydivelog.app/v/…</span>
+                <span className="font-mono">jumplogs.com/v/…</span>
               </p>
             </div>
           </div>

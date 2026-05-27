@@ -399,7 +399,7 @@ export function TenDocument({
     <Document
       title={`Jump Logs — ${jumper.full_name} Logbook`}
       author="Jump Logs"
-      creator="skydivelog.app"
+      creator="jumplogs.com"
     >
       {pages.map((pageJumps, pi) => (
         <TenPage

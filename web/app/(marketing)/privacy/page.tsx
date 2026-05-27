@@ -18,7 +18,7 @@ export default function PrivacyPage() {
     {
       id: "rights",
       title: "Your rights",
-      content: "You can export all your data at any time from the logbook page. You can delete your account from Settings. For data correction requests, contact hello@skydivelog.app. If you are in the EU, you have rights under GDPR.",
+      content: "You can export all your data at any time from the logbook page. You can delete your account from Settings. For data correction requests, contact support@jumplogs.com. If you are in the EU, you have rights under GDPR.",
     },
     {
       id: "cookies",
@@ -28,7 +28,7 @@ export default function PrivacyPage() {
     {
       id: "contact",
       title: "Contact",
-      content: "For privacy questions, email hello@skydivelog.app. We aim to respond within 5 business days.",
+      content: "For privacy questions, email support@jumplogs.com. We aim to respond within 5 business days.",
     },
   ]
 

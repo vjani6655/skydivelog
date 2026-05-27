@@ -42,6 +42,8 @@ export default function CertificateActions() {
     if (!title.trim())       errs.title = "Required"
     if (!issuingBody.trim()) errs.issuingBody = "Required"
     if (!issuedDate)         errs.issuedDate = "Required"
+    if (expiresDate && issuedDate && expiresDate < issuedDate + "-01")
+      errs.expiresDate = "Expiry date cannot be before the issued date"
     if (Object.keys(errs).length) { setErrors(errs); return }
     setErrors({})
     setSaving(true)
@@ -183,6 +185,7 @@ export default function CertificateActions() {
                     value={expiresDate}
                     onChange={(e) => setExpiresDate(e.target.value)}
                   />
+                  {err("expiresDate")}
                 </div>
               </div>
 
