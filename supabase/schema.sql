@@ -9,7 +9,7 @@
 
 create type public.jump_type_enum as enum (
   'Belly', 'Tracking', 'Wingsuit', 'Freefly',
-  'CRW', 'AFF', 'Tandem', 'Coach', 'Demo', 'Night'
+  'CRW', 'AFF', 'Tandem', 'Coach', 'Demo', 'Night', 'Camera Flying'
 );
 
 create type public.gear_type_enum as enum ('rig', 'canopy', 'aad');

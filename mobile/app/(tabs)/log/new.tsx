@@ -17,7 +17,7 @@ import { colors, spacing, radii } from '@/constants/tokens';
 import Toggle from '@/components/ui/Toggle';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const JUMP_TYPES = ['Belly', 'Tracking', 'Wingsuit', 'Freefly', 'CRW', 'AFF', 'Tandem', 'Coach', 'Demo', 'Night'];
+const JUMP_TYPES = ['Belly', 'Tracking', 'Wingsuit', 'Freefly', 'CRW', 'AFF', 'Tandem', 'Coach', 'Demo', 'Night', 'Camera Flying'];
 
 // Maps free-text student stage input (e.g. "AFF 1", "IAD Stage 3") to a valid DB enum value
 function sanitizeJumpType(text: string): string | null {
