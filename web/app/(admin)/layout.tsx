@@ -1,4 +1,4 @@
-import { redirect } from 'next/navigation'
+import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import AdminSidebar from '@/components/admin/sidebar'
@@ -18,7 +18,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     .eq('active', true)
     .maybeSingle()
 
-  if (!adminRow) redirect('/')
+  if (!adminRow) notFound()
+  if (adminRow.role !== 'super-admin') notFound()
 
   return (
     <div className="min-h-screen flex bg-bg text-fg font-sans">
