@@ -17,7 +17,9 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase';
 import { trySyncQueue, getRawQueue, queuedToJumpFull } from '@/lib/offlineQueue';
-import { colors, spacing, radii } from '@/constants/tokens';
+import { spacing, radii } from '@/constants/tokens';
+import type { ColorSet } from '@/constants/tokens';
+import { useColors } from '@/lib/theme';
 import type { JumpFull } from '@/lib/types';
 import CompactRow from '@/components/log/CompactRow';
 import DataCard from '@/components/log/DataCard';
@@ -46,6 +48,8 @@ function monthKey(iso: string): string {
 // ─── screen ──────────────────────────────────────────────────────────────────
 
 export default function LogScreen() {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { prefs } = usePrefs();
   const [jumps, setJumps] = useState<JumpFull[]>([]);
   const [layout, setLayout] = useState<Layout>('Cards');
@@ -407,10 +411,11 @@ export default function LogScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(c: ColorSet) {
+  return StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.bg,
+    backgroundColor: c.bg,
   },
   center: {
     flex: 1,
@@ -430,14 +435,14 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: 'InterTight-Bold',
     fontSize: 28,
-    color: colors.fg,
+    color: c.fg,
     letterSpacing: -0.5,
   },
   subtitle: {
     fontFamily: 'JetBrainsMono-Regular',
     fontSize: 11,
     letterSpacing: 0.6,
-    color: colors.fg3,
+    color: c.fg3,
     marginTop: 3,
   },
   titleActions: {
@@ -450,15 +455,15 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: radii.md,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
   addBtn: {
-    backgroundColor: colors.sky,
-    borderColor: colors.sky,
+    backgroundColor: c.sky,
+    borderColor: c.sky,
   },
 
   // ── search ──────────────────────────────────────────────────
@@ -467,10 +472,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginHorizontal: spacing[5],
     marginBottom: spacing[3],
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     paddingHorizontal: spacing[3],
     height: 40,
   },
@@ -481,7 +486,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: 'InterTight-Regular',
     fontSize: 14,
-    color: colors.fg,
+    color: c.fg,
   },
 
   // ── filter chips ────────────────────────────────────────────
@@ -497,21 +502,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[3],
     paddingVertical: spacing[1],
     borderRadius: radii.pill,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
   },
   chipActive: {
-    backgroundColor: colors.sky,
-    borderColor: colors.sky,
+    backgroundColor: c.sky,
+    borderColor: c.sky,
   },
   chipText: {
     fontFamily: 'InterTight-Medium',
     fontSize: 13,
-    color: colors.fg2,
+    color: c.fg2,
   },
   chipTextActive: {
-    color: colors.onSky,
+    color: c.onSky,
   },
 
   // ── list ────────────────────────────────────────────────────
@@ -532,25 +537,26 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontFamily: 'InterTight-SemiBold',
     fontSize: 18,
-    color: colors.fg,
+    color: c.fg,
     marginTop: spacing[3],
   },
   emptyBody: {
     fontFamily: 'InterTight-Regular',
     fontSize: 14,
-    color: colors.fg3,
+    color: c.fg3,
     textAlign: 'center',
   },
   emptyBtn: {
     marginTop: spacing[4],
     paddingHorizontal: spacing[5],
     paddingVertical: spacing[3],
-    backgroundColor: colors.sky,
+    backgroundColor: c.sky,
     borderRadius: radii.md,
   },
   emptyBtnText: {
     fontFamily: 'InterTight-SemiBold',
     fontSize: 14,
-    color: colors.onSky,
+    color: c.onSky,
   },
-});
+  });
+}

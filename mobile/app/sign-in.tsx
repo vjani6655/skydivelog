@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,9 +14,13 @@ import { router, useNavigation, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
-import { colors, spacing, radii } from '@/constants/tokens';
+import { spacing, radii } from '@/constants/tokens';
+import type { ColorSet } from '@/constants/tokens';
+import { useColors } from '@/lib/theme';
 
 export default function SignInScreen() {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -138,8 +142,9 @@ export default function SignInScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+function makeStyles(c: ColorSet) {
+  return StyleSheet.create({
+  safe: { flex: 1, backgroundColor: c.bg },
   flex: { flex: 1 },
   container: {
     flexGrow: 1,
@@ -161,7 +166,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing[2],
-    backgroundColor: colors.skyBg,
+    backgroundColor: c.skyBg,
     borderRadius: radii.md,
     padding: spacing[4],
     marginBottom: spacing[6],
@@ -170,20 +175,20 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: 'InterTight-Regular',
     fontSize: 13,
-    color: colors.sky,
+    color: c.sky,
     lineHeight: 19,
   },
   title: {
     fontFamily: 'InterTight-Bold',
     fontSize: 32,
     letterSpacing: -0.6,
-    color: colors.fg,
+    color: c.fg,
     marginBottom: spacing[2],
   },
   subtitle: {
     fontFamily: 'InterTight-Regular',
     fontSize: 15,
-    color: colors.fg2,
+    color: c.fg2,
     lineHeight: 22,
   },
   form: {
@@ -197,7 +202,7 @@ const styles = StyleSheet.create({
     fontFamily: 'JetBrainsMono-Regular',
     fontSize: 10,
     letterSpacing: 1.2,
-    color: colors.fg3,
+    color: c.fg3,
   },
   labelRow: {
     flexDirection: 'row',
@@ -207,15 +212,15 @@ const styles = StyleSheet.create({
   forgotLink: {
     fontFamily: 'InterTight-Medium',
     fontSize: 13,
-    color: colors.sky,
+    color: c.sky,
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     paddingHorizontal: spacing[3],
     height: 48,
   },
@@ -226,7 +231,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: 'InterTight-Regular',
     fontSize: 15,
-    color: colors.fg,
+    color: c.fg,
   },
   inputFlex: {
     flex: 1,
@@ -235,7 +240,7 @@ const styles = StyleSheet.create({
     paddingLeft: spacing[2],
   },
   primaryButton: {
-    backgroundColor: colors.sky,
+    backgroundColor: c.sky,
     borderRadius: radii.lg,
     paddingVertical: spacing[4],
     alignItems: 'center',
@@ -247,7 +252,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontFamily: 'InterTight-SemiBold',
     fontSize: 16,
-    color: colors.onSky,
+    color: c.onSky,
   },
   footerLink: {
     alignItems: 'center',
@@ -255,10 +260,11 @@ const styles = StyleSheet.create({
   footerText: {
     fontFamily: 'InterTight-Regular',
     fontSize: 14,
-    color: colors.fg2,
+    color: c.fg2,
   },
   footerLinkText: {
     fontFamily: 'InterTight-SemiBold',
-    color: colors.sky,
+    color: c.sky,
   },
-});
+  });
+}

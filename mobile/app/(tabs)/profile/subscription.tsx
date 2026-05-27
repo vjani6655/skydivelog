@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView, StyleSheet, SafeAreaView,
   ActivityIndicator, Linking, Alert,
@@ -6,7 +6,9 @@ import {
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
-import { colors, spacing, radii } from '@/constants/tokens';
+import { spacing, radii } from '@/constants/tokens';
+import type { ColorSet } from '@/constants/tokens';
+import { useColors } from '@/lib/theme';
 
 const PRO_FEATURES = [
   'Unlimited jumps',
@@ -44,6 +46,8 @@ function fmtMoney(cents: number, currency: string): string {
 }
 
 export default function SubscriptionScreen() {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [loading, setLoading] = useState(true);
   const [subscribing, setSubscribing] = useState(false);
   const [sub, setSub] = useState<{ status: string; renews_at: string | null } | null>(null);
@@ -288,33 +292,35 @@ export default function SubscriptionScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
+function makeStyles(c: ColorSet) {
+  return StyleSheet.create({
+  screen: { flex: 1, backgroundColor: c.bg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing[5], paddingVertical: spacing[3], borderBottomWidth: 1, borderBottomColor: colors.border },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing[5], paddingVertical: spacing[3], borderBottomWidth: 1, borderBottomColor: c.border },
   backBtn: { width: 36, height: 36, justifyContent: 'center' },
-  headerTitle: { flex: 1, textAlign: 'center', fontFamily: 'InterTight-SemiBold', fontSize: 17, color: colors.fg },
+  headerTitle: { flex: 1, textAlign: 'center', fontFamily: 'InterTight-SemiBold', fontSize: 17, color: c.fg },
   body: { padding: spacing[5], paddingBottom: spacing[12], gap: spacing[4] },
-  statusCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.lg, padding: spacing[4], gap: spacing[2] },
+  statusCard: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.lg, padding: spacing[4], gap: spacing[2] },
   statusTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing[1] },
   statusBadge: { borderRadius: radii.sm, paddingHorizontal: spacing[2], paddingVertical: 3 },
   statusBadgeText: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, fontWeight: '700' },
-  renewText: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, color: colors.fg3 },
+  renewText: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, color: c.fg3 },
   featureRow: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
-  featureText: { fontFamily: 'InterTight-Regular', fontSize: 14, color: colors.fg2 },
-  subscribeBtn: { backgroundColor: colors.sky, borderRadius: radii.md, paddingVertical: spacing[3], alignItems: 'center', justifyContent: 'center', minHeight: 46 },
+  featureText: { fontFamily: 'InterTight-Regular', fontSize: 14, color: c.fg2 },
+  subscribeBtn: { backgroundColor: c.sky, borderRadius: radii.md, paddingVertical: spacing[3], alignItems: 'center', justifyContent: 'center', minHeight: 46 },
   subscribeBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: '#fff' },
   manageBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing[1], paddingVertical: spacing[2] },
-  manageBtnText: { fontFamily: 'InterTight-Medium', fontSize: 14, color: colors.sky },
-  invoiceSection: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.lg, overflow: 'hidden' },
-  invoiceSectionTitle: { fontFamily: 'InterTight-SemiBold', fontSize: 11, color: colors.fg4, letterSpacing: 1.2, textTransform: 'uppercase', paddingHorizontal: spacing[4], paddingTop: spacing[3], paddingBottom: spacing[2] },
+  manageBtnText: { fontFamily: 'InterTight-Medium', fontSize: 14, color: c.sky },
+  invoiceSection: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.lg, overflow: 'hidden' },
+  invoiceSectionTitle: { fontFamily: 'InterTight-SemiBold', fontSize: 11, color: c.fg4, letterSpacing: 1.2, textTransform: 'uppercase', paddingHorizontal: spacing[4], paddingTop: spacing[3], paddingBottom: spacing[2] },
   invoiceEmpty: { paddingHorizontal: spacing[4], paddingVertical: spacing[3] },
-  invoiceEmptyText: { fontFamily: 'InterTight-Regular', fontSize: 13, color: colors.fg4 },
-  invoiceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing[4], paddingVertical: spacing[3], borderTopWidth: 1, borderTopColor: colors.border },
+  invoiceEmptyText: { fontFamily: 'InterTight-Regular', fontSize: 13, color: c.fg4 },
+  invoiceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing[4], paddingVertical: spacing[3], borderTopWidth: 1, borderTopColor: c.border },
   invoiceLeft: { gap: 2 },
-  invoiceDate: { fontFamily: 'JetBrainsMono-Regular', fontSize: 12, color: colors.fg3 },
-  invoiceAmount: { fontFamily: 'InterTight-SemiBold', fontSize: 14, color: colors.fg },
+  invoiceDate: { fontFamily: 'JetBrainsMono-Regular', fontSize: 12, color: c.fg3 },
+  invoiceAmount: { fontFamily: 'InterTight-SemiBold', fontSize: 14, color: c.fg },
   invoiceRight: { flexDirection: 'row', alignItems: 'center', gap: spacing[3] },
   invoiceStatus: { borderRadius: radii.sm, paddingHorizontal: spacing[2], paddingVertical: 2 },
   invoiceStatusText: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, fontWeight: '700' },
-});
+  });
+}

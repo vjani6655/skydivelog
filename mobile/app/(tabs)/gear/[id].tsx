@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, SafeAreaView, ActivityIndicator,
   TouchableOpacity, Alert,
@@ -6,7 +6,9 @@ import {
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
-import { colors, spacing, radii } from '@/constants/tokens';
+import { spacing, radii } from '@/constants/tokens';
+import type { ColorSet } from '@/constants/tokens';
+import { useColors } from '@/lib/theme';
 import type { Gear } from '@/lib/types';
 
 const TYPE_ICON: Record<string, string> = {
@@ -18,6 +20,8 @@ const TYPE_ICON: Record<string, string> = {
 };
 
 export default function GearDetailScreen() {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { id } = useLocalSearchParams<{ id: string }>();
   const [gear, setGear] = useState<Gear | null>(null);
   const [loading, setLoading] = useState(true);
@@ -103,25 +107,27 @@ export default function GearDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
+function makeStyles(c: ColorSet) {
+  return StyleSheet.create({
+  screen: { flex: 1, backgroundColor: c.bg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing[5], paddingVertical: spacing[3], borderBottomWidth: 1, borderBottomColor: colors.border },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing[5], paddingVertical: spacing[3], borderBottomWidth: 1, borderBottomColor: c.border },
   back: { width: 36, height: 36, justifyContent: 'center' },
-  headerTitle: { flex: 1, textAlign: 'center', fontFamily: 'InterTight-SemiBold', fontSize: 17, color: colors.fg, paddingHorizontal: spacing[2] },
+  headerTitle: { flex: 1, textAlign: 'center', fontFamily: 'InterTight-SemiBold', fontSize: 17, color: c.fg, paddingHorizontal: spacing[2] },
   body: { padding: spacing[5], paddingBottom: spacing[12] },
-  heroRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, padding: spacing[4], marginBottom: spacing[5] },
-  gearIcon: { width: 60, height: 60, borderRadius: radii.md, backgroundColor: colors.surface2, justifyContent: 'center', alignItems: 'center' },
-  gearName: { fontFamily: 'InterTight-SemiBold', fontSize: 18, color: colors.fg },
-  gearType: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: colors.fg3, marginTop: 3 },
-  gearSN: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, color: colors.fg3, marginTop: 3 },
-  sectionTitle: { fontFamily: 'InterTight-SemiBold', fontSize: 13, color: colors.fg3, letterSpacing: 0.3, marginBottom: spacing[2] },
-  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, marginBottom: spacing[5], overflow: 'hidden' },
+  heroRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, padding: spacing[4], marginBottom: spacing[5] },
+  gearIcon: { width: 60, height: 60, borderRadius: radii.md, backgroundColor: c.surface2, justifyContent: 'center', alignItems: 'center' },
+  gearName: { fontFamily: 'InterTight-SemiBold', fontSize: 18, color: c.fg },
+  gearType: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: c.fg3, marginTop: 3 },
+  gearSN: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, color: c.fg3, marginTop: 3 },
+  sectionTitle: { fontFamily: 'InterTight-SemiBold', fontSize: 13, color: c.fg3, letterSpacing: 0.3, marginBottom: spacing[2] },
+  card: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, marginBottom: spacing[5], overflow: 'hidden' },
   specRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: spacing[4], paddingVertical: spacing[3.5] },
-  specRowBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
-  specLabel: { fontFamily: 'InterTight-Regular', fontSize: 14, color: colors.fg2 },
-  specValue: { fontFamily: 'InterTight-Medium', fontSize: 14, color: colors.fg, flexShrink: 1, textAlign: 'right', marginLeft: spacing[3], textTransform: 'capitalize' },
-  notesText: { fontFamily: 'InterTight-Regular', fontSize: 14, color: colors.fg2, padding: spacing[4] },
+  specRowBorder: { borderBottomWidth: 1, borderBottomColor: c.border },
+  specLabel: { fontFamily: 'InterTight-Regular', fontSize: 14, color: c.fg2 },
+  specValue: { fontFamily: 'InterTight-Medium', fontSize: 14, color: c.fg, flexShrink: 1, textAlign: 'right', marginLeft: spacing[3], textTransform: 'capitalize' },
+  notesText: { fontFamily: 'InterTight-Regular', fontSize: 14, color: c.fg2, padding: spacing[4] },
   deleteBtn: { paddingVertical: spacing[4] },
-  deleteBtnText: { fontFamily: 'InterTight-Medium', fontSize: 14, color: colors.danger },
-});
+  deleteBtnText: { fontFamily: 'InterTight-Medium', fontSize: 14, color: c.danger },
+  });
+}

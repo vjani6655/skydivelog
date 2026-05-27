@@ -2,10 +2,11 @@
  * 09B · Cockpit / Instrument panel layout
  * Dense mono telemetry grid, DZ card, notes, signed row.
  */
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { colors } from '@/constants/tokens';
+import type { ColorSet } from '@/constants/tokens';
+import { useColors } from '@/lib/theme';
 import typography from '@/constants/typography';
 import { Badge, Tag } from '@/components/ui';
 import type { JumpDetailProps } from '@/app/(tabs)/log/[id]';
@@ -37,10 +38,11 @@ function fmtSignerShort(name: string): string {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function TelCell({ label, value, unit }: { label: string; value: string; unit?: string }) {
+  const colors = useColors();
   return (
-    <View style={styles.telCell}>
+    <View style={{ flex: 1, padding: 14 }}>
       <Text style={[typography.overline, { color: colors.fg3 }]}>{label}</Text>
-      <View style={styles.telValueRow}>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 3, marginTop: 3 }}>
         <Text style={[typography.num, { color: colors.fg }]}>{value}</Text>
         {unit && (
           <Text style={[typography.caption, { color: colors.fg3, marginBottom: 3 }]}>
@@ -56,6 +58,8 @@ function TelCell({ label, value, unit }: { label: string; value: string; unit?: 
 
 export default function DetailCockpit({ jump, signatures, tags, edits }: JumpDetailProps) {
   const { prefs } = usePrefs();
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const signed   = signatures.length > 0;
   const sig      = signatures[0];
   const coords   = fmtCoords(
@@ -315,7 +319,8 @@ export default function DetailCockpit({ jump, signatures, tags, edits }: JumpDet
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+function makeStyles(colors: ColorSet) {
+  return StyleSheet.create({
   scroll:  { flex: 1 },
   content: { padding: 16, gap: 8 },
 
@@ -404,3 +409,4 @@ const styles = StyleSheet.create({
   timestamps: { marginTop: 8, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.border, gap: 4 },
   tsText: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.6, color: colors.fg3 },
 });
+}

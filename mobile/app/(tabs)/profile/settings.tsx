@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, SafeAreaView, TouchableOpacity,
   ActivityIndicator, Alert,
@@ -7,7 +7,9 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Toggle from '@/components/ui/Toggle';
 import { supabase } from '@/lib/supabase';
-import { colors, spacing, radii } from '@/constants/tokens';
+import { spacing, radii } from '@/constants/tokens';
+import type { ColorSet } from '@/constants/tokens';
+import { useColors } from '@/lib/theme';
 import { usePrefs, type AltUnit, type DateFmt, type ThemePref } from '@/lib/prefsContext';
 
 const LAYOUT_JUMP_LIST = ['Timeline', 'Compact', 'Cards'];
@@ -26,10 +28,14 @@ const THEMES: { value: ThemePref; label: string }[] = [
 ];
 
 function SectionTitle({ text }: { text: string }) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return <Text style={styles.sectionTitle}>{text}</Text>;
 }
 
 function ToggleRow({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.toggleRow}>
       <Text style={styles.toggleLabel}>{label}</Text>
@@ -39,6 +45,8 @@ function ToggleRow({ label, value, onChange }: { label: string; value: boolean; 
 }
 
 function ChipRow({ options, value, onChange }: { options: string[]; value: string; onChange: (v: string) => void }) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.chipRow}>
       {options.map(o => (
@@ -61,6 +69,8 @@ function LabeledChipRow<T extends string>({
   value: T;
   onChange: (v: T) => void;
 }) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View>
       <Text style={styles.subLabel}>{label}</Text>
@@ -81,6 +91,8 @@ function LabeledChipRow<T extends string>({
 }
 
 export default function SettingsScreen() {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { prefs, updatePrefs } = usePrefs();
   const [currencyAlerts, setCurrencyAlerts] = useState(true);
   const [currencyMonths, setCurrencyMonths] = useState(1);
@@ -236,27 +248,29 @@ export default function SettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
+function makeStyles(c: ColorSet) {
+  return StyleSheet.create({
+  screen: { flex: 1, backgroundColor: c.bg },
   flex: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing[5], paddingVertical: spacing[3], borderBottomWidth: 1, borderBottomColor: colors.border },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing[5], paddingVertical: spacing[3], borderBottomWidth: 1, borderBottomColor: c.border },
   backBtn: { width: 36, height: 36, justifyContent: 'center' },
-  headerTitle: { flex: 1, textAlign: 'center', fontFamily: 'InterTight-SemiBold', fontSize: 17, color: colors.fg },
-  saveBtn: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: colors.sky },
+  headerTitle: { flex: 1, textAlign: 'center', fontFamily: 'InterTight-SemiBold', fontSize: 17, color: c.fg },
+  saveBtn: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: c.sky },
   body: { padding: spacing[5], paddingBottom: spacing[12] },
-  sectionTitle: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: colors.fg3, marginBottom: spacing[2], marginTop: spacing[4] },
-  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.lg, overflow: 'hidden', paddingVertical: spacing[1] },
+  sectionTitle: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: c.fg3, marginBottom: spacing[2], marginTop: spacing[4] },
+  card: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.lg, overflow: 'hidden', paddingVertical: spacing[1] },
   toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing[4], paddingVertical: spacing[3] },
-  toggleLabel: { fontFamily: 'InterTight-Medium', fontSize: 15, color: colors.fg },
-  rowDivider: { height: 1, backgroundColor: colors.border, marginLeft: spacing[4] },
-  subLabel: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.5, color: colors.fg3, paddingHorizontal: spacing[4], paddingTop: spacing[3] },
+  toggleLabel: { fontFamily: 'InterTight-Medium', fontSize: 15, color: c.fg },
+  rowDivider: { height: 1, backgroundColor: c.border, marginLeft: spacing[4] },
+  subLabel: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.5, color: c.fg3, paddingHorizontal: spacing[4], paddingTop: spacing[3] },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2], paddingHorizontal: spacing[4], paddingTop: spacing[2], paddingBottom: spacing[3] },
-  chip: { paddingHorizontal: spacing[3], paddingVertical: spacing[2], borderRadius: radii.md, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border },
-  chipActive: { borderColor: colors.sky, backgroundColor: 'rgba(74,158,255,0.1)' },
-  chipText: { fontFamily: 'InterTight-Medium', fontSize: 13, color: colors.fg2 },
-  chipTextActive: { color: colors.sky },
+  chip: { paddingHorizontal: spacing[3], paddingVertical: spacing[2], borderRadius: radii.md, backgroundColor: c.surface2, borderWidth: 1, borderColor: c.border },
+  chipActive: { borderColor: c.sky, backgroundColor: 'rgba(74,158,255,0.1)' },
+  chipText: { fontFamily: 'InterTight-Medium', fontSize: 13, color: c.fg2 },
+  chipTextActive: { color: c.sky },
   threshRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing[4], paddingBottom: spacing[3] },
-  threshLabel: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, letterSpacing: 0.5, color: colors.fg3 },
+  threshLabel: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, letterSpacing: 0.5, color: c.fg3 },
   threshChips: { flexDirection: 'row', gap: spacing[2] },
-});
+  });
+}

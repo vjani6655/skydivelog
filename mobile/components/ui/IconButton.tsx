@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { TouchableOpacity, View, StyleSheet } from 'react-native';
-import { colors, shadows } from '@/constants/tokens';
+import { shadows } from '@/constants/tokens';
+import { useColors } from '@/lib/theme';
 import Icon from './Icon';
 
 interface IconButtonProps {
@@ -16,8 +17,34 @@ export default function IconButton({
   onPress,
   badge = false,
   disabled = false,
-  color = colors.fg,
+  color,
 }: IconButtonProps) {
+  const colors = useColors();
+  const resolvedColor = color ?? colors.fg;
+  const styles = useMemo(() => StyleSheet.create({
+    base: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+      ...shadows.card,
+    },
+    disabled: { opacity: 0.5 },
+    badge: {
+      position: 'absolute',
+      top: 3,
+      right: 3,
+      width: 7,
+      height: 7,
+      borderRadius: 4,
+      backgroundColor: colors.sky,
+    },
+  }), [colors]);
+
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -25,32 +52,8 @@ export default function IconButton({
       activeOpacity={0.7}
       style={[styles.base, disabled && styles.disabled]}
     >
-      <Icon name={name} size={18} color={color} />
+      <Icon name={name} size={18} color={resolvedColor} />
       {badge && <View style={styles.badge} />}
     </TouchableOpacity>
   );
 }
-
-const styles = StyleSheet.create({
-  base: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...shadows.card,
-  },
-  disabled: { opacity: 0.5 },
-  badge: {
-    position: 'absolute',
-    top: 3,
-    right: 3,
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: colors.sky,
-  },
-});

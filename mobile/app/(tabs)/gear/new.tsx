@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet,
   SafeAreaView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Modal,
@@ -7,7 +7,9 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { supabase } from '@/lib/supabase';
-import { colors, spacing, radii } from '@/constants/tokens';
+import { spacing, radii } from '@/constants/tokens';
+import type { ColorSet } from '@/constants/tokens';
+import { useColors } from '@/lib/theme';
 
 const GEAR_TYPES: { key: 'rig' | 'canopy' | 'aad'; label: string; icon: string }[] = [
   { key: 'rig',    label: 'Rig',    icon: 'briefcase-outline' },
@@ -16,10 +18,13 @@ const GEAR_TYPES: { key: 'rig' | 'canopy' | 'aad'; label: string; icon: string }
 ];
 
 function Label({ text }: { text: string }) {
-  return <Text style={styles.label}>{text}</Text>;
+  const colors = useColors();
+  return <Text style={{ fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: colors.fg3, marginBottom: spacing[1.5] }}>{text}</Text>;
 }
 
 function DateField({ label, value, onChange, error }: { label: string; value: Date | null; onChange: (d: Date) => void; error?: string }) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Date>(value ?? new Date());
   const display = value
@@ -69,6 +74,8 @@ function DateField({ label, value, onChange, error }: { label: string; value: Da
 }
 
 export default function NewGearScreen() {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [gearType, setGearType] = useState<'rig' | 'canopy' | 'aad'>('rig');
   const [canopySubType, setCanopySubType] = useState<'main' | 'reserve'>('main');
   const [makeModel, setMakeModel] = useState('');
@@ -232,40 +239,42 @@ export default function NewGearScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
+function makeStyles(c: ColorSet) {
+  return StyleSheet.create({
+  screen: { flex: 1, backgroundColor: c.bg },
   flex: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing[5], paddingVertical: spacing[3], borderBottomWidth: 1, borderBottomColor: colors.border },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing[5], paddingVertical: spacing[3], borderBottomWidth: 1, borderBottomColor: c.border },
   close: { width: 36, height: 36, justifyContent: 'center' },
-  headerTitle: { flex: 1, textAlign: 'center', fontFamily: 'InterTight-SemiBold', fontSize: 17, color: colors.fg },
-  saveBtn: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: colors.sky },
+  headerTitle: { flex: 1, textAlign: 'center', fontFamily: 'InterTight-SemiBold', fontSize: 17, color: c.fg },
+  saveBtn: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: c.sky },
   body: { padding: spacing[5], paddingBottom: spacing[12] },
-  sectionTitle: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: colors.fg3, marginBottom: spacing[2] },
+  sectionTitle: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: c.fg3, marginBottom: spacing[2] },
 
   // Horizontal type selector
   typeRow: { flexDirection: 'row', gap: spacing[2], marginBottom: spacing[5] },
-  typeCard: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing[2], backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, paddingVertical: spacing[4], paddingHorizontal: spacing[2] },
-  typeCardActive: { borderColor: colors.sky, backgroundColor: 'rgba(74,158,255,0.08)' },
-  typeLabel: { fontFamily: 'InterTight-Medium', fontSize: 12, color: colors.fg2, textAlign: 'center' },
-  typeLabelActive: { color: colors.sky },
+  typeCard: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing[2], backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, paddingVertical: spacing[4], paddingHorizontal: spacing[2] },
+  typeCardActive: { borderColor: c.sky, backgroundColor: 'rgba(74,158,255,0.08)' },
+  typeLabel: { fontFamily: 'InterTight-Medium', fontSize: 12, color: c.fg2, textAlign: 'center' },
+  typeLabelActive: { color: c.sky },
 
   // Canopy sub-type (Main / Reserve)
-  subTypeCard: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing[2], backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, paddingVertical: spacing[3] },
-  subTypeCardActive: { borderColor: colors.sky, backgroundColor: 'rgba(74,158,255,0.08)' },
-  subTypeLabel: { fontFamily: 'InterTight-Medium', fontSize: 14, color: colors.fg2 },
-  subTypeLabelActive: { color: colors.sky },
+  subTypeCard: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing[2], backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, paddingVertical: spacing[3] },
+  subTypeCardActive: { borderColor: c.sky, backgroundColor: 'rgba(74,158,255,0.08)' },
+  subTypeLabel: { fontFamily: 'InterTight-Medium', fontSize: 14, color: c.fg2 },
+  subTypeLabelActive: { color: c.sky },
   fieldGroup: { marginBottom: spacing[4] },
-  label: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: colors.fg3, marginBottom: spacing[1.5] },
-  input: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, paddingHorizontal: spacing[3], paddingVertical: spacing[3], fontFamily: 'InterTight-Regular', fontSize: 15, color: colors.fg },
-  inputError: { borderColor: colors.danger },
-  errorText: { fontFamily: 'InterTight-Regular', fontSize: 12, color: colors.danger, marginTop: spacing[1] },
-  dateBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, paddingHorizontal: spacing[3], paddingVertical: spacing[3] },
-  dateBtnText: { fontFamily: 'InterTight-Regular', fontSize: 15, color: colors.fg, flex: 1 },
+  label: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: c.fg3, marginBottom: spacing[1.5] },
+  input: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, paddingHorizontal: spacing[3], paddingVertical: spacing[3], fontFamily: 'InterTight-Regular', fontSize: 15, color: c.fg },
+  inputError: { borderColor: c.danger },
+  errorText: { fontFamily: 'InterTight-Regular', fontSize: 12, color: c.danger, marginTop: spacing[1] },
+  dateBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, paddingHorizontal: spacing[3], paddingVertical: spacing[3] },
+  dateBtnText: { fontFamily: 'InterTight-Regular', fontSize: 15, color: c.fg, flex: 1 },
   dateModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  dateModalSheet: { backgroundColor: colors.surface, borderTopLeftRadius: radii.xl, borderTopRightRadius: radii.xl, overflow: 'hidden', paddingBottom: spacing[8] },
-  dateModalToolbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing[4], paddingVertical: spacing[3], borderBottomWidth: 1, borderBottomColor: colors.border },
+  dateModalSheet: { backgroundColor: c.surface, borderTopLeftRadius: radii.xl, borderTopRightRadius: radii.xl, overflow: 'hidden', paddingBottom: spacing[8] },
+  dateModalToolbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing[4], paddingVertical: spacing[3], borderBottomWidth: 1, borderBottomColor: c.border },
   dateModalToolbarBtn: { minWidth: 60 },
-  dateModalTitle: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: colors.fg },
-  dateModalCancelText: { fontFamily: 'InterTight-Regular', fontSize: 15, color: colors.fg2 },
-  dateModalDoneText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: colors.sky, textAlign: 'right' },
-});
+  dateModalTitle: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: c.fg },
+  dateModalCancelText: { fontFamily: 'InterTight-Regular', fontSize: 15, color: c.fg2 },
+  dateModalDoneText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: c.sky, textAlign: 'right' },
+  });
+}

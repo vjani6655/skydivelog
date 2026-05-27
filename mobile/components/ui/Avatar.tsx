@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet, ImageSourcePropType } from 'react-native';
-import { colors } from '@/constants/tokens';
+import { useColors } from '@/lib/theme';
 
 type AvatarSize = 26 | 32 | 40 | 64 | 88;
 
@@ -15,8 +15,10 @@ export default function Avatar({
   initials,
   image,
   size = 40,
-  color = colors.sky,
+  color,
 }: AvatarProps) {
+  const colors = useColors();
+  const resolvedColor = color ?? colors.sky;
   const fontSize = Math.round(size * 0.4);
 
   if (image) {
@@ -33,7 +35,7 @@ export default function Avatar({
       style={[
         styles.base,
         styles.fallback,
-        { width: size, height: size, borderRadius: size / 2, backgroundColor: color },
+        { width: size, height: size, borderRadius: size / 2, backgroundColor: resolvedColor },
       ]}
     >
       <Text style={{ fontSize, fontWeight: '600', color: colors.onSky }}>

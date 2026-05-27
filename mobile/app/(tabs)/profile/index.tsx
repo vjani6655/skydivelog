@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView, StyleSheet, SafeAreaView, ActivityIndicator,
 } from 'react-native';
@@ -6,7 +6,9 @@ import { router } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
-import { colors, spacing, radii } from '@/constants/tokens';
+import { spacing, radii } from '@/constants/tokens';
+import type { ColorSet } from '@/constants/tokens';
+import { useColors } from '@/lib/theme';
 
 const MENU_ITEMS = [
   { label: 'Edit profile', icon: 'person-outline', route: '/(tabs)/profile/edit' },
@@ -33,6 +35,8 @@ function formatFF(seconds: number | null): string {
 }
 
 export default function ProfileScreen() {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [profile, setProfile] = useState<{ full_name: string | null; licence_number: string | null } | null>(null);
   const [email, setEmail] = useState<string | null>(null);
   const [stats, setStats] = useState({ jumps: 0, ff: 0, dzs: 0 });
@@ -158,32 +162,34 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
+function makeStyles(c: ColorSet) {
+  return StyleSheet.create({
+  screen: { flex: 1, backgroundColor: c.bg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   body: { padding: spacing[5], paddingBottom: spacing[12], gap: spacing[4] },
   hero: { alignItems: 'center', paddingVertical: spacing[4] },
-  avatar: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.sky, justifyContent: 'center', alignItems: 'center', marginBottom: spacing[3] },
-  avatarText: { fontFamily: 'InterTight-Bold', fontSize: 26, color: colors.onSky },
-  heroName: { fontFamily: 'InterTight-Bold', fontSize: 22, color: colors.fg, letterSpacing: -0.5, marginBottom: spacing[1] },
-  heroLicence: { fontFamily: 'JetBrainsMono-Regular', fontSize: 12, color: colors.fg3, marginBottom: spacing[2] },
+  avatar: { width: 72, height: 72, borderRadius: 36, backgroundColor: c.sky, justifyContent: 'center', alignItems: 'center', marginBottom: spacing[3] },
+  avatarText: { fontFamily: 'InterTight-Bold', fontSize: 26, color: c.onSky },
+  heroName: { fontFamily: 'InterTight-Bold', fontSize: 22, color: c.fg, letterSpacing: -0.5, marginBottom: spacing[1] },
+  heroLicence: { fontFamily: 'JetBrainsMono-Regular', fontSize: 12, color: c.fg3, marginBottom: spacing[2] },
   heroRow: { flexDirection: 'row', gap: spacing[2] },
   subBadge: { borderRadius: radii.sm, paddingHorizontal: spacing[3], paddingVertical: 3 },
   subBadgeText: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, letterSpacing: 0.5 },
-  proBadge: { backgroundColor: colors.sky, borderRadius: radii.sm, paddingHorizontal: spacing[2], paddingVertical: 2 },
-  proBadgeText: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, color: colors.onSky, letterSpacing: 0.5 },
-  currentBadge: { backgroundColor: colors.okBg, borderRadius: radii.sm, paddingHorizontal: spacing[2], paddingVertical: 2 },
-  currentBadgeText: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, color: colors.ok, letterSpacing: 0.5 },
+  proBadge: { backgroundColor: c.sky, borderRadius: radii.sm, paddingHorizontal: spacing[2], paddingVertical: 2 },
+  proBadgeText: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, color: c.onSky, letterSpacing: 0.5 },
+  currentBadge: { backgroundColor: c.okBg, borderRadius: radii.sm, paddingHorizontal: spacing[2], paddingVertical: 2 },
+  currentBadgeText: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, color: c.ok, letterSpacing: 0.5 },
   statsRow: { flexDirection: 'row', gap: spacing[3] },
-  statCard: { flex: 1, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, paddingVertical: spacing[3], alignItems: 'center' },
-  statValue: { fontFamily: 'InterTight-Bold', fontSize: 20, color: colors.fg, letterSpacing: -0.5 },
-  statLabel: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, color: colors.fg3, marginTop: 3, letterSpacing: 0.5 },
-  menuCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.lg, overflow: 'hidden' },
-  menuRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing[4], paddingVertical: spacing[4], borderBottomWidth: 1, borderBottomColor: colors.border, gap: spacing[3] },
+  statCard: { flex: 1, backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, paddingVertical: spacing[3], alignItems: 'center' },
+  statValue: { fontFamily: 'InterTight-Bold', fontSize: 20, color: c.fg, letterSpacing: -0.5 },
+  statLabel: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, color: c.fg3, marginTop: 3, letterSpacing: 0.5 },
+  menuCard: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.lg, overflow: 'hidden' },
+  menuRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing[4], paddingVertical: spacing[4], borderBottomWidth: 1, borderBottomColor: c.border, gap: spacing[3] },
   menuRowLast: { borderBottomWidth: 0 },
-  menuLabel: { flex: 1, fontFamily: 'InterTight-Medium', fontSize: 15, color: colors.fg },
-  menuSubBadge: { borderRadius: radii.xs ?? 4, paddingHorizontal: spacing[2], paddingVertical: 2, marginRight: spacing[1] },
+  menuLabel: { flex: 1, fontFamily: 'InterTight-Medium', fontSize: 15, color: c.fg },
+  menuSubBadge: { borderRadius: radii.sm, paddingHorizontal: spacing[2], paddingVertical: 2, marginRight: spacing[1] },
   menuSubBadgeText: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, letterSpacing: 0.5 },
   signOut: { paddingVertical: spacing[4], alignItems: 'center' },
-  signOutText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: colors.danger },
-});
+  signOutText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: c.danger },
+  });
+}

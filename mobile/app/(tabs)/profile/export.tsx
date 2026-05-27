@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView, StyleSheet, SafeAreaView,
   ActivityIndicator, Alert, Share, Linking,
@@ -8,7 +8,9 @@ import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
 import Constants from 'expo-constants';
 import { supabase } from '@/lib/supabase';
-import { colors, spacing, radii } from '@/constants/tokens';
+import { spacing, radii } from '@/constants/tokens';
+import type { ColorSet } from '@/constants/tokens';
+import { useColors } from '@/lib/theme';
 
 const FORMATS     = ['PDF', 'CSV'];
 const DATE_RANGES = ['All time', 'This year', 'Last 90 days'];
@@ -29,6 +31,8 @@ function resolveWebUrl(): string {
 const WEB_URL = resolveWebUrl();
 
 export default function ExportScreen() {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [format, setFormat]       = useState('CSV');
   const [range, setRange]         = useState('All time');
   const [jumpCount, setJumpCount] = useState<number | null>(null);
@@ -329,39 +333,40 @@ export default function ExportScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing[5], paddingVertical: spacing[3], borderBottomWidth: 1, borderBottomColor: colors.border },
+function makeStyles(c: ColorSet) {
+  return StyleSheet.create({
+  screen: { flex: 1, backgroundColor: c.bg },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing[5], paddingVertical: spacing[3], borderBottomWidth: 1, borderBottomColor: c.border },
   backBtn: { width: 36, height: 36, justifyContent: 'center' },
-  headerTitle: { flex: 1, textAlign: 'center', fontFamily: 'InterTight-SemiBold', fontSize: 17, color: colors.fg },
+  headerTitle: { flex: 1, textAlign: 'center', fontFamily: 'InterTight-SemiBold', fontSize: 17, color: c.fg },
   body: { padding: spacing[5], paddingBottom: spacing[12] },
-  sectionTitle: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: colors.fg3, marginBottom: spacing[2], marginTop: spacing[4] },
+  sectionTitle: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: c.fg3, marginBottom: spacing[2], marginTop: spacing[4] },
   chipRow: { flexDirection: 'row', gap: spacing[2], marginBottom: spacing[2] },
-  chip: { flex: 1, paddingVertical: spacing[3], borderRadius: radii.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, alignItems: 'center' },
-  chipActive: { borderColor: colors.sky, backgroundColor: 'rgba(74,158,255,0.08)' },
-  chipText: { fontFamily: 'InterTight-Medium', fontSize: 13, color: colors.fg2 },
-  chipTextActive: { color: colors.sky },
-  previewCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.lg, padding: spacing[6], alignItems: 'center', marginTop: spacing[4], marginBottom: spacing[5] },
-  previewHint: { fontFamily: 'InterTight-Regular', fontSize: 14, color: colors.fg3 },
-  previewCount: { fontFamily: 'InterTight-Bold', fontSize: 36, color: colors.fg, letterSpacing: -1 },
-  previewSub: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, color: colors.fg3, marginTop: spacing[2] },
-  exportBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.sky, borderRadius: radii.md, paddingVertical: spacing[4], gap: spacing[2] },
-  exportBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: colors.onSky },
+  chip: { flex: 1, paddingVertical: spacing[3], borderRadius: radii.md, backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, alignItems: 'center' },
+  chipActive: { borderColor: c.sky, backgroundColor: 'rgba(74,158,255,0.08)' },
+  chipText: { fontFamily: 'InterTight-Medium', fontSize: 13, color: c.fg2 },
+  chipTextActive: { color: c.sky },
+  previewCard: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.lg, padding: spacing[6], alignItems: 'center', marginTop: spacing[4], marginBottom: spacing[5] },
+  previewHint: { fontFamily: 'InterTight-Regular', fontSize: 14, color: c.fg3 },
+  previewCount: { fontFamily: 'InterTight-Bold', fontSize: 36, color: c.fg, letterSpacing: -1 },
+  previewSub: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, color: c.fg3, marginTop: spacing[2] },
+  exportBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: c.sky, borderRadius: radii.md, paddingVertical: spacing[4], gap: spacing[2] },
+  exportBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: c.onSky },
 
   // PDF layout picker
   pdfRow: { flexDirection: 'row', gap: spacing[3] },
   pdfCard: {
     flex: 1,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radii.lg,
     padding: spacing[4],
     alignItems: 'center',
   },
-  pdfCardLoading: { borderColor: colors.sky, backgroundColor: 'rgba(74,158,255,0.06)' },
-  pdfCardTitle: { fontFamily: 'InterTight-SemiBold', fontSize: 13, color: colors.fg, marginTop: spacing[2], textAlign: 'center' },
-  pdfCardSub: { fontFamily: 'InterTight-Regular', fontSize: 11, color: colors.fg3, marginTop: spacing[1], textAlign: 'center', lineHeight: 16 },
+  pdfCardLoading: { borderColor: c.sky, backgroundColor: 'rgba(74,158,255,0.06)' },
+  pdfCardTitle: { fontFamily: 'InterTight-SemiBold', fontSize: 13, color: c.fg, marginTop: spacing[2], textAlign: 'center' },
+  pdfCardSub: { fontFamily: 'InterTight-Regular', fontSize: 11, color: c.fg3, marginTop: spacing[1], textAlign: 'center', lineHeight: 16 },
 
   // Mini page preview (1-per-page card)
   miniPage: { width: '100%', aspectRatio: 0.707, backgroundColor: '#FAFAF7', borderRadius: 3, padding: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
@@ -374,4 +379,5 @@ const styles = StyleSheet.create({
   // Mini card grid (10-per-page card)
   miniCardGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 3, marginTop: 4 },
   miniCardCell: { width: '47%', height: 14, backgroundColor: '#D8D4C8', borderRadius: 2 },
-});
+  });
+}

@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { colors } from '@/constants/tokens';
+import { useColors } from '@/lib/theme';
 
 interface ProgressProps {
   /** 0 – 1 */
@@ -11,29 +11,25 @@ interface ProgressProps {
 
 export default function Progress({
   value,
-  color = colors.ok,
+  color,
   height = 6,
 }: ProgressProps) {
+  const colors = useColors();
+  const resolvedColor = color ?? colors.ok;
   const pct = `${Math.round(Math.max(0, Math.min(1, value)) * 100)}%` as `${number}%`;
+  const styles = useMemo(() => StyleSheet.create({
+    track: { backgroundColor: colors.surface2, overflow: 'hidden' },
+    fill:  { height: '100%' },
+  }), [colors]);
 
   return (
     <View style={[styles.track, { height, borderRadius: height / 2 }]}>
       <View
         style={[
           styles.fill,
-          { width: pct, backgroundColor: color, borderRadius: height / 2 },
+          { width: pct, backgroundColor: resolvedColor, borderRadius: height / 2 },
         ]}
       />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  track: {
-    backgroundColor: colors.surface2,
-    overflow: 'hidden',
-  },
-  fill: {
-    height: '100%',
-  },
-});

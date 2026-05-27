@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet,
   SafeAreaView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
@@ -13,7 +13,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { enqueueJump, isOfflineError, getRawQueue } from '@/lib/offlineQueue';
 import type { QueuedJumpSignature } from '@/lib/offlineQueue';
 import { supabase } from '@/lib/supabase';
-import { colors, spacing, radii } from '@/constants/tokens';
+import { spacing, radii } from '@/constants/tokens';
+import type { ColorSet } from '@/constants/tokens';
+import { useColors } from '@/lib/theme';
 import Toggle from '@/components/ui/Toggle';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -62,10 +64,13 @@ type Step = 1 | 2 | 3 | 4 | 'saved';
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 function Label({ text }: { text: string }) {
-  return <Text style={styles.label}>{text}</Text>;
+  const colors = useColors();
+  return <Text style={{ fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: colors.fg3, marginBottom: spacing[1.5] }}>{text}</Text>;
 }
 
 function ProgressBar({ step }: { step: Step }) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const n = step === 'saved' ? 4 : (step as number);
   return (
     <View style={styles.progressRow}>
@@ -77,6 +82,8 @@ function ProgressBar({ step }: { step: Step }) {
 }
 
 function TypeChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <TouchableOpacity style={[styles.chip, active && styles.chipActive]} onPress={onPress} activeOpacity={0.7}>
       <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
@@ -94,6 +101,8 @@ interface SigPadProps {
 }
 
 function SignaturePad({ paths, onChange, onDrawing }: SigPadProps) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const allPaths = useRef<string[]>(paths);
   const currentPath = useRef('');
   const [tick, setTick] = useState(0);
@@ -245,6 +254,8 @@ function SignaturePad({ paths, onChange, onDrawing }: SigPadProps) {
 
 // ─── Date Picker ──────────────────────────────────────────────────────────────
 function DateField({ value, onChange }: { value: Date; onChange: (d: Date) => void }) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(value);
 
@@ -291,6 +302,8 @@ function DateField({ value, onChange }: { value: Date; onChange: (d: Date) => vo
 
 // ─── Saved screen ─────────────────────────────────────────────────────────────
 function SavedScreen({ jumpNum, totalJumps, jumpId }: { jumpNum: number; totalJumps: number; jumpId: string }) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.savedCenter}>
@@ -320,6 +333,8 @@ function SavedScreen({ jumpNum, totalJumps, jumpId }: { jumpNum: number; totalJu
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export default function NewJumpScreen() {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { draftId } = useLocalSearchParams<{ draftId?: string }>();
 
   const [step, setStep] = useState<Step>(1);
@@ -1029,100 +1044,102 @@ export default function NewJumpScreen() {
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
+function makeStyles(c: ColorSet) {
+  return StyleSheet.create({
+  screen: { flex: 1, backgroundColor: c.bg },
   flex: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing[5], paddingTop: spacing[3], paddingBottom: spacing[2] },
   headerBack: { width: 36, height: 36, justifyContent: 'center' },
-  headerTitle: { flex: 1, textAlign: 'center', fontFamily: 'InterTight-SemiBold', fontSize: 17, color: colors.fg },
-  headerStep: { width: 36, textAlign: 'right', fontFamily: 'JetBrainsMono-Regular', fontSize: 12, color: colors.fg3 },
+  headerTitle: { flex: 1, textAlign: 'center', fontFamily: 'InterTight-SemiBold', fontSize: 17, color: c.fg },
+  headerStep: { width: 36, textAlign: 'right', fontFamily: 'JetBrainsMono-Regular', fontSize: 12, color: c.fg3 },
   progressRow: { flexDirection: 'row', gap: 4, paddingHorizontal: spacing[6], paddingBottom: spacing[3] },
-  progressSeg: { flex: 1, height: 3, borderRadius: 2, backgroundColor: colors.surface2 },
-  progressSegFill: { backgroundColor: colors.sky },
+  progressSeg: { flex: 1, height: 3, borderRadius: 2, backgroundColor: c.surface2 },
+  progressSegFill: { backgroundColor: c.sky },
   body: { paddingHorizontal: spacing[6], paddingBottom: spacing[4] },
-  stepTitle: { fontFamily: 'InterTight-Bold', fontSize: 22, letterSpacing: -0.4, color: colors.fg, marginBottom: spacing[4], marginTop: spacing[2] },
-  stepSub: { fontFamily: 'InterTight-Regular', fontSize: 14, color: colors.fg2, marginTop: -spacing[3], marginBottom: spacing[4] },
-  label: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: colors.fg3, marginBottom: spacing[1.5] },
-  input: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, paddingHorizontal: spacing[3], paddingVertical: spacing[3], marginBottom: spacing[4], fontFamily: 'InterTight-Regular', fontSize: 15, color: colors.fg },
-  inputError: { borderColor: colors.danger, marginBottom: spacing[1] },
-  inputWarn: { borderColor: colors.warn },
-  inputWithIcon: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, marginBottom: spacing[4] },
-  inputWithIconError: { borderColor: colors.danger, marginBottom: spacing[1] },
-  fieldError: { fontFamily: 'InterTight-Regular', fontSize: 12, color: colors.danger, marginBottom: spacing[3], marginTop: spacing[1] },
+  stepTitle: { fontFamily: 'InterTight-Bold', fontSize: 22, letterSpacing: -0.4, color: c.fg, marginBottom: spacing[4], marginTop: spacing[2] },
+  stepSub: { fontFamily: 'InterTight-Regular', fontSize: 14, color: c.fg2, marginTop: -spacing[3], marginBottom: spacing[4] },
+  label: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: c.fg3, marginBottom: spacing[1.5] },
+  input: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, paddingHorizontal: spacing[3], paddingVertical: spacing[3], marginBottom: spacing[4], fontFamily: 'InterTight-Regular', fontSize: 15, color: c.fg },
+  inputError: { borderColor: c.danger, marginBottom: spacing[1] },
+  inputWarn: { borderColor: c.warn },
+  inputWithIcon: { flexDirection: 'row', alignItems: 'center', backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, marginBottom: spacing[4] },
+  inputWithIconError: { borderColor: c.danger, marginBottom: spacing[1] },
+  fieldError: { fontFamily: 'InterTight-Regular', fontSize: 12, color: c.danger, marginBottom: spacing[3], marginTop: spacing[1] },
   inputIcon: { marginLeft: spacing[3] },
-  inputInner: { flex: 1, paddingLeft: spacing[2], paddingRight: spacing[3], paddingVertical: spacing[3], fontFamily: 'InterTight-Regular', fontSize: 15, color: colors.fg },
+  inputInner: { flex: 1, paddingLeft: spacing[2], paddingRight: spacing[3], paddingVertical: spacing[3], fontFamily: 'InterTight-Regular', fontSize: 15, color: c.fg },
   textarea: { minHeight: 120, paddingTop: spacing[3] },
   textareaSm: { minHeight: 80, paddingTop: spacing[3] },
   row2: { flexDirection: 'row', gap: spacing[3] },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2], marginTop: spacing[1], marginBottom: spacing[5] },
-  chip: { paddingHorizontal: spacing[3], paddingVertical: spacing[1.5], borderRadius: radii.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-  chipActive: { backgroundColor: colors.sky, borderColor: colors.sky },
-  chipText: { fontFamily: 'InterTight-Medium', fontSize: 13, color: colors.fg2 },
-  chipTextActive: { color: colors.onSky },
-  toggleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, padding: spacing[4], marginBottom: spacing[4] },
-  toggleTitle: { fontFamily: 'InterTight-Medium', fontSize: 15, color: colors.fg },
-  toggleSub: { fontFamily: 'InterTight-Regular', fontSize: 12, color: colors.fg2, marginTop: 2 },
+  chip: { paddingHorizontal: spacing[3], paddingVertical: spacing[1.5], borderRadius: radii.pill, backgroundColor: c.surface, borderWidth: 1, borderColor: c.border },
+  chipActive: { backgroundColor: c.sky, borderColor: c.sky },
+  chipText: { fontFamily: 'InterTight-Medium', fontSize: 13, color: c.fg2 },
+  chipTextActive: { color: c.onSky },
+  toggleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, padding: spacing[4], marginBottom: spacing[4] },
+  toggleTitle: { fontFamily: 'InterTight-Medium', fontSize: 15, color: c.fg },
+  toggleSub: { fontFamily: 'InterTight-Regular', fontSize: 12, color: c.fg2, marginTop: 2 },
   warnBox: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing[2], backgroundColor: 'rgba(255,183,74,0.10)', borderWidth: 1, borderColor: 'rgba(255,183,74,0.3)', borderRadius: radii.md, padding: spacing[3], marginBottom: spacing[3], marginTop: -spacing[2] },
-  warnText: { flex: 1, fontFamily: 'InterTight-Regular', fontSize: 13, color: colors.warn },
+  warnText: { flex: 1, fontFamily: 'InterTight-Regular', fontSize: 13, color: c.warn },
   // Signature
-  sigPad: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.lg, overflow: 'hidden', marginBottom: spacing[3] },
+  sigPad: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.lg, overflow: 'hidden', marginBottom: spacing[3] },
   sigCanvas: { height: 200 },
   sigPlaceholder: { ...StyleSheet.absoluteFill, justifyContent: 'center', alignItems: 'center' },
-  sigPlaceholderText: { fontFamily: 'InterTight-Regular', fontSize: 15, color: colors.fg3 },
-  sigFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: spacing[4], paddingVertical: spacing[3], borderTopWidth: 1, borderTopColor: colors.border },
-  sigHint: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: colors.fg3 },
+  sigPlaceholderText: { fontFamily: 'InterTight-Regular', fontSize: 15, color: c.fg3 },
+  sigFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: spacing[4], paddingVertical: spacing[3], borderTopWidth: 1, borderTopColor: c.border },
+  sigHint: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: c.fg3 },
   sigActions: { flexDirection: 'row', gap: spacing[4] },
   sigActionBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing[1] },
-  sigClear: { fontFamily: 'InterTight-Regular', fontSize: 13, color: colors.fg2 },
+  sigClear: { fontFamily: 'InterTight-Regular', fontSize: 13, color: c.fg2 },
   // Full-screen signature modal
-  fsScreen: { flex: 1, backgroundColor: colors.bg },
+  fsScreen: { flex: 1, backgroundColor: c.bg },
   fsCanvas: { flex: 1 },
   fsFooter: { flexDirection: 'row', gap: spacing[3], padding: spacing[5], paddingBottom: spacing[7] },
   fsBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing[2], paddingVertical: spacing[4], borderRadius: radii.md },
-  fsBtnGhost: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-  fsBtnPrimary: { backgroundColor: colors.sky },
-  fsBtnGhostText: { fontFamily: 'InterTight-SemiBold', fontSize: 16, color: colors.fg2 },
-  fsBtnPrimaryText: { fontFamily: 'InterTight-SemiBold', fontSize: 16, color: colors.onSky },
+  fsBtnGhost: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border },
+  fsBtnPrimary: { backgroundColor: c.sky },
+  fsBtnGhostText: { fontFamily: 'InterTight-SemiBold', fontSize: 16, color: c.fg2 },
+  fsBtnPrimaryText: { fontFamily: 'InterTight-SemiBold', fontSize: 16, color: c.onSky },
   // Outcome (pass/repeat)
   outcomeRow: { marginBottom: spacing[4] },
-  outcomeRowError: { borderWidth: 1, borderColor: colors.danger, borderRadius: radii.md, padding: spacing[3], marginBottom: spacing[1] },
-  outcomeSectionLabel: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: colors.fg3, marginBottom: spacing[2] },
+  outcomeRowError: { borderWidth: 1, borderColor: c.danger, borderRadius: radii.md, padding: spacing[3], marginBottom: spacing[1] },
+  outcomeSectionLabel: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: c.fg3, marginBottom: spacing[2] },
   outcomeBtns: { flexDirection: 'row', gap: spacing[3] },
-  outcomeBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing[2], paddingVertical: spacing[4], backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md },
-  outcomeBtnPass: { backgroundColor: colors.sky, borderColor: colors.sky },
-  outcomeBtnRepeat: { backgroundColor: colors.warn, borderColor: colors.warn },
+  outcomeBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing[2], paddingVertical: spacing[4], backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md },
+  outcomeBtnPass: { backgroundColor: c.sky, borderColor: c.sky },
+  outcomeBtnRepeat: { backgroundColor: c.warn, borderColor: c.warn },
   // Sign-off jump summary box
-  signSummaryBox: { backgroundColor: colors.skyBg, borderWidth: 1, borderColor: 'rgba(74,158,255,0.25)', borderRadius: radii.lg, padding: spacing[4], marginBottom: spacing[4] },
+  signSummaryBox: { backgroundColor: c.skyBg, borderWidth: 1, borderColor: 'rgba(74,158,255,0.25)', borderRadius: radii.lg, padding: spacing[4], marginBottom: spacing[4] },
   signSummaryRow: { flexDirection: 'row', gap: spacing[2] },
   signSummaryStat: { flex: 1 },
-  signSummaryLabel: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, letterSpacing: 0.8, color: colors.fg3, marginBottom: 2 },
-  signSummaryValue: { fontFamily: 'InterTight-SemiBold', fontSize: 13, color: colors.fg, letterSpacing: -0.2 },
-  outcomeBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: colors.fg2 },
+  signSummaryLabel: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, letterSpacing: 0.8, color: c.fg3, marginBottom: 2 },
+  signSummaryValue: { fontFamily: 'InterTight-SemiBold', fontSize: 13, color: c.fg, letterSpacing: -0.2 },
+  outcomeBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: c.fg2 },
   // Date picker
   dateModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  dateModalSheet: { backgroundColor: colors.surface, borderTopLeftRadius: radii.xl, borderTopRightRadius: radii.xl, overflow: 'hidden', paddingBottom: spacing[8] },
-  dateModalToolbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing[4], paddingVertical: spacing[3], borderBottomWidth: 1, borderBottomColor: colors.border },
+  dateModalSheet: { backgroundColor: c.surface, borderTopLeftRadius: radii.xl, borderTopRightRadius: radii.xl, overflow: 'hidden', paddingBottom: spacing[8] },
+  dateModalToolbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing[4], paddingVertical: spacing[3], borderBottomWidth: 1, borderBottomColor: c.border },
   dateModalToolbarBtn: { minWidth: 60 },
-  dateModalTitle: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: colors.fg },
-  dateModalCancelText: { fontFamily: 'InterTight-Regular', fontSize: 15, color: colors.fg2 },
-  dateModalDoneText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: colors.sky, textAlign: 'right' },
+  dateModalTitle: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: c.fg },
+  dateModalCancelText: { fontFamily: 'InterTight-Regular', fontSize: 15, color: c.fg2 },
+  dateModalDoneText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: c.sky, textAlign: 'right' },
   // Footer
-  footer: { flexDirection: 'row', gap: spacing[3], paddingHorizontal: spacing[6], paddingVertical: spacing[3], paddingBottom: spacing[6], borderTopWidth: 1, borderTopColor: colors.border },
+  footer: { flexDirection: 'row', gap: spacing[3], paddingHorizontal: spacing[6], paddingVertical: spacing[3], paddingBottom: spacing[6], borderTopWidth: 1, borderTopColor: c.border },
   btn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing[2], paddingVertical: spacing[3], borderRadius: radii.md },
-  btnPrimary: { backgroundColor: colors.sky },
-  btnGhost: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  btnPrimary: { backgroundColor: c.sky },
+  btnGhost: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border },
   btnDisabled: { opacity: 0.4 },
-  btnPrimaryText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: colors.onSky },
-  btnGhostText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: colors.fg2 },
+  btnPrimaryText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: c.onSky },
+  btnGhostText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: c.fg2 },
   step4Row: { flexDirection: 'row', gap: spacing[3] },
   // Saved screen
   savedCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing[8] },
-  savedCircle: { width: 80, height: 80, borderRadius: 40, backgroundColor: colors.okBg, borderWidth: 2, borderColor: colors.ok, alignItems: 'center', justifyContent: 'center', marginBottom: spacing[5] },
-  savedTitle: { fontFamily: 'InterTight-Bold', fontSize: 26, letterSpacing: -0.4, color: colors.fg, textAlign: 'center' },
-  savedSub: { fontFamily: 'InterTight-Regular', fontSize: 14, color: colors.fg2, textAlign: 'center', marginTop: spacing[2] },
-  savedStats: { flexDirection: 'row', width: '100%', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, marginTop: spacing[6] },
+  savedCircle: { width: 80, height: 80, borderRadius: 40, backgroundColor: c.okBg, borderWidth: 2, borderColor: c.ok, alignItems: 'center', justifyContent: 'center', marginBottom: spacing[5] },
+  savedTitle: { fontFamily: 'InterTight-Bold', fontSize: 26, letterSpacing: -0.4, color: c.fg, textAlign: 'center' },
+  savedSub: { fontFamily: 'InterTight-Regular', fontSize: 14, color: c.fg2, textAlign: 'center', marginTop: spacing[2] },
+  savedStats: { flexDirection: 'row', width: '100%', backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, marginTop: spacing[6] },
   savedStat: { flex: 1, padding: spacing[4], alignItems: 'center' },
-  savedStatMid: { borderLeftWidth: 1, borderRightWidth: 1, borderColor: colors.border },
-  savedStatLabel: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, letterSpacing: 0.8, color: colors.fg3 },
-  savedStatValue: { fontFamily: 'JetBrainsMono-Medium', fontSize: 18, color: colors.fg, marginTop: 4 },
-});
+  savedStatMid: { borderLeftWidth: 1, borderRightWidth: 1, borderColor: c.border },
+  savedStatLabel: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, letterSpacing: 0.8, color: c.fg3 },
+  savedStatValue: { fontFamily: 'JetBrainsMono-Medium', fontSize: 18, color: c.fg, marginTop: 4 },
+  });
+}

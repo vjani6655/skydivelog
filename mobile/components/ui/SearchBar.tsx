@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, TextInput, StyleSheet } from 'react-native';
-import { colors } from '@/constants/tokens';
 import typography from '@/constants/typography';
+import { useColors } from '@/lib/theme';
 import Icon from './Icon';
 
 interface SearchBarProps {
@@ -15,7 +15,23 @@ export default function SearchBar({
   onChangeText,
   placeholder = 'Search',
 }: SearchBarProps) {
+  const colors = useColors();
   const [focused, setFocused] = useState(false);
+  const styles = useMemo(() => StyleSheet.create({
+    wrap: {
+      height: 40,
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: 12,
+      gap: 8,
+    },
+    focused: { borderColor: colors.sky },
+    input: { flex: 1, height: '100%' },
+  }), [colors]);
 
   return (
     <View style={[styles.wrap, focused && styles.focused]}>
@@ -32,24 +48,3 @@ export default function SearchBar({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: {
-    height: 40,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 12,
-    gap: 8,
-  },
-  focused: {
-    borderColor: colors.sky,
-  },
-  input: {
-    flex: 1,
-    height: '100%',
-  },
-});

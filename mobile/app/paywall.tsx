@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,9 @@ import {
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, radii } from '@/constants/tokens';
+import { spacing, radii } from '@/constants/tokens';
+import type { ColorSet } from '@/constants/tokens';
+import { useColors } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
 
 const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'https://skydivelog.app';
@@ -40,6 +42,8 @@ const FEATURES = [
 ];
 
 export default function PaywallScreen() {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -143,8 +147,9 @@ export default function PaywallScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+function makeStyles(c: ColorSet) {
+  return StyleSheet.create({
+  safe: { flex: 1, backgroundColor: c.bg },
   container: {
     flexGrow: 1,
     paddingHorizontal: spacing[6],
@@ -156,7 +161,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: radii.pill,
-    backgroundColor: colors.surface2,
+    backgroundColor: c.surface2,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing[6],
@@ -166,7 +171,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing[1.5],
     alignSelf: 'flex-start',
-    backgroundColor: colors.skyBg,
+    backgroundColor: c.skyBg,
     borderRadius: radii.pill,
     paddingHorizontal: spacing[3],
     paddingVertical: spacing[1],
@@ -176,14 +181,14 @@ const styles = StyleSheet.create({
     fontFamily: 'JetBrainsMono-Medium',
     fontSize: 10,
     letterSpacing: 1.2,
-    color: colors.sky,
+    color: c.sky,
   },
   title: {
     fontFamily: 'InterTight-Bold',
     fontSize: 34,
     lineHeight: 38,
     letterSpacing: -0.7,
-    color: colors.fg,
+    color: c.fg,
     marginBottom: spacing[8],
   },
   features: {
@@ -198,7 +203,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: radii.md,
-    backgroundColor: colors.skyBg,
+    backgroundColor: c.skyBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -209,20 +214,20 @@ const styles = StyleSheet.create({
   featureTitle: {
     fontFamily: 'InterTight-SemiBold',
     fontSize: 15,
-    color: colors.fg,
+    color: c.fg,
     marginBottom: 2,
   },
   featureDesc: {
     fontFamily: 'InterTight-Regular',
     fontSize: 13,
-    color: colors.fg2,
+    color: c.fg2,
     lineHeight: 18,
   },
   pricingCard: {
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderRadius: radii.xl,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     padding: spacing[5],
     marginBottom: spacing[6],
   },
@@ -235,30 +240,30 @@ const styles = StyleSheet.create({
   pricingLabel: {
     fontFamily: 'InterTight-SemiBold',
     fontSize: 16,
-    color: colors.fg,
+    color: c.fg,
   },
   pricingAmount: {
     fontFamily: 'InterTight-Bold',
     fontSize: 26,
     letterSpacing: -0.5,
-    color: colors.fg,
+    color: c.fg,
   },
   pricingPer: {
     fontFamily: 'InterTight-Regular',
     fontSize: 14,
-    color: colors.fg2,
+    color: c.fg2,
   },
   pricingNote: {
     fontFamily: 'InterTight-Regular',
     fontSize: 13,
-    color: colors.fg3,
+    color: c.fg3,
   },
   applePayButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing[2],
-    backgroundColor: colors.fg,
+    backgroundColor: c.fg,
     borderRadius: radii.lg,
     paddingVertical: spacing[4],
     marginBottom: spacing[4],
@@ -266,16 +271,16 @@ const styles = StyleSheet.create({
   applePayText: {
     fontFamily: 'InterTight-SemiBold',
     fontSize: 17,
-    color: colors.bg,
+    color: c.bg,
   },
   errorBox: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing[2],
-    backgroundColor: colors.dangerBg,
+    backgroundColor: c.dangerBg,
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: `${colors.danger}40`,
+    borderColor: `${c.danger}40`,
     paddingHorizontal: spacing[3],
     paddingVertical: spacing[3],
     marginBottom: spacing[4],
@@ -283,14 +288,15 @@ const styles = StyleSheet.create({
   errorText: {
     fontFamily: 'InterTight-Regular',
     fontSize: 13,
-    color: colors.danger,
+    color: c.danger,
     flex: 1,
   },
   legalCaption: {
     fontFamily: 'JetBrainsMono-Regular',
     fontSize: 10,
     letterSpacing: 0.5,
-    color: colors.fg3,
+    color: c.fg3,
     textAlign: 'center',
   },
-});
+  });
+}

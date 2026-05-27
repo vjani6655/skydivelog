@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { TouchableOpacity, Animated, StyleSheet } from 'react-native';
-import { colors, durations } from '@/constants/tokens';
+import { durations } from '@/constants/tokens';
+import { useColors } from '@/lib/theme';
 
 interface ToggleProps {
   on: boolean;
@@ -9,6 +10,7 @@ interface ToggleProps {
 }
 
 export default function Toggle({ on, onChange, disabled = false }: ToggleProps) {
+  const colors = useColors();
   const translateX = useRef(new Animated.Value(on ? 18 : 0)).current;
 
   useEffect(() => {

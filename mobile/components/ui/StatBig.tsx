@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import { colors } from '@/constants/tokens';
 import typography from '@/constants/typography';
+import { useColors } from '@/lib/theme';
 
 interface StatBigProps {
   label: string;
@@ -11,6 +11,7 @@ interface StatBigProps {
 }
 
 export default function StatBig({ label, value, unit, sub }: StatBigProps) {
+  const colors = useColors();
   return (
     <View>
       <Text style={[typography.overline, { color: colors.fg3, marginBottom: 4 }]}>

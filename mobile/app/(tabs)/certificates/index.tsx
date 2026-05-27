@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useMemo } from 'react';
 import {
   View, Text, FlatList, StyleSheet, SafeAreaView, ActivityIndicator,
   TouchableOpacity, RefreshControl,
@@ -6,7 +6,9 @@ import {
 import { useFocusEffect, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
-import { colors, spacing, radii } from '@/constants/tokens';
+import { spacing, radii } from '@/constants/tokens';
+import type { ColorSet } from '@/constants/tokens';
+import { useColors } from '@/lib/theme';
 import type { Certificate } from '@/lib/types';
 
 function daysUntil(dateStr: string): number {
@@ -22,6 +24,8 @@ function fmtDMY(iso: string): string {
 }
 
 export default function CertificatesScreen() {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [certs, setCerts] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -114,30 +118,32 @@ export default function CertificatesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
+function makeStyles(c: ColorSet) {
+  return StyleSheet.create({
+  screen: { flex: 1, backgroundColor: c.bg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: spacing[5], paddingTop: spacing[5], paddingBottom: spacing[3] },
-  title: { fontFamily: 'InterTight-Bold', fontSize: 28, color: colors.fg, letterSpacing: -0.5 },
-  sub: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, letterSpacing: 0.8, color: colors.fg3, marginTop: 3 },
-  iconBtn: { width: 36, height: 36, borderRadius: radii.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, justifyContent: 'center', alignItems: 'center' },
-  addBtn: { backgroundColor: colors.sky, borderColor: colors.sky },
+  title: { fontFamily: 'InterTight-Bold', fontSize: 28, color: c.fg, letterSpacing: -0.5 },
+  sub: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, letterSpacing: 0.8, color: c.fg3, marginTop: 3 },
+  iconBtn: { width: 36, height: 36, borderRadius: radii.md, backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, justifyContent: 'center', alignItems: 'center' },
+  addBtn: { backgroundColor: c.sky, borderColor: c.sky },
   list: { paddingHorizontal: spacing[5], paddingBottom: spacing[10] },
-  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, padding: spacing[3.5], marginBottom: spacing[3] },
+  card: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, padding: spacing[3.5], marginBottom: spacing[3] },
   cardRow: { flexDirection: 'row', gap: spacing[3] },
   certIcon: { width: 40, height: 40, borderRadius: radii.md, justifyContent: 'center', alignItems: 'center', flexShrink: 0 },
   cardInfo: { flex: 1 },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing[1] },
-  certName: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: colors.fg, flex: 1, marginRight: spacing[2] },
-  certMeta: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, color: colors.fg3 },
+  certName: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: c.fg, flex: 1, marginRight: spacing[2] },
+  certMeta: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, color: c.fg3 },
   badge: { paddingHorizontal: spacing[2], paddingVertical: 2, borderRadius: radii.sm },
-  badgeOk: { backgroundColor: colors.okBg },
+  badgeOk: { backgroundColor: c.okBg },
   badgeWarn: { backgroundColor: 'rgba(255,183,74,0.12)' },
   badgeDanger: { backgroundColor: 'rgba(255,107,107,0.12)' },
-  badgeMuted: { backgroundColor: colors.surface2, paddingHorizontal: spacing[2], paddingVertical: 2, borderRadius: radii.sm },
+  badgeMuted: { backgroundColor: c.surface2, paddingHorizontal: spacing[2], paddingVertical: 2, borderRadius: radii.sm },
   badgeText: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.3 },
-  badgeMutedText: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, color: colors.fg3 },
+  badgeMutedText: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, color: c.fg3 },
   empty: { alignItems: 'center', paddingTop: spacing[16], gap: spacing[2] },
-  emptyTitle: { fontFamily: 'InterTight-SemiBold', fontSize: 17, color: colors.fg, marginTop: spacing[3] },
-  emptySub: { fontFamily: 'InterTight-Regular', fontSize: 14, color: colors.fg3 },
-});
+  emptyTitle: { fontFamily: 'InterTight-SemiBold', fontSize: 17, color: c.fg, marginTop: spacing[3] },
+  emptySub: { fontFamily: 'InterTight-Regular', fontSize: 14, color: c.fg3 },
+  });
+}

@@ -3,7 +3,7 @@
  * Mirror of tailwind.config.ts — same values, plain TS constants.
  */
 
-export const colors = {
+export const darkColors = {
   // ─── Surfaces ──────────────────────────────────────────────
   bg:            '#0A1220',
   surface:       '#121C2E',
@@ -33,10 +33,47 @@ export const colors = {
   okBg:          'rgba(74, 222, 128, 0.12)',
 
   // ─── On-accent text ────────────────────────────────────────
-  onSky:         '#001426',
+  onSky:         '#FFFFFF',
 } as const;
 
-export type ColorToken = keyof typeof colors;
+export const lightColors = {
+  // ─── Surfaces ──────────────────────────────────────────────
+  bg:            '#F2F5FA',
+  surface:       '#FFFFFF',
+  surface2:      '#EDF1F8',
+  surface3:      '#E2E8F2',
+  border:        '#D4DCE8',
+  borderStrong:  '#B8C6D8',
+
+  // ─── Foreground ────────────────────────────────────────────
+  fg:            '#0C1829',
+  fg2:           '#3A4F68',
+  fg3:           '#6B80A0',
+  fg4:           '#9BADC2',
+
+  // ─── Accents ───────────────────────────────────────────────
+  sky:           '#2176CC',
+  skyDim:        '#1557A0',
+  skyBg:         'rgba(33, 118, 204, 0.08)',
+  cyan:          '#0B8FA2',
+
+  // ─── Status ────────────────────────────────────────────────
+  warn:          '#C46A00',
+  warnBg:        'rgba(196, 106, 0, 0.08)',
+  danger:        '#C82020',
+  dangerBg:      'rgba(200, 32, 32, 0.08)',
+  ok:            '#1A8740',
+  okBg:          'rgba(26, 135, 64, 0.08)',
+
+  // ─── On-accent text ────────────────────────────────────────
+  onSky:         '#FFFFFF',
+} as const;
+
+/** Static dark-mode alias kept for any module that imports colors directly. */
+export const colors = darkColors;
+
+export type ColorSet = { readonly [K in keyof typeof darkColors]: string };
+export type ColorToken = keyof typeof darkColors;
 
 export const spacing = {
   0:   0,   0.5: 2,   1:   4,   1.5: 6,

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useMemo } from 'react';
 import {
   View, Text, FlatList, StyleSheet, SafeAreaView, ActivityIndicator,
   TouchableOpacity, RefreshControl, ScrollView,
@@ -6,7 +6,9 @@ import {
 import { useFocusEffect, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
-import { colors, spacing, radii } from '@/constants/tokens';
+import { spacing, radii } from '@/constants/tokens';
+import type { ColorSet } from '@/constants/tokens';
+import { useColors } from '@/lib/theme';
 import type { Gear } from '@/lib/types';
 
 type FilterKey = 'All' | 'rig' | 'canopy' | 'aad' | 'due';
@@ -27,12 +29,14 @@ const TYPE_ICON: Record<string, string> = {
   other: 'cube-outline',
 };
 
-function gearStatusColor(g: Gear): string {
-  // Simple heuristic: if no dom or no serial, treat as ok
-  return colors.sky;
-}
-
 export default function GearScreen() {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
+  function gearStatusColor(_g: Gear): string {
+    return colors.sky;
+  }
+
   const [gear, setGear] = useState<Gear[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -142,36 +146,38 @@ export default function GearScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
+function makeStyles(c: ColorSet) {
+  return StyleSheet.create({
+  screen: { flex: 1, backgroundColor: c.bg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: spacing[5], paddingTop: spacing[5], paddingBottom: spacing[3] },
-  title: { fontFamily: 'InterTight-Bold', fontSize: 28, color: colors.fg, letterSpacing: -0.5 },
-  sub: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, letterSpacing: 0.8, color: colors.fg3, marginTop: 3 },
-  iconBtn: { width: 36, height: 36, borderRadius: radii.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, justifyContent: 'center', alignItems: 'center' },
-  addBtn: { backgroundColor: colors.sky, borderColor: colors.sky },
+  title: { fontFamily: 'InterTight-Bold', fontSize: 28, color: c.fg, letterSpacing: -0.5 },
+  sub: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, letterSpacing: 0.8, color: c.fg3, marginTop: 3 },
+  iconBtn: { width: 36, height: 36, borderRadius: radii.md, backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, justifyContent: 'center', alignItems: 'center' },
+  addBtn: { backgroundColor: c.sky, borderColor: c.sky },
   chipScroll: { flexGrow: 0, marginBottom: spacing[2] },
   chipContent: { paddingHorizontal: spacing[5], gap: spacing[2] },
-  chip: { paddingHorizontal: spacing[3], paddingVertical: spacing[1.5], borderRadius: radii.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-  chipActive: { backgroundColor: colors.sky, borderColor: colors.sky },
-  chipText: { fontFamily: 'InterTight-Medium', fontSize: 13, color: colors.fg2 },
-  chipTextActive: { color: colors.onSky },
+  chip: { paddingHorizontal: spacing[3], paddingVertical: spacing[1.5], borderRadius: radii.pill, backgroundColor: c.surface, borderWidth: 1, borderColor: c.border },
+  chipActive: { backgroundColor: c.sky, borderColor: c.sky },
+  chipText: { fontFamily: 'InterTight-Medium', fontSize: 13, color: c.fg2 },
+  chipTextActive: { color: c.onSky },
   list: { paddingHorizontal: spacing[5], paddingBottom: spacing[10] },
-  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, padding: spacing[3.5], marginBottom: spacing[3] },
+  card: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, padding: spacing[3.5], marginBottom: spacing[3] },
   cardRow: { flexDirection: 'row', gap: spacing[3] },
-  gearIcon: { width: 44, height: 44, borderRadius: radii.md, backgroundColor: colors.surface2, borderWidth: 1, justifyContent: 'center', alignItems: 'center', flexShrink: 0 },
+  gearIcon: { width: 44, height: 44, borderRadius: radii.md, backgroundColor: c.surface2, borderWidth: 1, justifyContent: 'center', alignItems: 'center', flexShrink: 0 },
   cardInfo: { flex: 1 },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing[1] },
-  gearName: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: colors.fg, flex: 1, marginRight: spacing[2] },
-  gearSN: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, color: colors.fg3, marginBottom: spacing[2] },
+  gearName: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: c.fg, flex: 1, marginRight: spacing[2] },
+  gearSN: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, color: c.fg3, marginBottom: spacing[2] },
   badge: { paddingHorizontal: spacing[2], paddingVertical: 2, borderRadius: radii.sm },
-  badgeOk: { backgroundColor: colors.okBg },
+  badgeOk: { backgroundColor: c.okBg },
   badgeWarn: { backgroundColor: 'rgba(255,183,74,0.12)' },
   badgeDanger: { backgroundColor: 'rgba(255,107,107,0.12)' },
   badgeText: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.3 },
-  progressTrack: { height: 3, borderRadius: 2, backgroundColor: colors.surface2, overflow: 'hidden' },
+  progressTrack: { height: 3, borderRadius: 2, backgroundColor: c.surface2, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 2 },
   empty: { alignItems: 'center', paddingTop: spacing[16], gap: spacing[2] },
-  emptyTitle: { fontFamily: 'InterTight-SemiBold', fontSize: 17, color: colors.fg, marginTop: spacing[3] },
-  emptySub: { fontFamily: 'InterTight-Regular', fontSize: 14, color: colors.fg3 },
-});
+  emptyTitle: { fontFamily: 'InterTight-SemiBold', fontSize: 17, color: c.fg, marginTop: spacing[3] },
+  emptySub: { fontFamily: 'InterTight-Regular', fontSize: 14, color: c.fg3 },
+  });
+}

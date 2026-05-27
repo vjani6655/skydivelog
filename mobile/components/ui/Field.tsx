@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors } from '@/constants/tokens';
 import typography from '@/constants/typography';
+import { useColors } from '@/lib/theme';
 
 interface FieldProps {
   label: string;
@@ -12,6 +12,20 @@ interface FieldProps {
 }
 
 export default function Field({ label, value, mono = false, sub, action }: FieldProps) {
+  const colors = useColors();
+  const styles = useMemo(() => StyleSheet.create({
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    content: { flex: 1 },
+    action:  { marginLeft: 12 },
+  }), [colors]);
+
   return (
     <View style={styles.row}>
       <View style={styles.content}>
@@ -37,15 +51,3 @@ export default function Field({ label, value, mono = false, sub, action }: Field
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  content: { flex: 1 },
-  action:  { marginLeft: 12 },
-});

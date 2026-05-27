@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
-import { colors, shadows } from '@/constants/tokens';
+import { shadows } from '@/constants/tokens';
+import { useColors } from '@/lib/theme';
 
 export type CardVariant = 'default' | 'elevated' | 'promo' | 'success' | 'warning' | 'danger';
 
@@ -13,15 +14,6 @@ interface CardProps {
   style?: object;
 }
 
-const variantMap: Record<CardVariant, { bg: string; border: string; shadow: object }> = {
-  default:  { bg: colors.surface,   border: colors.border,  shadow: {} },
-  elevated: { bg: colors.surface,   border: colors.border,  shadow: shadows.card },
-  promo:    { bg: colors.surface2,  border: colors.sky,     shadow: shadows.glow },
-  success:  { bg: colors.okBg,      border: colors.ok,      shadow: {} },
-  warning:  { bg: colors.warnBg,    border: colors.warn,    shadow: {} },
-  danger:   { bg: colors.dangerBg,  border: colors.danger,  shadow: {} },
-};
-
 export default function Card({
   variant = 'default',
   padding = 16,
@@ -30,6 +22,15 @@ export default function Card({
   children,
   style,
 }: CardProps) {
+  const colors = useColors();
+  const variantMap: Record<CardVariant, { bg: string; border: string; shadow: object }> = {
+    default:  { bg: colors.surface,   border: colors.border,  shadow: {} },
+    elevated: { bg: colors.surface,   border: colors.border,  shadow: shadows.card },
+    promo:    { bg: colors.surface2,  border: colors.sky,     shadow: shadows.glow },
+    success:  { bg: colors.okBg,      border: colors.ok,      shadow: {} },
+    warning:  { bg: colors.warnBg,    border: colors.warn,    shadow: {} },
+    danger:   { bg: colors.dangerBg,  border: colors.danger,  shadow: {} },
+  };
   const v = variantMap[variant];
   const containerStyle = [
     styles.base,

@@ -1,6 +1,9 @@
+import { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing } from '@/constants/tokens';
+import { spacing } from '@/constants/tokens';
+import type { ColorSet } from '@/constants/tokens';
+import { useColors } from '@/lib/theme';
 import type { JumpFull } from '@/lib/types';
 import { fmtAlt, fmtDate, type AltUnit, type DateFmt } from '@/lib/prefsContext';
 
@@ -12,6 +15,8 @@ interface Props {
 }
 
 export default function CompactRow({ jump, onPress, altUnit = 'ft', dateFormat = 'DD MMM YYYY' }: Props) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={0.7}>
       <Text style={styles.number}>#{jump.jump_number}</Text>
@@ -43,7 +48,8 @@ export default function CompactRow({ jump, onPress, altUnit = 'ft', dateFormat =
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: ColorSet) {
+  return StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -109,3 +115,4 @@ const styles = StyleSheet.create({
     color: colors.fg3,
   },
 });
+}

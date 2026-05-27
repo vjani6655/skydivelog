@@ -1,12 +1,15 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { router } from 'expo-router';
 import Constants from 'expo-constants';
 import { supabase } from '@/lib/supabase';
 import Logo from '@/components/ui/Logo';
-import { colors } from '@/constants/tokens';
+import type { ColorSet } from '@/constants/tokens';
+import { useColors } from '@/lib/theme';
 
 export default function SplashScreen() {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const progress = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -48,46 +51,48 @@ export default function SplashScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bg,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 12,
-  },
-  wordmark: {
-    fontFamily: 'InterTight-Bold',
-    fontSize: 28,
-    letterSpacing: -0.5,
-    color: colors.fg,
-    marginTop: 8,
-  },
-  caption: {
-    fontFamily: 'JetBrainsMono-Regular',
-    fontSize: 11,
-    letterSpacing: 1.2,
-    color: colors.fg3,
-    marginTop: 4,
-  },
-  progressTrack: {
-    position: 'absolute',
-    bottom: 48,
-    left: 32,
-    right: 32,
-    height: 2,
-    backgroundColor: colors.surface3,
-    borderRadius: 1,
-    overflow: 'hidden',
-  },
-  progressBar: {
-    height: 2,
-    backgroundColor: colors.sky,
-    borderRadius: 1,
-  },
-});
+function makeStyles(c: ColorSet) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.bg,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    center: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 12,
+    },
+    wordmark: {
+      fontFamily: 'InterTight-Bold',
+      fontSize: 28,
+      letterSpacing: -0.5,
+      color: c.fg,
+      marginTop: 8,
+    },
+    caption: {
+      fontFamily: 'JetBrainsMono-Regular',
+      fontSize: 11,
+      letterSpacing: 1.2,
+      color: c.fg3,
+      marginTop: 4,
+    },
+    progressTrack: {
+      position: 'absolute',
+      bottom: 48,
+      left: 32,
+      right: 32,
+      height: 2,
+      backgroundColor: c.surface3,
+      borderRadius: 1,
+      overflow: 'hidden',
+    },
+    progressBar: {
+      height: 2,
+      backgroundColor: c.sky,
+      borderRadius: 1,
+    },
+  });
+}

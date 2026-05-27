@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
 import { supabase } from '@/lib/supabase';
-import { colors, spacing, radii } from '@/constants/tokens';
+import { spacing, radii } from '@/constants/tokens';
+import type { ColorSet } from '@/constants/tokens';
+import { useColors } from '@/lib/theme';
 import type { JumpFull } from '@/lib/types';
 
 const EXPIRES_IN = 5 * 60; // 5 minutes
@@ -16,6 +18,8 @@ function fmtCountdown(s: number): string {
 }
 
 export default function QRScreen() {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { jumpId } = useLocalSearchParams<{ jumpId: string }>();
   const [jump, setJump] = useState<JumpFull | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(EXPIRES_IN);
@@ -116,30 +120,32 @@ export default function QRScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing[5], paddingVertical: spacing[3], borderBottomWidth: 1, borderBottomColor: colors.border },
+function makeStyles(c: ColorSet) {
+  return StyleSheet.create({
+  screen: { flex: 1, backgroundColor: c.bg },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing[5], paddingVertical: spacing[3], borderBottomWidth: 1, borderBottomColor: c.border },
   close: { width: 36, height: 36, justifyContent: 'center' },
-  headerTitle: { flex: 1, textAlign: 'center', fontFamily: 'InterTight-SemiBold', fontSize: 17, color: colors.fg },
+  headerTitle: { flex: 1, textAlign: 'center', fontFamily: 'InterTight-SemiBold', fontSize: 17, color: c.fg },
   body: { flex: 1, alignItems: 'center', paddingHorizontal: spacing[5], paddingTop: spacing[8] },
-  bodyText: { fontFamily: 'InterTight-Regular', fontSize: 14, color: colors.fg2, textAlign: 'center', marginBottom: spacing[8] },
+  bodyText: { fontFamily: 'InterTight-Regular', fontSize: 14, color: c.fg2, textAlign: 'center', marginBottom: spacing[8] },
   qrBox: { width: 268, height: 268, borderRadius: radii.lg, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', padding: 19 },
-  qrBoxExpired: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  qrBoxExpired: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border },
   expiredCenter: { alignItems: 'center', gap: spacing[2] },
-  expiredText: { fontFamily: 'InterTight-Medium', fontSize: 15, color: colors.fg3 },
+  expiredText: { fontFamily: 'InterTight-Medium', fontSize: 15, color: c.fg3 },
   countdownRow: { flexDirection: 'row', alignItems: 'center', gap: spacing[1.5], marginTop: spacing[4] },
-  countdown: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, letterSpacing: 0.8, color: colors.fg3 },
-  refreshBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], backgroundColor: colors.sky, paddingHorizontal: spacing[5], paddingVertical: spacing[3], borderRadius: radii.md, marginTop: spacing[5] },
-  refreshBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 14, color: colors.onSky },
-  card: { width: '100%', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, padding: spacing[4], marginTop: spacing[6] },
+  countdown: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, letterSpacing: 0.8, color: c.fg3 },
+  refreshBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], backgroundColor: c.sky, paddingHorizontal: spacing[5], paddingVertical: spacing[3], borderRadius: radii.md, marginTop: spacing[5] },
+  refreshBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 14, color: c.onSky },
+  card: { width: '100%', backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, padding: spacing[4], marginTop: spacing[6] },
   cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing[2] },
-  cardMono: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, letterSpacing: 0.8, color: colors.fg3 },
+  cardMono: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, letterSpacing: 0.8, color: c.fg3 },
   pendingBadge: { backgroundColor: 'rgba(255,183,74,0.15)', paddingHorizontal: spacing[2], paddingVertical: 2, borderRadius: radii.sm },
-  pendingText: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, color: colors.warn, letterSpacing: 0.5 },
-  cardValue: { fontFamily: 'InterTight-SemiBold', fontSize: 17, color: colors.fg },
-  divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing[3] },
+  pendingText: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, color: c.warn, letterSpacing: 0.5 },
+  cardValue: { fontFamily: 'InterTight-SemiBold', fontSize: 17, color: c.fg },
+  divider: { height: 1, backgroundColor: c.border, marginVertical: spacing[3] },
   cardRow: { flexDirection: 'row' },
   cardCell: { flex: 1 },
-  cellLabel: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, letterSpacing: 0.8, color: colors.fg3 },
-  cellValue: { fontFamily: 'InterTight-Medium', fontSize: 13, color: colors.fg, marginTop: 2 },
-});
+  cellLabel: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, letterSpacing: 0.8, color: c.fg3 },
+  cellValue: { fontFamily: 'InterTight-Medium', fontSize: 13, color: c.fg, marginTop: 2 },
+  });
+}

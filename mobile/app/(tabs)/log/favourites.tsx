@@ -1,9 +1,11 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useMemo } from 'react';
 import { View, Text, FlatList, StyleSheet, SafeAreaView, ActivityIndicator, RefreshControl, TouchableOpacity } from 'react-native';
 import { useFocusEffect, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
-import { colors, spacing, radii } from '@/constants/tokens';
+import { spacing, radii } from '@/constants/tokens';
+import type { ColorSet } from '@/constants/tokens';
+import { useColors } from '@/lib/theme';
 import type { JumpFull } from '@/lib/types';
 
 function fmtDate(iso: string) {
@@ -11,6 +13,8 @@ function fmtDate(iso: string) {
 }
 
 export default function FavouritesScreen() {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [jumps, setJumps] = useState<JumpFull[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -89,25 +93,27 @@ export default function FavouritesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
+function makeStyles(c: ColorSet) {
+  return StyleSheet.create({
+  screen: { flex: 1, backgroundColor: c.bg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing[5], paddingVertical: spacing[4] },
   back: { width: 36, height: 36, justifyContent: 'center' },
-  title: { fontFamily: 'InterTight-Bold', fontSize: 22, color: colors.fg, letterSpacing: -0.4 },
-  sub: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: colors.fg3, marginTop: 2 },
+  title: { fontFamily: 'InterTight-Bold', fontSize: 22, color: c.fg, letterSpacing: -0.4 },
+  sub: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: c.fg3, marginTop: 2 },
   list: { paddingHorizontal: spacing[5], paddingBottom: spacing[10] },
-  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, padding: spacing[4], marginBottom: spacing[3] },
+  card: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, padding: spacing[4], marginBottom: spacing[3] },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   cardLeft: { flex: 1 },
   overlineRow: { flexDirection: 'row', alignItems: 'center', gap: spacing[1], marginBottom: spacing[1] },
-  overline: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, color: colors.fg3 },
-  jumpType: { fontFamily: 'InterTight-SemiBold', fontSize: 16, color: colors.fg },
-  dzLine: { fontFamily: 'InterTight-Regular', fontSize: 12, color: colors.fg2, marginTop: 2 },
+  overline: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, color: c.fg3 },
+  jumpType: { fontFamily: 'InterTight-SemiBold', fontSize: 16, color: c.fg },
+  dzLine: { fontFamily: 'InterTight-Regular', fontSize: 12, color: c.fg2, marginTop: 2 },
   cardRight: { alignItems: 'flex-end' },
-  alt: { fontFamily: 'JetBrainsMono-Medium', fontSize: 14, color: colors.fg },
-  ff: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, color: colors.fg3, marginTop: 2 },
+  alt: { fontFamily: 'JetBrainsMono-Medium', fontSize: 14, color: c.fg },
+  ff: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, color: c.fg3, marginTop: 2 },
   empty: { alignItems: 'center', paddingTop: spacing[16], gap: spacing[2] },
-  emptyTitle: { fontFamily: 'InterTight-SemiBold', fontSize: 17, color: colors.fg, marginTop: spacing[3] },
-  emptySub: { fontFamily: 'InterTight-Regular', fontSize: 14, color: colors.fg3 },
-});
+  emptyTitle: { fontFamily: 'InterTight-SemiBold', fontSize: 17, color: c.fg, marginTop: spacing[3] },
+  emptySub: { fontFamily: 'InterTight-Regular', fontSize: 14, color: c.fg3 },
+  });
+}

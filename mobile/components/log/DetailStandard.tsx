@@ -2,10 +2,11 @@
  * 09A · Standard layout
  * Telemetry grid → field list → notes → signed-by
  */
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { colors } from '@/constants/tokens';
+import type { ColorSet } from '@/constants/tokens';
+import { useColors } from '@/lib/theme';
 import typography from '@/constants/typography';
 import { Badge, Field, Tag } from '@/components/ui';
 import type { JumpDetailProps } from '@/app/(tabs)/log/[id]';
@@ -26,13 +27,14 @@ function fmtTime(s: number | null): string {
 function TelCell({
   label, value, unit,
 }: { label: string; value: string; unit?: string }) {
+  const colors = useColors();
   return (
-    <View style={styles.telCell}>
+    <View style={{ flex: 1, padding: 16 }}>
       <Text style={[typography.overline, { color: colors.fg3 }]}>{label}</Text>
-      <View style={styles.telValueRow}>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 4, marginTop: 4 }}>
         <Text style={[typography.numLg, { color: colors.fg }]}>{value}</Text>
         {unit && (
-          <Text style={[typography.sm, styles.telUnit]}>{unit}</Text>
+          <Text style={[typography.sm, { color: colors.fg3, marginBottom: 4 }]}>{unit}</Text>
         )}
       </View>
     </View>
@@ -43,6 +45,8 @@ function TelCell({
 
 export default function DetailStandard({ jump, signatures, tags, edits }: JumpDetailProps) {
   const { prefs } = usePrefs();
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const signed     = signatures.length > 0;
   const sig        = signatures[0];
   const dzName     = jump.dropzones
@@ -223,7 +227,8 @@ export default function DetailStandard({ jump, signatures, tags, edits }: JumpDe
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+function makeStyles(colors: ColorSet) {
+  return StyleSheet.create({
   scroll:   { flex: 1 },
   content:  { padding: 16 },
 
@@ -287,4 +292,5 @@ const styles = StyleSheet.create({
   historyFrom: { fontFamily: 'InterTight-Regular', fontSize: 13, color: colors.fg2, textDecorationLine: 'line-through' },
   historyArrow: { fontFamily: 'InterTight-Regular', fontSize: 13, color: colors.fg3 },
   historyTo: { fontFamily: 'InterTight-SemiBold', fontSize: 13, color: colors.fg },
-});;
+});
+}

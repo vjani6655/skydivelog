@@ -1,6 +1,9 @@
+import { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, radii } from '@/constants/tokens';
+import { spacing, radii } from '@/constants/tokens';
+import type { ColorSet } from '@/constants/tokens';
+import { useColors } from '@/lib/theme';
 import type { JumpFull } from '@/lib/types';
 import { fmtAltFull, fmtDate, type AltUnit, type DateFmt } from '@/lib/prefsContext';
 
@@ -17,6 +20,8 @@ interface Props {
 }
 
 export default function DataCard({ jump, onPress, altUnit = 'ft', dateFormat = 'DD MMM YYYY' }: Props) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
       {/* Overline */}
@@ -60,7 +65,8 @@ export default function DataCard({ jump, onPress, altUnit = 'ft', dateFormat = '
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: ColorSet) {
+  return StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
     borderRadius: radii.md,
@@ -134,3 +140,4 @@ const styles = StyleSheet.create({
     color: colors.fg,
   },
 });
+}

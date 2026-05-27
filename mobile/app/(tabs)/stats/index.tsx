@@ -6,7 +6,9 @@ import {
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
-import { colors, spacing, radii } from '@/constants/tokens';
+import { spacing, radii } from '@/constants/tokens';
+import type { ColorSet } from '@/constants/tokens';
+import { useColors } from '@/lib/theme';
 import type { JumpFull } from '@/lib/types';
 
 type StatsLayout = 'Cards' | 'Cockpit' | 'Story';
@@ -35,6 +37,8 @@ function daysSinceLastJump(jumps: JumpFull[]): number {
 // ─── Chart primitives ─────────────────────────────────────────────────────────
 
 function SparklineRN({ data }: { data: number[] }) {
+  const colors = useColors();
+  const sparkStyles = useMemo(() => makeSparkStyles(colors), [colors]);
   const max = Math.max(...data, 1);
   return (
     <View style={sparkStyles.row}>
@@ -48,13 +52,17 @@ function SparklineRN({ data }: { data: number[] }) {
   );
 }
 
-const sparkStyles = StyleSheet.create({
+function makeSparkStyles(c: ColorSet) {
+  return StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'flex-end', height: 48, width: 110, gap: 2 },
   barCol: { flex: 1, flexDirection: 'column', height: '100%' },
-  bar: { borderRadius: 2, backgroundColor: colors.sky, opacity: 0.8 },
-});
+  bar: { borderRadius: 2, backgroundColor: c.sky, opacity: 0.8 },
+  });
+}
 
 function BarChartRN({ data }: { data: { label: string; v: number; highlight?: boolean }[] }) {
+  const colors = useColors();
+  const barStyles = useMemo(() => makeBarStyles(colors), [colors]);
   const max = Math.max(...data.map(d => d.v), 1);
   return (
     <View style={barStyles.container}>
@@ -71,17 +79,21 @@ function BarChartRN({ data }: { data: { label: string; v: number; highlight?: bo
   );
 }
 
-const barStyles = StyleSheet.create({
+function makeBarStyles(c: ColorSet) {
+  return StyleSheet.create({
   container: { flexDirection: 'row', alignItems: 'flex-end', height: 100, gap: 4 },
   col: { flex: 1, flexDirection: 'column', alignItems: 'center', height: '100%' },
   barWrap: { flex: 1, width: '100%', flexDirection: 'column' },
   bar: { borderTopLeftRadius: 3, borderTopRightRadius: 3 },
-  label: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, color: colors.fg3, marginTop: 3 },
-});
+  label: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, color: c.fg3, marginTop: 3 },
+  });
+}
 
 // ─── Progress bar ─────────────────────────────────────────────────────────────
 
 function ProgressBar({ pct, color }: { pct: number; color: string }) {
+  const colors = useColors();
+  const progressStyles = useMemo(() => makeProgressStyles(colors), [colors]);
   return (
     <View style={progressStyles.track}>
       <View style={[progressStyles.fill, { width: `${Math.min(pct, 100)}%` as any, backgroundColor: color }]} />
@@ -89,10 +101,12 @@ function ProgressBar({ pct, color }: { pct: number; color: string }) {
   );
 }
 
-const progressStyles = StyleSheet.create({
-  track: { height: 4, borderRadius: 2, backgroundColor: colors.surface2, overflow: 'hidden' },
+function makeProgressStyles(c: ColorSet) {
+  return StyleSheet.create({
+  track: { height: 4, borderRadius: 2, backgroundColor: c.surface2, overflow: 'hidden' },
   fill: { height: '100%', borderRadius: 2 },
-});
+  });
+}
 
 // ─── Stats data bag ───────────────────────────────────────────────────────────
 
@@ -113,6 +127,8 @@ interface StatsBag {
 // ─── StatsA (Cards) ──────────────────────────────────────────────────────────
 
 function StatsA({ s }: { s: StatsBag }) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const isCurrent = s.daysSinceLast <= s.currencyDays;
   const TYPE_COLORS = [colors.sky, '#34D2D6', colors.warn, '#A78BFA'];
 
@@ -195,6 +211,9 @@ function StatsA({ s }: { s: StatsBag }) {
 // ─── StatsB (Cockpit) ─────────────────────────────────────────────────────────
 
 function StatsB({ s }: { s: StatsBag }) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const currencyBarStyles = useMemo(() => makeCurrencyBarStyles(colors), [colors]);
   const isCurrent = s.daysSinceLast <= s.currencyDays;
   const currencyPct = Math.max(0, Math.round(((s.currencyDays - s.daysSinceLast) / s.currencyDays) * 100));
 
@@ -272,14 +291,20 @@ function StatsB({ s }: { s: StatsBag }) {
   );
 }
 
-const currencyBarStyles = StyleSheet.create({
-  track: { height: 6, borderRadius: 3, backgroundColor: colors.surface2, marginBottom: spacing[2], overflow: 'hidden' },
-  fill: { height: '100%', borderRadius: 3, backgroundColor: colors.ok },
-});
+function makeCurrencyBarStyles(c: ColorSet) {
+  return StyleSheet.create({
+  track: { height: 6, borderRadius: 3, backgroundColor: c.surface2, marginBottom: spacing[2], overflow: 'hidden' },
+  fill: { height: '100%', borderRadius: 3, backgroundColor: c.ok },
+  });
+}
 
 // ─── StatsC (Story) ───────────────────────────────────────────────────────────
 
 function StatsC({ s }: { s: StatsBag }) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const storyCardStyles = useMemo(() => makeStoryCardStyles(colors), [colors]);
+  const heroBannerStyles = useMemo(() => makeHeroBannerStyles(colors), [colors]);
   const isCurrent = s.daysSinceLast <= s.currencyDays;
   const thisYear = new Date().getFullYear();
 
@@ -347,24 +372,30 @@ function StatsC({ s }: { s: StatsBag }) {
   );
 }
 
-const storyCardStyles = StyleSheet.create({
-  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, padding: spacing[4], marginRight: spacing[3], minWidth: 130 },
-  value: { fontFamily: 'JetBrainsMono-Medium', fontSize: 20, color: colors.fg, marginTop: spacing[1] },
-});
+function makeStoryCardStyles(c: ColorSet) {
+  return StyleSheet.create({
+  card: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, padding: spacing[4], marginRight: spacing[3], minWidth: 130 },
+  value: { fontFamily: 'JetBrainsMono-Medium', fontSize: 20, color: c.fg, marginTop: spacing[1] },
+  });
+}
 
-const heroBannerStyles = StyleSheet.create({
-  hero: { height: 200, backgroundColor: colors.surface2, justifyContent: 'flex-end', overflow: 'hidden' },
+function makeHeroBannerStyles(c: ColorSet) {
+  return StyleSheet.create({
+  hero: { height: 200, backgroundColor: c.surface2, justifyContent: 'flex-end', overflow: 'hidden' },
   overlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(10,18,32,0.5)' },
   topRow: { position: 'absolute', top: 44, left: spacing[5] },
-  yearLabel: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, color: colors.fg2, letterSpacing: 0.8 },
+  yearLabel: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, color: c.fg2, letterSpacing: 0.8 },
   bottom: { position: 'absolute', bottom: spacing[4], left: spacing[5], right: spacing[5] },
-  bigNum: { fontFamily: 'JetBrainsMono-Medium', fontSize: 44, color: colors.fg, letterSpacing: -1, lineHeight: 44 },
-  bigSub: { fontFamily: 'InterTight-Regular', fontSize: 14, color: colors.fg2, marginTop: 4 },
-});
+  bigNum: { fontFamily: 'JetBrainsMono-Medium', fontSize: 44, color: c.fg, letterSpacing: -1, lineHeight: 44 },
+  bigSub: { fontFamily: 'InterTight-Regular', fontSize: 14, color: c.fg2, marginTop: 4 },
+  });
+}
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function StatsScreen() {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [layout, setLayout] = useState<StatsLayout>('Cards');
@@ -445,40 +476,42 @@ export default function StatsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
+function makeStyles(c: ColorSet) {
+  return StyleSheet.create({
+  screen: { flex: 1, backgroundColor: c.bg },
   flex: { flex: 1 },
   center: { justifyContent: 'center', alignItems: 'center' },
   body: { paddingHorizontal: spacing[5], paddingBottom: spacing[12] },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingTop: spacing[5], paddingBottom: spacing[4] },
-  screenTitle: { fontFamily: 'InterTight-Bold', fontSize: 28, color: colors.fg, letterSpacing: -0.5 },
-  screenSub: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, letterSpacing: 0.8, color: colors.fg3, marginTop: 3 },
-  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, padding: spacing[4], marginBottom: spacing[3] },
-  heroCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.lg, padding: spacing[5], marginBottom: spacing[3], alignItems: 'center' },
+  screenTitle: { fontFamily: 'InterTight-Bold', fontSize: 28, color: c.fg, letterSpacing: -0.5 },
+  screenSub: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, letterSpacing: 0.8, color: c.fg3, marginTop: 3 },
+  card: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, padding: spacing[4], marginBottom: spacing[3] },
+  heroCard: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.lg, padding: spacing[5], marginBottom: spacing[3], alignItems: 'center' },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   row2: { flexDirection: 'row', gap: spacing[3], marginBottom: spacing[0] },
-  label: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: colors.fg3 },
-  labelSm: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, color: colors.fg3, marginTop: 3 },
-  heroNum: { fontFamily: 'JetBrainsMono-Medium', fontSize: 48, color: colors.fg, lineHeight: 52, marginTop: spacing[1] },
-  monoMd: { fontFamily: 'JetBrainsMono-Medium', fontSize: 22, color: colors.fg, marginTop: spacing[1] },
-  heroGaugeLabel: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, color: colors.sky, letterSpacing: 1.5 },
-  heroGaugeNum: { fontFamily: 'JetBrainsMono-Medium', fontSize: 72, color: colors.fg, lineHeight: 80, marginTop: spacing[1] },
-  heroGaugeSub: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, color: colors.fg3, letterSpacing: 0.8, marginTop: spacing[2] },
-  telLabel: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, color: colors.fg3, letterSpacing: 1 },
-  telValue: { fontFamily: 'JetBrainsMono-Medium', fontSize: 24, color: colors.fg, marginTop: spacing[1] },
-  telUnit: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, color: colors.fg3 },
+  label: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: c.fg3 },
+  labelSm: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, color: c.fg3, marginTop: 3 },
+  heroNum: { fontFamily: 'JetBrainsMono-Medium', fontSize: 48, color: c.fg, lineHeight: 52, marginTop: spacing[1] },
+  monoMd: { fontFamily: 'JetBrainsMono-Medium', fontSize: 22, color: c.fg, marginTop: spacing[1] },
+  heroGaugeLabel: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, color: c.sky, letterSpacing: 1.5 },
+  heroGaugeNum: { fontFamily: 'JetBrainsMono-Medium', fontSize: 72, color: c.fg, lineHeight: 80, marginTop: spacing[1] },
+  heroGaugeSub: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, color: c.fg3, letterSpacing: 0.8, marginTop: spacing[2] },
+  telLabel: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, color: c.fg3, letterSpacing: 1 },
+  telValue: { fontFamily: 'JetBrainsMono-Medium', fontSize: 24, color: c.fg, marginTop: spacing[1] },
+  telUnit: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, color: c.fg3 },
   inlineRow: { flexDirection: 'row', alignItems: 'center', gap: spacing[1], marginTop: spacing[2] },
-  trendText: { fontFamily: 'InterTight-Regular', fontSize: 12, color: colors.ok },
-  divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing[3] },
+  trendText: { fontFamily: 'InterTight-Regular', fontSize: 12, color: c.ok },
+  divider: { height: 1, backgroundColor: c.border, marginVertical: spacing[3] },
   badge: { paddingHorizontal: spacing[2], paddingVertical: 3, borderRadius: radii.sm },
-  badgeOk: { backgroundColor: colors.okBg },
+  badgeOk: { backgroundColor: c.okBg },
   badgeDanger: { backgroundColor: 'rgba(255,107,107,0.12)' },
   badgeText: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.5 },
-  sectionTitle: { fontFamily: 'InterTight-SemiBold', fontSize: 13, color: colors.fg3, letterSpacing: 0.3, marginBottom: spacing[2], marginTop: spacing[1] },
+  sectionTitle: { fontFamily: 'InterTight-SemiBold', fontSize: 13, color: c.fg3, letterSpacing: 0.3, marginBottom: spacing[2], marginTop: spacing[1] },
   typeRow: { paddingVertical: spacing[3] },
-  typeRowBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
-  typeName: { fontFamily: 'InterTight-Regular', fontSize: 13, color: colors.fg2 },
-  typeCount: { fontFamily: 'JetBrainsMono-Regular', fontSize: 13, color: colors.fg },
-  typePct: { color: colors.fg3 },
-  fg: { color: colors.fg },
-});
+  typeRowBorder: { borderBottomWidth: 1, borderBottomColor: c.border },
+  typeName: { fontFamily: 'InterTight-Regular', fontSize: 13, color: c.fg2 },
+  typeCount: { fontFamily: 'JetBrainsMono-Regular', fontSize: 13, color: c.fg },
+  typePct: { color: c.fg3 },
+  fg: { color: c.fg },
+  });
+}

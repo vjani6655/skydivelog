@@ -1,9 +1,11 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useMemo } from 'react';
 import { View, Text, FlatList, StyleSheet, SafeAreaView, ActivityIndicator, TouchableOpacity, TextInput } from 'react-native';
 import { useFocusEffect, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
-import { colors, spacing, radii } from '@/constants/tokens';
+import { spacing, radii } from '@/constants/tokens';
+import type { ColorSet } from '@/constants/tokens';
+import { useColors } from '@/lib/theme';
 import type { TagData } from '@/lib/types';
 
 // Tag colors palette
@@ -14,6 +16,8 @@ interface TagWithCount extends TagData {
 }
 
 export default function TagsScreen() {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [tags, setTags] = useState<TagWithCount[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -102,22 +106,24 @@ export default function TagsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
+function makeStyles(c: ColorSet) {
+  return StyleSheet.create({
+  screen: { flex: 1, backgroundColor: c.bg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing[5], paddingVertical: spacing[4] },
   back: { width: 36, height: 36, justifyContent: 'center' },
-  title: { flex: 1, textAlign: 'center', fontFamily: 'InterTight-Bold', fontSize: 22, color: colors.fg, letterSpacing: -0.4 },
-  searchWrap: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], marginHorizontal: spacing[5], marginBottom: spacing[4], backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, paddingHorizontal: spacing[3], height: 40 },
-  searchInput: { flex: 1, fontFamily: 'InterTight-Regular', fontSize: 14, color: colors.fg },
+  title: { flex: 1, textAlign: 'center', fontFamily: 'InterTight-Bold', fontSize: 22, color: c.fg, letterSpacing: -0.4 },
+  searchWrap: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], marginHorizontal: spacing[5], marginBottom: spacing[4], backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, paddingHorizontal: spacing[3], height: 40 },
+  searchInput: { flex: 1, fontFamily: 'InterTight-Regular', fontSize: 14, color: c.fg },
   grid: { paddingHorizontal: spacing[5], paddingBottom: spacing[10] },
-  card: { flex: 1, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, padding: spacing[4], marginBottom: spacing[3] },
+  card: { flex: 1, backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, padding: spacing[4], marginBottom: spacing[3] },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], marginBottom: spacing[3] },
   dot: { width: 9, height: 9, borderRadius: 5 },
-  tagName: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: colors.fg },
-  count: { fontFamily: 'JetBrainsMono-Medium', fontSize: 22, color: colors.fg },
-  countLabel: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: colors.fg3, marginTop: 2 },
+  tagName: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: c.fg },
+  count: { fontFamily: 'JetBrainsMono-Medium', fontSize: 22, color: c.fg },
+  countLabel: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: c.fg3, marginTop: 2 },
   empty: { alignItems: 'center', paddingTop: spacing[16], gap: spacing[2] },
-  emptyTitle: { fontFamily: 'InterTight-SemiBold', fontSize: 17, color: colors.fg, marginTop: spacing[3] },
-  emptySub: { fontFamily: 'InterTight-Regular', fontSize: 14, color: colors.fg3 },
-});
+  emptyTitle: { fontFamily: 'InterTight-SemiBold', fontSize: 17, color: c.fg, marginTop: spacing[3] },
+  emptySub: { fontFamily: 'InterTight-Regular', fontSize: 14, color: c.fg3 },
+  });
+}

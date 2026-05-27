@@ -1,7 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
-import { colors } from '@/constants/tokens';
 import typography from '@/constants/typography';
+import { useColors } from '@/lib/theme';
 
 interface ChipProps {
   active?: boolean;
@@ -18,6 +18,7 @@ export default function Chip({
   onPress,
   children,
 }: ChipProps) {
+  const colors = useColors();
   return (
     <TouchableOpacity
       onPress={onPress}

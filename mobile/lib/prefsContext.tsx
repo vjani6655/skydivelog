@@ -100,7 +100,10 @@ export function fmtDetailDate(iso: string | null | undefined, fmt: DateFmt): str
 
 function applyTheme(theme: ThemePref) {
   if (theme === 'system') {
-    Appearance.setColorScheme(null);
+    // Reset to system scheme. The null argument resets the override;
+    // TypeScript types vary by RN version but the runtime supports it.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (Appearance as any).setColorScheme(null);
   } else {
     Appearance.setColorScheme(theme);
   }

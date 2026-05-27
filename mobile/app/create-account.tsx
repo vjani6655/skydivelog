@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,9 @@ import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
-import { colors, spacing, radii } from '@/constants/tokens';
+import { spacing, radii } from '@/constants/tokens';
+import type { ColorSet } from '@/constants/tokens';
+import { useColors } from '@/lib/theme';
 
 type Errors = {
   fullName: string;
@@ -43,6 +45,8 @@ function validate(f: { fullName: string; email: string; password: string; licenc
 const EMPTY_ERRORS: Errors = { fullName: '', email: '', password: '', licence: '', rating: '', agreed: '' };
 
 export default function CreateAccountScreen() {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -245,8 +249,9 @@ export default function CreateAccountScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+function makeStyles(c: ColorSet) {
+  return StyleSheet.create({
+  safe: { flex: 1, backgroundColor: c.bg },
   flex: { flex: 1 },
   container: {
     flexGrow: 1,
@@ -268,13 +273,13 @@ const styles = StyleSheet.create({
     fontFamily: 'InterTight-Bold',
     fontSize: 32,
     letterSpacing: -0.6,
-    color: colors.fg,
+    color: c.fg,
     marginBottom: spacing[2],
   },
   subtitle: {
     fontFamily: 'InterTight-Regular',
     fontSize: 15,
-    color: colors.fg2,
+    color: c.fg2,
   },
   form: {
     gap: spacing[4],
@@ -287,26 +292,26 @@ const styles = StyleSheet.create({
     fontFamily: 'JetBrainsMono-Regular',
     fontSize: 10,
     letterSpacing: 1.2,
-    color: colors.fg3,
+    color: c.fg3,
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     paddingHorizontal: spacing[3],
     height: 48,
   },
   inputRowError: {
-    borderColor: colors.danger,
-    backgroundColor: colors.dangerBg,
+    borderColor: c.danger,
+    backgroundColor: c.dangerBg,
   },
   errorText: {
     fontFamily: 'InterTight-Regular',
     fontSize: 12,
-    color: colors.danger,
+    color: c.danger,
     marginTop: 2,
   },
   inputIcon: {
@@ -316,7 +321,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: 'InterTight-Regular',
     fontSize: 15,
-    color: colors.fg,
+    color: c.fg,
   },
   inputFlex: { flex: 1 },
   eyeBtn: { paddingLeft: spacing[2] },
@@ -335,26 +340,26 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: radii.sm,
     borderWidth: 1.5,
-    borderColor: colors.border,
+    borderColor: c.border,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
   },
   checkboxChecked: {
-    backgroundColor: colors.sky,
-    borderColor: colors.sky,
+    backgroundColor: c.sky,
+    borderColor: c.sky,
   },
   checkboxError: {
-    borderColor: colors.danger,
+    borderColor: c.danger,
   },
   submitErrorBox: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing[2],
-    backgroundColor: colors.dangerBg,
+    backgroundColor: c.dangerBg,
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: `${colors.danger}40`,
+    borderColor: `${c.danger}40`,
     paddingHorizontal: spacing[3],
     paddingVertical: spacing[3],
     marginBottom: spacing[4],
@@ -362,21 +367,21 @@ const styles = StyleSheet.create({
   submitErrorText: {
     fontFamily: 'InterTight-Regular',
     fontSize: 13,
-    color: colors.danger,
+    color: c.danger,
     flex: 1,
   },
   checkLabel: {
     fontFamily: 'InterTight-Regular',
     fontSize: 14,
-    color: colors.fg2,
+    color: c.fg2,
     flex: 1,
   },
   checkLink: {
     fontFamily: 'InterTight-SemiBold',
-    color: colors.sky,
+    color: c.sky,
   },
   primaryButton: {
-    backgroundColor: colors.sky,
+    backgroundColor: c.sky,
     borderRadius: radii.lg,
     paddingVertical: spacing[4],
     alignItems: 'center',
@@ -385,6 +390,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontFamily: 'InterTight-SemiBold',
     fontSize: 16,
-    color: colors.onSky,
+    color: c.onSky,
   },
-});
+  });
+}

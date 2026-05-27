@@ -2,11 +2,12 @@
  * 09C · Photo-led layout
  * Full-width photo hero → compact telemetry row → DZ/Aircraft → tags → notes.
  */
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, ImageBackground, Dimensions,
 } from 'react-native';
-import { colors } from '@/constants/tokens';
+import type { ColorSet } from '@/constants/tokens';
+import { useColors } from '@/lib/theme';
 import typography from '@/constants/typography';
 import { Tag } from '@/components/ui';
 import { Badge } from '@/components/ui';
@@ -30,8 +31,9 @@ function fmtTime(s: number | null): string {
 // ─── Compact telemetry cell ───────────────────────────────────────────────────
 
 function MiniTel({ label, value }: { label: string; value: string }) {
+  const colors = useColors();
   return (
-    <View style={styles.miniCell}>
+    <View style={{ flex: 1, paddingVertical: 14, paddingHorizontal: 16 }}>
       <Text style={[typography.overline, { color: colors.fg3 }]}>{label}</Text>
       <Text style={[typography.numSm, { color: colors.fg, marginTop: 2 }]}>{value}</Text>
     </View>
@@ -42,6 +44,8 @@ function MiniTel({ label, value }: { label: string; value: string }) {
 
 export default function DetailPhotoLed({ jump, signatures, tags, edits }: JumpDetailProps) {
   const { prefs } = usePrefs();
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const signed   = signatures.length > 0;
   const sig      = signatures[0];
   const dzName   = jump.dropzones?.name ?? null;
@@ -287,7 +291,8 @@ export default function DetailPhotoLed({ jump, signatures, tags, edits }: JumpDe
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+function makeStyles(colors: ColorSet) {
+  return StyleSheet.create({
   // Photo hero
   photo: {
     width: '100%',
@@ -404,3 +409,4 @@ const styles = StyleSheet.create({
   timestamps: { marginHorizontal: 16, marginTop: 8, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.border, gap: 4 },
   tsText: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.6, color: colors.fg3 },
 });
+}

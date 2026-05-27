@@ -1,6 +1,9 @@
+import { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing } from '@/constants/tokens';
+import { spacing } from '@/constants/tokens';
+import type { ColorSet } from '@/constants/tokens';
+import { useColors } from '@/lib/theme';
 import type { JumpFull } from '@/lib/types';
 import { usePrefs, fmtAlt, type AltUnit } from '@/lib/prefsContext';
 
@@ -22,6 +25,8 @@ interface Props {
 
 export default function TimelineGroup({ month, count, jumps, onPressJump }: Props) {
   const { prefs } = usePrefs();
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.group}>
       {/* Month header */}
@@ -62,7 +67,8 @@ export default function TimelineGroup({ month, count, jumps, onPressJump }: Prop
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: ColorSet) {
+  return StyleSheet.create({
   group: {
     paddingHorizontal: spacing[5],
     marginBottom: spacing[5],
@@ -153,3 +159,4 @@ const styles = StyleSheet.create({
     color: colors.fg2,
   },
 });
+}

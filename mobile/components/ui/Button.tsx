@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   TouchableOpacity,
   Text,
@@ -7,8 +7,8 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
-import { colors } from '@/constants/tokens';
 import typography from '@/constants/typography';
+import { useColors } from '@/lib/theme';
 import Icon from './Icon';
 
 export type ButtonVariant = 'primary' | 'ghost' | 'sub' | 'danger';
@@ -27,13 +27,6 @@ interface ButtonProps {
   style?: ViewStyle;
 }
 
-const variantMap = {
-  primary: { bg: colors.sky,      text: colors.onSky, borderColor: 'transparent', borderWidth: 0 },
-  ghost:   { bg: 'transparent',   text: colors.fg,    borderColor: colors.borderStrong, borderWidth: 1 },
-  sub:     { bg: colors.surface,  text: colors.fg,    borderColor: colors.border, borderWidth: 1 },
-  danger:  { bg: colors.danger,   text: colors.onSky, borderColor: 'transparent', borderWidth: 0 },
-};
-
 const heights:   Record<ButtonSize, number> = { sm: 32, md: 38, lg: 52 };
 const paddingH:  Record<ButtonSize, number> = { sm: 12, md: 16, lg: 20 };
 
@@ -49,6 +42,13 @@ export default function Button({
   children,
   style,
 }: ButtonProps) {
+  const colors = useColors();
+  const variantMap = {
+    primary: { bg: colors.sky,      text: colors.onSky, borderColor: 'transparent', borderWidth: 0 },
+    ghost:   { bg: 'transparent',   text: colors.fg,    borderColor: colors.borderStrong, borderWidth: 1 },
+    sub:     { bg: colors.surface,  text: colors.fg,    borderColor: colors.border, borderWidth: 1 },
+    danger:  { bg: colors.danger,   text: colors.onSky, borderColor: 'transparent', borderWidth: 0 },
+  };
   const v = variantMap[variant];
   const textStyle = size === 'sm' ? typography.buttonSm : typography.button;
   const iconSize  = size === 'sm' ? 14 : size === 'lg' ? 18 : 16;

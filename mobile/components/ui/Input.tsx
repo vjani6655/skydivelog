@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TextInputProps } from 'react-native';
-import { colors } from '@/constants/tokens';
 import typography from '@/constants/typography';
+import { useColors } from '@/lib/theme';
 import Icon from './Icon';
 
 interface InputProps extends Omit<TextInputProps, 'style'> {
@@ -18,7 +18,15 @@ export default function Input({
   state = 'default',
   ...props
 }: InputProps) {
+  const colors = useColors();
   const [focused, setFocused] = useState(false);
+  const styles = useMemo(() => StyleSheet.create({
+    label:   { color: colors.fg2, marginBottom: 6 },
+    wrap:    { height: 52, backgroundColor: colors.surface, borderRadius: 10, borderWidth: 1, justifyContent: 'center' },
+    iconWrap: { position: 'absolute', left: 14, zIndex: 1 },
+    input:   { flex: 1, paddingRight: 14, height: '100%' },
+    helper:  { marginTop: 4, marginLeft: 2 },
+  }), [colors]);
 
   const borderColor =
     state === 'error'   ? colors.danger
@@ -62,30 +70,3 @@ export default function Input({
   );
 }
 
-const styles = StyleSheet.create({
-  label: {
-    color: colors.fg2,
-    marginBottom: 6,
-  },
-  wrap: {
-    height: 52,
-    backgroundColor: colors.surface,
-    borderRadius: 10,
-    borderWidth: 1,
-    justifyContent: 'center',
-  },
-  iconWrap: {
-    position: 'absolute',
-    left: 14,
-    zIndex: 1,
-  },
-  input: {
-    flex: 1,
-    paddingRight: 14,
-    height: '100%',
-  },
-  helper: {
-    marginTop: 4,
-    marginLeft: 2,
-  },
-});

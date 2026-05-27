@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet,
   SafeAreaView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Modal,
@@ -8,7 +8,9 @@ import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
 import { PanResponder } from 'react-native';
 import { supabase } from '@/lib/supabase';
-import { colors, spacing, radii } from '@/constants/tokens';
+import { spacing, radii } from '@/constants/tokens';
+import type { ColorSet } from '@/constants/tokens';
+import { useColors } from '@/lib/theme';
 import type { JumpFull, JumpEdit } from '@/lib/types';
 
 const CANVAS_W = 320;
@@ -30,7 +32,8 @@ function fmtAlt(ft: number | null | undefined): string {
 }
 
 function Label({ text }: { text: string }) {
-  return <Text style={styles.label}>{text}</Text>;
+  const colors = useColors();
+  return <Text style={{ fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: colors.fg3, marginBottom: spacing[1.5] }}>{text}</Text>;
 }
 
 interface SigPadProps {
@@ -39,6 +42,8 @@ interface SigPadProps {
 }
 
 function SignaturePad({ onChange, onDrawing }: SigPadProps) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const allPaths = useRef<string[]>([]);
   const currentPath = useRef('');
   const [tick, setTick] = useState(0);
@@ -132,6 +137,8 @@ function SignaturePad({ onChange, onDrawing }: SigPadProps) {
 }
 
 export default function InstructorSignScreen() {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { jumpId, changes: changesParam } = useLocalSearchParams<{ jumpId: string; changes?: string }>();
   const parsedChanges: Array<{ field: string; from: string; to: string }> = changesParam ? JSON.parse(changesParam) : [];
   const [jump, setJump] = useState<JumpFull | null>(null);
@@ -395,71 +402,73 @@ export default function InstructorSignScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
+function makeStyles(c: ColorSet) {
+  return StyleSheet.create({
+  screen: { flex: 1, backgroundColor: c.bg },
   flex: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing[5], paddingVertical: spacing[3], borderBottomWidth: 1, borderBottomColor: colors.border },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing[5], paddingVertical: spacing[3], borderBottomWidth: 1, borderBottomColor: c.border },
   back: { width: 36, height: 36, justifyContent: 'center' },
-  headerTitle: { flex: 1, textAlign: 'center', fontFamily: 'InterTight-SemiBold', fontSize: 17, color: colors.fg },
+  headerTitle: { flex: 1, textAlign: 'center', fontFamily: 'InterTight-SemiBold', fontSize: 17, color: c.fg },
   body: { padding: spacing[5], paddingBottom: spacing[12] },
   scannedBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], backgroundColor: 'rgba(74,222,128,0.12)', borderWidth: 1, borderColor: 'rgba(74,222,128,0.3)', borderRadius: radii.md, padding: spacing[3], marginBottom: spacing[5] },
-  scannedText: { fontFamily: 'InterTight-Medium', fontSize: 14, color: colors.ok },
-  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, padding: spacing[4], marginBottom: spacing[5] },
+  scannedText: { fontFamily: 'InterTight-Medium', fontSize: 14, color: c.ok },
+  card: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, padding: spacing[4], marginBottom: spacing[5] },
   cardHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing[3], marginBottom: spacing[3] },
-  cardMono: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, letterSpacing: 0.8, color: colors.fg3 },
-  jumpDate: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: colors.fg, marginTop: 2 },
+  cardMono: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, letterSpacing: 0.8, color: c.fg3 },
+  jumpDate: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: c.fg, marginTop: 2 },
   typeBadge: { backgroundColor: 'rgba(56,189,248,0.12)', borderWidth: 1, borderColor: 'rgba(56,189,248,0.3)', borderRadius: radii.sm, paddingHorizontal: spacing[2], paddingVertical: 2 },
-  typeBadgeText: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, letterSpacing: 0.8, color: colors.sky },
+  typeBadgeText: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, letterSpacing: 0.8, color: c.sky },
   studentBadge: { backgroundColor: 'rgba(255,183,74,0.15)', borderWidth: 1, borderColor: 'rgba(255,183,74,0.4)', borderRadius: radii.sm, paddingHorizontal: spacing[2], paddingVertical: 2 },
-  studentBadgeText: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, letterSpacing: 0.8, color: colors.warn },
-  divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing[3] },
+  studentBadgeText: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, letterSpacing: 0.8, color: c.warn },
+  divider: { height: 1, backgroundColor: c.border, marginVertical: spacing[3] },
   cardGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[3] },
   cardCell: { width: '45%' },
-  cellLabel: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, letterSpacing: 0.8, color: colors.fg3 },
-  cellValue: { fontFamily: 'InterTight-Medium', fontSize: 14, color: colors.fg, marginTop: 2 },
-  notesText: { fontFamily: 'InterTight-Regular', fontSize: 14, color: colors.fg2, marginTop: 4, lineHeight: 20 },
-  sigPad: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, overflow: 'hidden', marginBottom: spacing[3] },
+  cellLabel: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, letterSpacing: 0.8, color: c.fg3 },
+  cellValue: { fontFamily: 'InterTight-Medium', fontSize: 14, color: c.fg, marginTop: 2 },
+  notesText: { fontFamily: 'InterTight-Regular', fontSize: 14, color: c.fg2, marginTop: 4, lineHeight: 20 },
+  sigPad: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, overflow: 'hidden', marginBottom: spacing[3] },
   sigCanvas: { height: 160 },
   sigPlaceholder: { ...StyleSheet.absoluteFill, justifyContent: 'center', alignItems: 'center' },
-  sigPlaceholderText: { fontFamily: 'InterTight-Regular', fontSize: 15, color: colors.fg3 },
-  sigFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing[3], borderTopWidth: 1, borderTopColor: colors.border },
-  sigHint: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: colors.fg3 },
-  roleBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], backgroundColor: colors.warnBg, borderWidth: 1, borderColor: 'rgba(255,183,74,0.35)', borderRadius: radii.md, padding: spacing[3], marginBottom: spacing[4] },
-  roleBannerText: { fontFamily: 'InterTight-Medium', fontSize: 13, color: colors.warn, flex: 1 },
-  roleBannerLicensed: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], backgroundColor: colors.skyBg, borderWidth: 1, borderColor: 'rgba(74,158,255,0.3)', borderRadius: radii.md, padding: spacing[3], marginBottom: spacing[4] },
-  roleBannerLicensedText: { fontFamily: 'InterTight-Medium', fontSize: 13, color: colors.sky, flex: 1 },
-  changesBox: { backgroundColor: colors.warnBg, borderWidth: 1, borderColor: 'rgba(255,183,74,0.35)', borderRadius: radii.md, padding: spacing[4], marginBottom: spacing[4] },
+  sigPlaceholderText: { fontFamily: 'InterTight-Regular', fontSize: 15, color: c.fg3 },
+  sigFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing[3], borderTopWidth: 1, borderTopColor: c.border },
+  sigHint: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: c.fg3 },
+  roleBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], backgroundColor: c.warnBg, borderWidth: 1, borderColor: 'rgba(255,183,74,0.35)', borderRadius: radii.md, padding: spacing[3], marginBottom: spacing[4] },
+  roleBannerText: { fontFamily: 'InterTight-Medium', fontSize: 13, color: c.warn, flex: 1 },
+  roleBannerLicensed: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], backgroundColor: c.skyBg, borderWidth: 1, borderColor: 'rgba(74,158,255,0.3)', borderRadius: radii.md, padding: spacing[3], marginBottom: spacing[4] },
+  roleBannerLicensedText: { fontFamily: 'InterTight-Medium', fontSize: 13, color: c.sky, flex: 1 },
+  changesBox: { backgroundColor: c.warnBg, borderWidth: 1, borderColor: 'rgba(255,183,74,0.35)', borderRadius: radii.md, padding: spacing[4], marginBottom: spacing[4] },
   changesHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], marginBottom: spacing[3] },
-  changesTitle: { fontFamily: 'InterTight-SemiBold', fontSize: 13, color: colors.warn },
+  changesTitle: { fontFamily: 'InterTight-SemiBold', fontSize: 13, color: c.warn },
   changeRow: { marginBottom: spacing[2] },
-  changeField: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, letterSpacing: 0.8, color: colors.fg3, marginBottom: 3 },
+  changeField: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, letterSpacing: 0.8, color: c.fg3, marginBottom: 3 },
   changeValues: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], flexWrap: 'wrap' },
-  changeFrom: { fontFamily: 'InterTight-Regular', fontSize: 13, color: colors.fg2, textDecorationLine: 'line-through' },
-  changeTo: { fontFamily: 'InterTight-SemiBold', fontSize: 13, color: colors.fg },
-  historyBox: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, padding: spacing[4], marginBottom: spacing[4] },
-  historyBoxTitle: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, letterSpacing: 0.8, color: colors.fg3, marginBottom: spacing[3] },
-  historyEntry: { marginBottom: spacing[4], paddingBottom: spacing[4], borderBottomWidth: 1, borderBottomColor: colors.border },
-  historyEntryDate: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.6, color: colors.sky, marginBottom: spacing[2] },
+  changeFrom: { fontFamily: 'InterTight-Regular', fontSize: 13, color: c.fg2, textDecorationLine: 'line-through' },
+  changeTo: { fontFamily: 'InterTight-SemiBold', fontSize: 13, color: c.fg },
+  historyBox: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, padding: spacing[4], marginBottom: spacing[4] },
+  historyBoxTitle: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, letterSpacing: 0.8, color: c.fg3, marginBottom: spacing[3] },
+  historyEntry: { marginBottom: spacing[4], paddingBottom: spacing[4], borderBottomWidth: 1, borderBottomColor: c.border },
+  historyEntryDate: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.6, color: c.sky, marginBottom: spacing[2] },
   sigActions: { flexDirection: 'row', gap: spacing[4] },
   sigActionBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing[1] },
-  sigClear: { fontFamily: 'InterTight-Medium', fontSize: 13, color: colors.sky },
-  fsScreen: { flex: 1, backgroundColor: colors.bg },
+  sigClear: { fontFamily: 'InterTight-Medium', fontSize: 13, color: c.sky },
+  fsScreen: { flex: 1, backgroundColor: c.bg },
   fsCanvas: { flex: 1 },
   fsFooter: { flexDirection: 'row', gap: spacing[3], padding: spacing[5], paddingBottom: spacing[7] },
   fsBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing[2], paddingVertical: spacing[4], borderRadius: radii.md },
-  fsBtnGhost: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-  fsBtnPrimary: { backgroundColor: colors.sky },
-  fsBtnGhostText: { fontFamily: 'InterTight-SemiBold', fontSize: 16, color: colors.fg2 },
-  fsBtnPrimaryText: { fontFamily: 'InterTight-SemiBold', fontSize: 16, color: colors.onSky },
+  fsBtnGhost: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border },
+  fsBtnPrimary: { backgroundColor: c.sky },
+  fsBtnGhostText: { fontFamily: 'InterTight-SemiBold', fontSize: 16, color: c.fg2 },
+  fsBtnPrimaryText: { fontFamily: 'InterTight-SemiBold', fontSize: 16, color: c.onSky },
   outcomeRow: { marginBottom: spacing[4] },
   outcomeBtns: { flexDirection: 'row', gap: spacing[3] },
-  outcomeBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing[2], paddingVertical: spacing[4], backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md },
-  outcomeBtnPass: { backgroundColor: colors.sky, borderColor: colors.sky },
-  outcomeBtnRepeat: { backgroundColor: colors.warn, borderColor: colors.warn },
-  outcomeBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: colors.fg2 },
-  label: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: colors.fg3, marginBottom: spacing[1.5] },
-  input: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, paddingHorizontal: spacing[3], paddingVertical: spacing[3], marginBottom: spacing[4], fontFamily: 'InterTight-Regular', fontSize: 15, color: colors.fg },
+  outcomeBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing[2], paddingVertical: spacing[4], backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md },
+  outcomeBtnPass: { backgroundColor: c.sky, borderColor: c.sky },
+  outcomeBtnRepeat: { backgroundColor: c.warn, borderColor: c.warn },
+  outcomeBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: c.fg2 },
+  label: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: c.fg3, marginBottom: spacing[1.5] },
+  input: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, paddingHorizontal: spacing[3], paddingVertical: spacing[3], marginBottom: spacing[4], fontFamily: 'InterTight-Regular', fontSize: 15, color: c.fg },
   textarea: { minHeight: 80, paddingTop: spacing[3] },
-  confirmBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing[2], backgroundColor: colors.sky, borderRadius: radii.md, paddingVertical: spacing[4], marginTop: spacing[2] },
-  confirmBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 16, color: colors.onSky },
-});
+  confirmBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing[2], backgroundColor: c.sky, borderRadius: radii.md, paddingVertical: spacing[4], marginTop: spacing[2] },
+  confirmBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 16, color: c.onSky },
+  });
+}

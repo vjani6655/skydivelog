@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   View, Text, TouchableOpacity, Modal, StyleSheet,
   ScrollView, Animated, Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, radii } from '@/constants/tokens';
+import { spacing, radii } from '@/constants/tokens';
+import type { ColorSet } from '@/constants/tokens';
+import { useColors } from '@/lib/theme';
 
 const SORT_OPTIONS = [
   { key: 'date_desc', label: 'Date · newest' },
@@ -41,19 +43,22 @@ interface FilterSheetProps {
 }
 
 function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  const colors = useColors();
   return (
     <TouchableOpacity
-      style={[styles.chip, active && styles.chipActive]}
+      style={[{ paddingHorizontal: spacing[3], paddingVertical: spacing[1.5], borderRadius: radii.pill, borderWidth: 1, borderColor: active ? colors.sky : colors.border, backgroundColor: active ? colors.sky : colors.surface2 }]}
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
+      <Text style={{ fontFamily: 'InterTight-Medium', fontSize: 13, color: active ? colors.onSky : colors.fg2 }}>{label}</Text>
     </TouchableOpacity>
   );
 }
 
 export function FilterSheet({ visible, onClose, filter, onApply, totalCount, filteredCount }: FilterSheetProps) {
   const [local, setLocal] = useState<FilterState>(filter);
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const reset = () => setLocal(DEFAULT_FILTER);
 
@@ -136,7 +141,8 @@ export function FilterSheet({ visible, onClose, filter, onApply, totalCount, fil
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: ColorSet) {
+  return StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' },
   sheet: { backgroundColor: colors.surface, borderTopLeftRadius: radii.xl, borderTopRightRadius: radii.xl, paddingBottom: 40, maxHeight: '80%' },
   handle: { width: 38, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginTop: spacing[2.5], marginBottom: spacing[2] },
@@ -161,3 +167,4 @@ const styles = StyleSheet.create({
   applyBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing[2], backgroundColor: colors.sky, borderRadius: radii.md, paddingVertical: spacing[4] },
   applyBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 16, color: colors.onSky },
 });
+}

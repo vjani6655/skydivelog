@@ -1,9 +1,14 @@
+import { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, radii } from '@/constants/tokens';
+import { spacing, radii } from '@/constants/tokens';
+import type { ColorSet } from '@/constants/tokens';
+import { useColors } from '@/lib/theme';
 
 function StripedHero() {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const stripes = Array.from({ length: 20 });
   return (
     <View style={styles.hero}>
@@ -24,6 +29,8 @@ function StripedHero() {
 }
 
 export default function WelcomeScreen() {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.container}>
       <StripedHero />
@@ -58,10 +65,11 @@ export default function WelcomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(c: ColorSet) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg,
+    backgroundColor: c.bg,
   },
   hero: {
     flex: 1,
@@ -82,7 +90,7 @@ const styles = StyleSheet.create({
     fontFamily: 'JetBrainsMono-Regular',
     fontSize: 10,
     letterSpacing: 1.4,
-    color: colors.fg3,
+    color: c.fg3,
   },
   content: {
     flex: 1,
@@ -96,13 +104,13 @@ const styles = StyleSheet.create({
     fontSize: 36,
     lineHeight: 40,
     letterSpacing: -0.8,
-    color: colors.fg,
+    color: c.fg,
   },
   subtitle: {
     fontFamily: 'InterTight-Regular',
     fontSize: 15,
     lineHeight: 22,
-    color: colors.fg2,
+    color: c.fg2,
     marginTop: spacing[3],
   },
   buttons: {
@@ -110,7 +118,7 @@ const styles = StyleSheet.create({
     marginTop: spacing[8],
   },
   primaryButton: {
-    backgroundColor: colors.sky,
+    backgroundColor: c.sky,
     borderRadius: radii.lg,
     paddingVertical: spacing[4],
     alignItems: 'center',
@@ -118,26 +126,27 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontFamily: 'InterTight-SemiBold',
     fontSize: 16,
-    color: colors.onSky,
+    color: c.onSky,
   },
   ghostButton: {
     borderRadius: radii.lg,
     paddingVertical: spacing[4],
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
   },
   ghostButtonText: {
     fontFamily: 'InterTight-Medium',
     fontSize: 16,
-    color: colors.fg,
+    color: c.fg,
   },
   priceCaption: {
     fontFamily: 'JetBrainsMono-Regular',
     fontSize: 11,
     letterSpacing: 0.5,
-    color: colors.fg3,
+    color: c.fg3,
     textAlign: 'center',
     marginTop: spacing[4],
   },
-});
+  });
+}

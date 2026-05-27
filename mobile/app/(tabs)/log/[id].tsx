@@ -5,7 +5,7 @@ import {
 import { useLocalSearchParams, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
-import { colors } from '@/constants/tokens';
+import { useColors } from '@/lib/theme';
 import typography from '@/constants/typography';
 import { IconButton } from '@/components/ui';
 import type { JumpFull, JumpSignature, TagData, JumpEdit } from '@/lib/types';
@@ -38,6 +38,7 @@ function TopBar({
   layout, title, isFavourite,
   onBack, onToggleFavourite, onMenu, onShare,
 }: TopBarProps) {
+  const colors = useColors();
   const showStar  = layout !== 'Cockpit';
   const showShare = layout === 'Photo-led';
   const showMenu  = layout !== 'Photo-led';
@@ -73,6 +74,7 @@ function TopBar({
 // ─── Screen ──────────────────────────────────────────────────────────────────
 
 export default function JumpDetailScreen() {
+  const colors = useColors();
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const [jump,       setJump]       = useState<JumpFull | null>(null);
