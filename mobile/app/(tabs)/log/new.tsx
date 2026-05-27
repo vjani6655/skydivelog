@@ -874,7 +874,7 @@ export default function NewJumpScreen() {
               </View>
               <Toggle on={isFav} onChange={setIsFav} />
             </View>
-            <Label text={jumperType === 'Student' ? 'NOTES' : 'NOTES (optional)'} />
+            <Label text={jumperType === 'Student' ? 'JUMP DESCRIPTION' : 'JUMP DESCRIPTION (optional)'} />
             <TextInput style={[styles.input, styles.textarea, errors.notes ? styles.inputError : null]} value={notes} onChangeText={v => { setNotes(v); setErrors(e => ({ ...e, notes: '' })); }} multiline numberOfLines={6} placeholder="What happened on this jump?" placeholderTextColor={colors.fg3} textAlignVertical="top" />
             {errors.notes && <Text style={styles.fieldError}>{errors.notes}</Text>}
           </>)}
@@ -964,7 +964,7 @@ export default function NewJumpScreen() {
             <Label text="LICENCE #" />
             <TextInput style={[styles.input, errors.signerLicence ? styles.inputError : null]} value={signerLicence} onChangeText={v => { setSignerLicence(v); setErrors(e => ({ ...e, signerLicence: '' })); }} placeholder="APF 14829" placeholderTextColor={colors.fg3} autoCapitalize="none" autoCorrect={false} />
             {errors.signerLicence && <Text style={styles.fieldError}>{errors.signerLicence}</Text>}
-            <Label text={jumperType === 'Student' ? 'INSTRUCTOR NOTES' : 'NOTES (optional)'} />
+            <Label text={jumperType === 'Student' ? 'INSTRUCTOR NOTES' : 'SIGNER NOTES (optional)'} />
             <TextInput style={[styles.input, styles.textareaSm, errors.signerNotes ? styles.inputError : null]} value={signerNotes} onChangeText={v => { setSignerNotes(v); setErrors(e => ({ ...e, signerNotes: '' })); }} multiline numberOfLines={3} placeholder="Instructor notes..." placeholderTextColor={colors.fg3} textAlignVertical="top" />
             {errors.signerNotes && <Text style={styles.fieldError}>{errors.signerNotes}</Text>}
           </>)}

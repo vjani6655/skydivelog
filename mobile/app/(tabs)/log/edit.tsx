@@ -342,7 +342,7 @@ export default function EditJumpScreen() {
             </View>
           </View>
 
-          <Label text="NOTES" />
+          <Label text="JUMP DESCRIPTION" />
           <TextInput style={[styles.input, styles.textarea]} value={notes} onChangeText={setNotes} multiline numberOfLines={4} placeholderTextColor={colors.fg3} textAlignVertical="top" />
 
           <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete} activeOpacity={0.7}>
