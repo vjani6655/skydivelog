@@ -1,6 +1,8 @@
 import Link from "next/link"
 import BrandMark from "@/components/BrandMark"
 import WebThemeToggle from "@/components/WebThemeToggle"
+import MarketingSignOutButton from "@/components/MarketingSignOutButton"
+import { createClient } from "@/lib/supabase/server"
 
 const NAV_LINKS = [
   { href: "/features", label: "Features" },
@@ -9,11 +11,15 @@ const NAV_LINKS = [
   { href: "/contact", label: "Contact" },
 ]
 
-export default function MarketingLayout({
+export default async function MarketingLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const isLoggedIn = !!user
+
   return (
     <div className="min-h-screen flex flex-col bg-bg">
       <header className="border-b border-border sticky top-0 z-50 bg-bg/90 backdrop-blur-sm">
@@ -33,18 +39,32 @@ export default function MarketingLayout({
 
           <div className="flex items-center gap-2">
             <WebThemeToggle />
-            <Link
-              href="/login"
-              className="text-sm text-fg-3 hover:text-fg px-3 py-1.5 rounded-sm transition-colors"
-            >
-              Log in
-            </Link>
-            <Link
-              href="/signup"
-              className="bg-sky text-on-sky text-sm font-semibold px-4 py-1.5 rounded-sm hover:bg-sky/90 transition-colors"
-            >
-              Sign up
-            </Link>
+            {isLoggedIn ? (
+              <>
+                <Link
+                  href="/dashboard"
+                  className="text-sm text-fg-3 hover:text-fg px-3 py-1.5 rounded-sm transition-colors"
+                >
+                  Take me to dashboard
+                </Link>
+                <MarketingSignOutButton />
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="text-sm text-fg-3 hover:text-fg px-3 py-1.5 rounded-sm transition-colors"
+                >
+                  Log in
+                </Link>
+                <Link
+                  href="/signup"
+                  className="bg-sky text-on-sky text-sm font-semibold px-4 py-1.5 rounded-sm hover:bg-sky/90 transition-colors"
+                >
+                  Sign up
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>

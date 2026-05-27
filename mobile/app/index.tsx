@@ -1,11 +1,31 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, Image } from 'react-native';
 import { router } from 'expo-router';
 import Constants from 'expo-constants';
 import { supabase } from '@/lib/supabase';
+import { setCachedMedia } from '@/lib/mediaCache';
 import Logo from '@/components/ui/Logo';
 import type { ColorSet } from '@/constants/tokens';
 import { useColors } from '@/lib/theme';
+
+// Slots that are shown on the not-logged-in welcome screen
+const WELCOME_SLOTS = ['welcome_hero']
+
+async function prefetchMedia(slots: string[]): Promise<void> {
+  await Promise.allSettled(
+    slots.map(async (slot) => {
+      const { data } = await supabase
+        .from('app_media')
+        .select('url')
+        .eq('slot', slot)
+        .maybeSingle()
+      if (data?.url) {
+        setCachedMedia(slot, data.url)
+        await Image.prefetch(data.url)
+      }
+    })
+  )
+}
 
 export default function SplashScreen() {
   const colors = useColors();
@@ -19,11 +39,18 @@ export default function SplashScreen() {
       useNativeDriver: false,
     }).start();
 
+    // Kick off session check AND media prefetch concurrently at t=0
+    const sessionPromise = supabase.auth.getSession();
+    const mediaPromise   = prefetchMedia(WELCOME_SLOTS);
+
     const timer = setTimeout(async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await sessionPromise;
       if (session) {
+        // Logged in — let media finish in the background, don't block routing
         router.replace('/(tabs)/log');
       } else {
+        // Not logged in — wait for media so welcome screen renders instantly
+        await mediaPromise;
         router.replace('/welcome');
       }
     }, 2200);

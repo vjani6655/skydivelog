@@ -1,7 +1,9 @@
 export const dynamic = 'force-dynamic'
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import { KPI, AdminCard, Badge, Avatar, Divider } from '@/components/admin/ui'
+import { KPI, AdminCard, Badge, Avatar } from '@/components/admin/ui'
+import UserActionsClient from '@/components/admin/UserActionsClient'
+import { type UserActionsProps } from '@/components/admin/UserActionsClient'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronRight, Mail, Eye, MoreHorizontal } from 'lucide-react'
@@ -35,6 +37,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
     { data: recentTickets },
     { count: flaggedCount },
     { count: totalUsers },
+    { data: adminNotes },
   ] = await Promise.all([
     db.from('users').select('*, home_dropzone_id').eq('id', id).single(),
     db.from('subscriptions').select('*').eq('user_id', id).order('started_at', { ascending: false }).limit(1).maybeSingle(),
@@ -49,6 +52,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
       .eq('status', 'open')
       .in('jump_id', (await db.from('jumps').select('id').eq('user_id', id).is('deleted_at', null)).data?.map(j => j.id) ?? []),
     db.from('users').select('*', { count: 'exact', head: true }).lte('created_at', (await db.from('users').select('created_at').eq('id', id).single()).data?.created_at ?? ''),
+    db.from('audit_log').select('id, reason, created_at').eq('action', 'admin_note').eq('target', `user:${id}`).order('created_at', { ascending: false }),
   ])
 
   if (!user) notFound()
@@ -220,97 +224,16 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
         </div>
 
         {/* Right column */}
-        <div className="flex flex-col gap-3.5">
-          {/* Subscription */}
-          <AdminCard title="SUBSCRIPTION">
-            {sub ? (
-              <>
-                <div className="flex justify-between items-center mb-1">
-                  <div className="flex gap-1.5">
-                    <Badge kind="sky">{sub.plan?.toUpperCase() ?? 'PRO'}</Badge>
-                    <Badge kind={statusKind[sub.status] ?? 'muted'}>{sub.status.toUpperCase()}</Badge>
-                  </div>
-                  <span className="font-mono text-lg font-semibold">${sub.price_at_signup}/yr</span>
-                </div>
-                <div className="font-mono text-[10px] text-fg-3 mb-3">BILLED ANNUALLY · STRIPE</div>
-                <Divider />
-                {[
-                  ['Started',   fmtDateShort(sub.started_at)],
-                  ['Renews',    fmtDateShort(sub.renews_at)],
-                  ['Method',    `${sub.payment_method_brand} •••• ${sub.payment_method_last4}`],
-                  ['Stripe ID', sub.stripe_subscription_id],
-                ].map(([k, v]) => (
-                  <div key={k} className="flex justify-between py-1.5 text-xs">
-                    <span className="text-fg-2">{k}</span>
-                    <span className="font-mono text-fg truncate ml-2 text-right">{v}</span>
-                  </div>
-                ))}
-                <div className="flex gap-2 mt-3">
-                  <button className="flex-1 py-1.5 bg-surface-2 border border-border rounded-sm text-xs text-fg-2 hover:text-fg transition-colors">Extend</button>
-                  <button className="flex-1 py-1.5 bg-surface-2 border border-border rounded-sm text-xs text-danger hover:bg-danger/10 transition-colors">Revoke</button>
-                </div>
-              </>
-            ) : inTrial ? (
-              <>
-                <div className="flex justify-between items-center mb-1">
-                  <Badge kind="sky">FREE TRIAL</Badge>
-                  <span className="font-mono text-lg font-semibold">{trialDaysLeft}d left</span>
-                </div>
-                <div className="font-mono text-[10px] text-fg-3 mb-3">14-DAY TRIAL · NO CARD ON FILE</div>
-                <Divider />
-                {[
-                  ['Trial started', fmtDateShort(user.created_at)],
-                  ['Trial ends',    fmtDateShort(trialEndDate.toISOString())],
-                ].map(([k, v]) => (
-                  <div key={k} className="flex justify-between py-1.5 text-xs">
-                    <span className="text-fg-2">{k}</span>
-                    <span className="font-mono text-fg">{v}</span>
-                  </div>
-                ))}
-              </>
-            ) : (
-              <>
-                <Badge kind="warn">TRIAL EXPIRED</Badge>
-                <div className="font-mono text-[10px] text-fg-3 mt-1.5 mb-3">14-DAY TRIAL ENDED · NO SUBSCRIPTION</div>
-                <Divider />
-                {[
-                  ['Trial started', fmtDateShort(user.created_at)],
-                  ['Trial ended',   fmtDateShort(trialEndDate.toISOString())],
-                ].map(([k, v]) => (
-                  <div key={k} className="flex justify-between py-1.5 text-xs">
-                    <span className="text-fg-2">{k}</span>
-                    <span className="font-mono text-fg">{v}</span>
-                  </div>
-                ))}
-              </>
-            )}
-          </AdminCard>
-
-          {/* Manual actions */}
-          <AdminCard title="MANUAL ACTIONS">
-            {[
-              { label: 'Send password reset',         color: 'text-fg-2' },
-              { label: 'Force sign-out',              color: 'text-fg-2' },
-              { label: 'Apply discount…',             color: 'text-fg-2' },
-              { label: 'Comp / extend subscription',  color: 'text-fg-2' },
-              { label: 'Lock account',                color: 'text-fg-2' },
-              { label: 'Delete account…',             color: 'text-danger' },
-            ].map(({ label, color }) => (
-              <button key={label}
-                className={`w-full flex items-center justify-between py-2.5 border-b border-dashed border-border last:border-0 text-left text-sm ${color} hover:opacity-80 transition-opacity`}>
-                {label}
-                <ChevronRight size={11} className="text-fg-4 shrink-0" />
-              </button>
-            ))}
-          </AdminCard>
-
-          {/* Admin notes */}
-          <AdminCard title="ADMIN NOTES" action={
-            <button className="font-mono text-[10px] text-sky hover:underline">+ Add</button>
-          }>
-            <div className="text-xs text-fg-3 py-2 italic">No admin notes yet.</div>
-          </AdminCard>
-        </div>
+        <UserActionsClient
+          userId={id}
+          userEmail={user.email}
+          sub={sub as UserActionsProps['sub']}
+          inTrial={inTrial}
+          trialDaysLeft={trialDaysLeft}
+          trialEndDateIso={trialEndDate.toISOString()}
+          userCreatedAt={user.created_at}
+          notes={(adminNotes ?? []) as { id: string; reason: string; created_at: string }[]}
+        />
       </div>
     </div>
   )

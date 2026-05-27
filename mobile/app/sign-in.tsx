@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -38,6 +38,12 @@ export default function SignInScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Errors>(EMPTY_ERRORS);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) router.replace('/(tabs)/log');
+    });
+  }, []);
   const [submitError, setSubmitError] = useState('');
   const navigation = useNavigation();
   const canGoBack = navigation.canGoBack();

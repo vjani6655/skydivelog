@@ -68,7 +68,7 @@ export default async function AdminDashboardPage() {
     db.from('users').select('created_at').gte('created_at', sixtyDaysAgo).lt('created_at', thirtyDaysAgo),
     db.from('jumps').select('freefall_seconds').is('deleted_at', null),
     db.from('users').select('id, email, full_name, created_at').order('created_at', { ascending: false }).limit(3),
-    db.from('jumps').select('user_id, jump_number, jump_type, created_at').is('deleted_at', null).order('created_at', { ascending: false }).limit(3),
+    db.from('jumps').select('user_id, jump_number, jump_type, created_at, users(email, full_name)').is('deleted_at', null).order('created_at', { ascending: false }).limit(3),
     db.from('support_tickets').select('id, subject, category, status, created_at').eq('status', 'open').order('created_at', { ascending: false }).limit(3),
     db.from('subscriptions').select('price_at_signup, started_at, users(email)').eq('status', 'active').order('started_at', { ascending: false }).limit(3),
   ])
@@ -103,7 +103,7 @@ export default async function AdminDashboardPage() {
   const ffHours = Math.floor(ffTotal / 3600)
 
   // Live activity feed
-  const activities: { icon: string; color: string; text: string; sub: string; time: string; rawMs: number }[] = []
+  const activities: { icon: string; color: string; text: string; sub: string; sub2?: string; time: string; rawMs: number }[] = []
   recentUsers?.forEach(u => {
     activities.push({
       icon: '+', color: 'bg-ok/10 text-ok',
@@ -113,9 +113,13 @@ export default async function AdminDashboardPage() {
     })
   })
   recentJumps?.forEach(j => {
+    const jumpUser = (Array.isArray(j.users) ? j.users[0] : j.users) as { email: string; full_name: string | null } | null
+    const nameEmail = [jumpUser?.full_name, jumpUser?.email].filter(Boolean).join(' · ')
     activities.push({
       icon: 'J', color: 'bg-surface-2 text-fg-2',
-      text: `Jump #${j.jump_number} logged`, sub: j.jump_type ?? 'Jump',
+      text: `Jump #${j.jump_number} logged`,
+      sub: nameEmail,
+      sub2: j.jump_type ?? 'Jump',
       time: timeAgo(j.created_at),
       rawMs: new Date(j.created_at).getTime(),
     })
@@ -208,6 +212,7 @@ export default async function AdminDashboardPage() {
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-medium text-fg leading-tight">{a.text}</div>
                   <div className="font-mono text-[10px] text-fg-3 truncate mt-0.5">{a.sub}</div>
+                  {a.sub2 && <div className="font-mono text-[10px] text-fg-4 truncate">{a.sub2}</div>}
                 </div>
                 <span className="font-mono text-[10px] text-fg-3 whitespace-nowrap shrink-0">{a.time}</span>
               </div>
