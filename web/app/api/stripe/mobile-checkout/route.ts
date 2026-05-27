@@ -29,8 +29,8 @@ export async function POST(req: NextRequest) {
     mode: 'subscription',
     payment_method_types: ['card'],
     line_items: [{ price: process.env.STRIPE_PRICE_ID!, quantity: 1 }],
-    success_url: `${appScheme}://subscription?upgraded=1`,
-    cancel_url: `${appScheme}://subscription`,
+    success_url: `${appScheme}://subscription-success?upgraded=1`,
+    cancel_url: `${appScheme}://paywall`,
     allow_promotion_codes: true,
     metadata: { user_id: user.id },
   }
