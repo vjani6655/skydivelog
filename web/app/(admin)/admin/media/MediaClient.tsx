@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useTransition } from 'react'
+import { useState, useRef } from 'react'
 import { Upload, CheckCircle, AlertCircle, Trash2, ExternalLink } from 'lucide-react'
 import Image from 'next/image'
 import { AdminPageHeader, AdminCard } from '@/components/admin/ui'
