@@ -357,6 +357,7 @@ export default function NewJumpScreen() {
   // Step 3
   const [isFav, setIsFav] = useState(false);
   const [notes, setNotes] = useState('');
+  const [peopleOnJump, setPeopleOnJump] = useState('');
 
   // Step 4
   const [signerName, setSignerName] = useState('');
@@ -519,6 +520,7 @@ export default function NewJumpScreen() {
         notes: notes.trim() || null,
         landing_accuracy_value: landingAccuracyValue.trim() || null,
         landing_accuracy_unit: landingAccuracyValue.trim() ? landingAccuracyUnit : null,
+        people_on_jump: parseInt(peopleOnJump, 10) || null,
         is_draft: false,
       };
 
@@ -628,6 +630,7 @@ export default function NewJumpScreen() {
         notes: notes.trim() || null,
         landing_accuracy_value: landingAccuracyValue.trim() || null,
         landing_accuracy_unit: landingAccuracyValue.trim() ? landingAccuracyUnit : null,
+        people_on_jump: parseInt(peopleOnJump, 10) || null,
         is_draft: true,
       };
 
@@ -877,6 +880,8 @@ export default function NewJumpScreen() {
             <Label text={jumperType === 'Student' ? 'JUMP DESCRIPTION' : 'JUMP DESCRIPTION (optional)'} />
             <TextInput style={[styles.input, styles.textarea, errors.notes ? styles.inputError : null]} value={notes} onChangeText={v => { setNotes(v); setErrors(e => ({ ...e, notes: '' })); }} multiline numberOfLines={6} placeholder="What happened on this jump?" placeholderTextColor={colors.fg3} textAlignVertical="top" />
             {errors.notes && <Text style={styles.fieldError}>{errors.notes}</Text>}
+            <Label text="PEOPLE ON JUMP (optional)" />
+            <TextInput style={styles.input} value={peopleOnJump} onChangeText={setPeopleOnJump} keyboardType="numeric" placeholder="e.g. 4" placeholderTextColor={colors.fg3} />
           </>)}
 
           {/* ─── Step 4: Sign-off ────────────────────────────────────────── */}

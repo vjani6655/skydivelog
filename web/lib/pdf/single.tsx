@@ -303,7 +303,7 @@ function SinglePage({
         {jump.notes ? (
           <View style={{ marginTop: 4, marginBottom: 8 }}>
             <Text style={[s.mono, { fontSize: 8, color: INK_3, letterSpacing: 1, marginBottom: 4 }]}>
-              {isStudent ? 'STUDENT DESCRIPTION' : 'DESCRIPTION OF JUMP'}
+              {isStudent ? 'JUMP DESCRIPTION' : 'JUMP DESCRIPTION'}
             </Text>
             <View style={{
               backgroundColor: CREAM,

@@ -67,6 +67,7 @@ export default function EditJumpScreen() {
   const [canopyType, setCanopyType] = useState('');
   const [canopyGearId, setCanopyGearId] = useState<string | null>(null);
   const [userCanopies, setUserCanopies] = useState<Array<{ id: string; make_model: string }>>([])
+  const [peopleOnJump, setPeopleOnJump] = useState('');
 
   useFocusEffect(useCallback(() => {
     (async () => {
@@ -91,6 +92,7 @@ export default function EditJumpScreen() {
         setLandingAccuracyUnit(j.landing_accuracy_unit ?? 'M');
         setCanopyType((j as any).canopy_type ?? '');
         setCanopyGearId((j as any).canopy_gear_id ?? null);
+        setPeopleOnJump(String((j as any).people_on_jump ?? ''));
       }
       // Load user canopies for the picker
       const { data: { session } } = await supabase.auth.getSession();
@@ -141,6 +143,7 @@ export default function EditJumpScreen() {
           landing_accuracy_unit: landingAccuracyValue.trim() ? landingAccuracyUnit : null,
           canopy_type: canopyType.trim() || null,
           canopy_gear_id: canopyGearId || null,
+          people_on_jump: parseInt(peopleOnJump, 10) || null,
         }).eq('id', id);
         if (error) { Alert.alert('Error', error.message); return; }
 
@@ -344,6 +347,9 @@ export default function EditJumpScreen() {
 
           <Label text="JUMP DESCRIPTION" />
           <TextInput style={[styles.input, styles.textarea]} value={notes} onChangeText={setNotes} multiline numberOfLines={4} placeholderTextColor={colors.fg3} textAlignVertical="top" />
+
+          <Label text="PEOPLE ON JUMP (optional)" />
+          <TextInput style={styles.input} value={peopleOnJump} onChangeText={setPeopleOnJump} keyboardType="numeric" placeholder="e.g. 4" placeholderTextColor={colors.fg3} />
 
           <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete} activeOpacity={0.7}>
             <Text style={styles.deleteBtnText}>Delete jump</Text>

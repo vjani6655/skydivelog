@@ -228,9 +228,12 @@ export default function DetailCockpit({ jump, signatures, tags, edits }: JumpDet
             </Text>
           ) : null}
           {jump.notes ? (
-            <Text style={[typography.body, { color: colors.fg2, lineHeight: 22 }]}>
-              {jump.notes}
-            </Text>
+            <>
+              <Text style={[typography.overline, { color: colors.fg3, marginBottom: 6 }]}>JUMP DESCRIPTION</Text>
+              <Text style={[typography.body, { color: colors.fg2, lineHeight: 22 }]}>
+                {jump.notes}
+              </Text>
+            </>
           ) : null}
           {tags.length > 0 && (
             <View style={[styles.tagRow, jump.notes ? { marginTop: 10 } : {}]}>

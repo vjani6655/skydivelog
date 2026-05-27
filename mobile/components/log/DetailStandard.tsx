@@ -131,7 +131,7 @@ export default function DetailStandard({ jump, signatures, tags, edits }: JumpDe
       {/* Description of jump */}
       {jump.notes ? (
         <View style={styles.notesCard}>
-          <Text style={[typography.overline, styles.sectionLabel]}>DESCRIPTION OF JUMP</Text>
+          <Text style={[typography.overline, styles.sectionLabel]}>JUMP DESCRIPTION</Text>
           <Text style={[typography.body, { color: colors.fg2, lineHeight: 22 }]}>
             {jump.notes}
           </Text>

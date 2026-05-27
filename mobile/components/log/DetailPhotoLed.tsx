@@ -209,7 +209,7 @@ export default function DetailPhotoLed({ jump, signatures, tags, edits }: JumpDe
       {jump.notes ? (
         <View style={styles.section}>
           <Text style={[typography.overline, { color: colors.fg3, marginBottom: 8 }]}>
-            DESCRIPTION OF JUMP
+            JUMP DESCRIPTION
           </Text>
           <Text style={[typography.body, { color: colors.fg2, lineHeight: 22 }]}>
             {jump.notes}

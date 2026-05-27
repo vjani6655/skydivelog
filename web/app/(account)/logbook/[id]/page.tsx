@@ -405,7 +405,7 @@ export default async function JumpDetailPage({ params }: Props) {
             <div className="bg-surface border border-border rounded-[14px] overflow-hidden">
               <div className="px-5 py-3 border-b border-border flex items-center justify-between">
                 <p className="text-overline font-mono uppercase tracking-wider text-fg-3">
-                  {isStudent ? "Student Notes" : "Description of jump"}
+                  {isStudent ? "Jump Description" : "Jump Description"}
                 </p>
                 <div className="flex items-center gap-2">
                   {raw.notes && <span className="font-mono text-[10px] text-fg-4">{raw.notes.length} CHARS</span>}
