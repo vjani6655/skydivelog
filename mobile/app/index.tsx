@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { router } from 'expo-router';
+import Constants from 'expo-constants';
 import { supabase } from '@/lib/supabase';
 import Logo from '@/components/ui/Logo';
 import { colors } from '@/constants/tokens';
@@ -37,7 +38,7 @@ export default function SplashScreen() {
       <View style={styles.center}>
         <Logo size={80} variant="dark" />
         <Text style={styles.wordmark}>Jump Logs</Text>
-        <Text style={styles.caption}>V 2.4.1 · LOADING</Text>
+        <Text style={styles.caption}>V {Constants.expoConfig?.version} · LOADING</Text>
       </View>
 
       <View style={styles.progressTrack}>
