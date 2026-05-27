@@ -52,7 +52,8 @@ export async function POST(req: NextRequest) {
 
     const pm = subscription.default_payment_method as Stripe.PaymentMethod | null
     const card = pm?.card
-    const price = subscription.items.data[0]?.price
+    const item = subscription.items.data[0]
+    const price = item?.price
     const product = price?.product as Stripe.Product | null
 
     const { error } = await admin.from('subscriptions').upsert(
@@ -63,8 +64,8 @@ export async function POST(req: NextRequest) {
         status: STATUS_MAP[subscription.status] ?? 'active',
         plan: product?.name ?? price?.nickname ?? 'Pro',
         price_at_signup: (price?.unit_amount ?? 0) / 100,
-        started_at: new Date(subscription.current_period_start * 1000).toISOString(),
-        renews_at: new Date(subscription.current_period_end * 1000).toISOString(),
+        started_at: new Date(item.current_period_start * 1000).toISOString(),
+        renews_at: new Date(item.current_period_end * 1000).toISOString(),
         payment_method_brand: card?.brand ?? 'unknown',
         payment_method_last4: card?.last4 ?? '0000',
         payment_method_expiry: card ? `${card.exp_month}/${String(card.exp_year).slice(-2)}` : 'unknown',
@@ -88,7 +89,7 @@ export async function POST(req: NextRequest) {
       .from('subscriptions')
       .update({
         status: STATUS_MAP[subscription.status] ?? 'active',
-        renews_at: new Date(subscription.current_period_end * 1000).toISOString(),
+        renews_at: new Date((subscription.items.data[0]?.current_period_end ?? 0) * 1000).toISOString(),
       })
       .eq('stripe_subscription_id', subscription.id)
 
