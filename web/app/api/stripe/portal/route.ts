@@ -24,9 +24,11 @@ export async function POST() {
     return NextResponse.json({ error: "No subscription found" }, { status: 404 })
   }
 
+  const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://jumplogs.com'
+
   const portalSession = await stripe.billingPortal.sessions.create({
     customer: sub.stripe_customer_id,
-    return_url: `${process.env.NEXT_PUBLIC_APP_URL}/billing`,
+    return_url: `${APP_URL}/billing`,
   })
 
   return NextResponse.json({ url: portalSession.url })

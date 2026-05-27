@@ -21,12 +21,14 @@ export async function POST() {
     .limit(1)
     .maybeSingle()
 
+  const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://jumplogs.com'
+
   const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
     mode: "subscription",
     payment_method_types: ["card"],
     line_items: [{ price: process.env.STRIPE_PRICE_ID!, quantity: 1 }],
-    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/billing?upgraded=1`,
-    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/subscription`,
+    success_url: `${APP_URL}/billing?upgraded=1`,
+    cancel_url: `${APP_URL}/subscription`,
     allow_promotion_codes: true,
     metadata: { user_id: user.id },
   }
