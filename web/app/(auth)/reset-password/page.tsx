@@ -22,13 +22,14 @@ export default function ResetPasswordPage() {
   const [linkError, setLinkError] = useState<string | null>(null)
 
   useEffect(() => {
-    const hash = window.location.hash
-    if (!hash.includes("error=")) return
-    const params = new URLSearchParams(hash.slice(1))
-    const code = params.get("error_code")
-    if (code === "otp_expired") {
+    // Check query params (PKCE error forwarded from callback)
+    const qParams = new URLSearchParams(window.location.search)
+    // Check hash (implicit flow direct redirect)
+    const hParams = window.location.hash ? new URLSearchParams(window.location.hash.slice(1)) : null
+    const errorCode = qParams.get("error_code") ?? hParams?.get("error_code") ?? null
+    if (errorCode === "otp_expired") {
       setLinkError("Your password reset link has expired.")
-    } else {
+    } else if (errorCode) {
       setLinkError("This reset link is invalid or has already been used.")
     }
   }, [])

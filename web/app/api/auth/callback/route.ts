@@ -7,6 +7,13 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get("code")
   const next = searchParams.get("next") ?? "/dashboard"
 
+  // Forward Supabase error params (e.g. otp_expired) to the target page
+  const errorCode = searchParams.get("error_code")
+  if (errorCode) {
+    const fwd = new URLSearchParams({ error_code: errorCode })
+    return NextResponse.redirect(`${origin}${next}?${fwd}`)
+  }
+
   if (code) {
     const cookieStore = await cookies()
     const supabase = createServerClient(
@@ -30,6 +37,9 @@ export async function GET(request: NextRequest) {
     if (!error) {
       return NextResponse.redirect(`${origin}${next}`)
     }
+    // Code exchange failed — forward a generic error to the target page
+    const fwd = new URLSearchParams({ error_code: "otp_expired" })
+    return NextResponse.redirect(`${origin}${next}?${fwd}`)
   }
 
   return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`)
