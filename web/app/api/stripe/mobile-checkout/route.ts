@@ -12,7 +12,8 @@ export async function POST(req: NextRequest) {
 
   const { data: { user }, error } = await verifyBearerToken(token)
   if (error || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    console.error('[mobile-checkout] auth error:', error?.message, error?.status)
+    return NextResponse.json({ error: error?.message ?? 'Unauthorized' }, { status: 401 })
   }
 
   const admin = createAdminClient()
