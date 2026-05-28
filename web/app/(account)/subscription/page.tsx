@@ -58,10 +58,16 @@ export default async function SubscriptionPage() {
     try {
       const stripeSub = await stripe.subscriptions.retrieve(sub.stripe_subscription_id)
       if (stripeSub.cancel_at_period_end) {
-        const admin = createAdminClient()
-        await admin.from('subscriptions').update({ status: 'cancelled' }).eq('stripe_subscription_id', sub.stripe_subscription_id)
+        // Update UI immediately — don't wait for DB
         isActive = false
         isCancelledInGrace = !!sub.renews_at && new Date(sub.renews_at) > new Date()
+        // Best-effort DB reconciliation (fire and forget)
+        createAdminClient()
+          .from('subscriptions')
+          .update({ status: 'cancelled' })
+          .eq('stripe_subscription_id', sub.stripe_subscription_id)
+          .then(({ error }) => { if (error) console.error('[sub page reconcile]', error.message) })
+          .catch(() => {})
       }
     } catch {
       // ignore — don't block page render if Stripe is unreachable
