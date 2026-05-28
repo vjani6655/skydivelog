@@ -103,8 +103,11 @@ export async function POST(request: Request) {
   }
 
   // 7. Batch-send via send-push Supabase Edge Function (100 tokens per call)
+  // SUPABASE_EDGE_KEY must be the JWT-format service role key (eyJ…) from the
+  // Supabase dashboard — the newer sb_secret_* key is not accepted by the
+  // Edge Functions gateway which requires a valid JWT.
   const sendPushUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-push`
-  const serviceKey = process.env.SUPABASE_SECRET_KEY!
+  const serviceKey = process.env.SUPABASE_EDGE_KEY ?? process.env.SUPABASE_SECRET_KEY!
   let sent = 0
   let errors = 0
 
