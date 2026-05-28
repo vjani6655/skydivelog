@@ -111,7 +111,7 @@ export default function NewCertificateScreen() {
         category,
         title: title.trim(),
         issuing_body: issuingBody.trim(),
-        issued_date: issuedDate.toISOString().slice(0, 10),
+        issued_date: issuedDate!.toISOString().slice(0, 10),
         expires_date: expiresDate ? expiresDate.toISOString().slice(0, 10) : null,
         reference_number: referenceNumber.trim() || null,
       });
