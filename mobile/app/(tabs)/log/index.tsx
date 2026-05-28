@@ -84,7 +84,7 @@ export default function LogScreen() {
         .order('jump_number', { ascending: false }),
       supabase
         .from('subscriptions')
-        .select('status')
+        .select('status, renews_at')
         .eq('user_id', user.id)
         .order('started_at', { ascending: false })
         .limit(1)
@@ -93,7 +93,15 @@ export default function LogScreen() {
 
     setUserCreatedAt(user.created_at);
     setTrialEndsAt((user.user_metadata?.trial_ends_at as string) ?? null);
-    setSubActive(subData?.status === 'active' || subData?.status === 'overdue');
+    const cancelledInGrace =
+      subData?.status === 'cancelled' &&
+      !!subData?.renews_at &&
+      new Date(subData.renews_at) > new Date();
+    setSubActive(
+      subData?.status === 'active' ||
+      subData?.status === 'overdue' ||
+      cancelledInGrace,
+    );
 
     if (userData?.display_layout_jump_list) {
       setLayout(userData.display_layout_jump_list as Layout);

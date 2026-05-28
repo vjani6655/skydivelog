@@ -114,10 +114,17 @@ export default function ProfileScreen() {
     profile.emergency_contact_phone,
   ].filter(v => !v).length : 0;
 
+  const cancelledInGrace =
+    sub?.status === 'cancelled' &&
+    !!sub?.renews_at &&
+    new Date(sub.renews_at) > new Date();
+
   const subBadge = sub?.status === 'active'
     ? { label: 'ACTIVE', bg: colors.okBg, text: colors.ok }
     : sub?.status === 'overdue'
     ? { label: 'OVERDUE', bg: colors.warnBg, text: colors.warn }
+    : cancelledInGrace
+    ? { label: 'CANCELLED', bg: colors.warnBg, text: colors.warn }
     : sub?.status === 'cancelled'
     ? { label: 'CANCELLED', bg: colors.surface2, text: colors.fg3 }
     : inTrial

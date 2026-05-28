@@ -156,11 +156,18 @@ export default function SubscriptionScreen() {
     : 0;
   const isActive = sub?.status === 'active';
   const isOverdue = sub?.status === 'overdue';
+  const isCancelledInGrace =
+    sub?.status === 'cancelled' &&
+    !!sub?.renews_at &&
+    new Date(sub.renews_at) > new Date();
+  const hasAccess = isActive || isOverdue || isCancelledInGrace;
 
   const statusLabel = isActive
     ? 'ACTIVE'
     : isOverdue
     ? 'OVERDUE'
+    : isCancelledInGrace
+    ? 'CANCELLED'
     : sub?.status === 'cancelled'
     ? 'CANCELLED'
     : inTrial
@@ -171,6 +178,8 @@ export default function SubscriptionScreen() {
     ? colors.ok
     : isOverdue || trialExpired
     ? colors.warn
+    : isCancelledInGrace
+    ? colors.warn
     : inTrial
     ? colors.sky
     : colors.fg3;
@@ -178,6 +187,8 @@ export default function SubscriptionScreen() {
   const statusBg = isActive
     ? colors.okBg
     : isOverdue || trialExpired
+    ? colors.warnBg
+    : isCancelledInGrace
     ? colors.warnBg
     : inTrial
     ? colors.skyBg
@@ -206,6 +217,9 @@ export default function SubscriptionScreen() {
                 {isOverdue ? 'Payment due' : 'Renews'} {fmtDate(sub.renews_at)}
               </Text>
             )}
+            {isCancelledInGrace && sub?.renews_at && (
+              <Text style={styles.renewText}>Access until {fmtDate(sub.renews_at)}</Text>
+            )}
             {inTrial && trialEnd && (
               <Text style={styles.renewText}>Trial ends {fmtDate(trialEnd.toISOString())}</Text>
             )}
@@ -215,17 +229,17 @@ export default function SubscriptionScreen() {
           {PRO_FEATURES.map(f => (
             <View key={f} style={styles.featureRow}>
               <Ionicons
-                name={isActive || inTrial ? 'checkmark-circle' : 'lock-closed-outline'}
+                name={hasAccess || inTrial ? 'checkmark-circle' : 'lock-closed-outline'}
                 size={16}
-                color={isActive || inTrial ? colors.ok : colors.fg4}
+                color={hasAccess || inTrial ? colors.ok : colors.fg4}
               />
-              <Text style={[styles.featureText, !(isActive || inTrial) && { color: colors.fg3 }]}>{f}</Text>
+              <Text style={[styles.featureText, !(hasAccess || inTrial) && { color: colors.fg3 }]}>{f}</Text>
             </View>
           ))}
         </View>
 
         {/* CTA for non-active users */}
-        {!isActive && (
+        {!hasAccess && (
           <TouchableOpacity
             style={[styles.subscribeBtn, subscribing && { opacity: 0.6 }]}
             onPress={handleSubscribe}
@@ -235,14 +249,29 @@ export default function SubscriptionScreen() {
             {subscribing
               ? <ActivityIndicator color="#fff" size="small" />
               : <Text style={styles.subscribeBtnText}>
-                  {trialExpired ? 'Reactivate · $12/yr' : 'Subscribe · $12/yr'}
+                  {trialExpired || sub?.status === 'cancelled' ? 'Reactivate · $12/yr' : 'Subscribe · $12/yr'}
                 </Text>
             }
           </TouchableOpacity>
         )}
 
+        {/* Reactivate nudge for cancelled-in-grace users */}
+        {isCancelledInGrace && (
+          <TouchableOpacity
+            style={[styles.subscribeBtn, subscribing && { opacity: 0.6 }]}
+            onPress={handleSubscribe}
+            disabled={subscribing}
+            activeOpacity={0.8}
+          >
+            {subscribing
+              ? <ActivityIndicator color="#fff" size="small" />
+              : <Text style={styles.subscribeBtnText}>Reactivate · $12/yr</Text>
+            }
+          </TouchableOpacity>
+        )}
+
         {/* Manage billing for active/overdue */}
-        {(isActive || isOverdue) && (
+        {(isActive || isOverdue || isCancelledInGrace) && (
           <TouchableOpacity style={styles.manageBtn} onPress={handleManageBilling} activeOpacity={0.7}>
             <Text style={styles.manageBtnText}>Manage billing</Text>
             <Ionicons name="open-outline" size={13} color={colors.sky} />
@@ -250,7 +279,7 @@ export default function SubscriptionScreen() {
         )}
 
         {/* Invoice history — shown when subscribed */}
-        {(isActive || isOverdue) && (
+        {(isActive || isOverdue || isCancelledInGrace) && (
           <View style={styles.invoiceSection}>
             <Text style={styles.invoiceSectionTitle}>Invoice History</Text>
 
