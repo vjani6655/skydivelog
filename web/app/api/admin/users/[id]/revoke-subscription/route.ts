@@ -77,7 +77,7 @@ export async function POST(
 
   const { error } = await db
     .from('subscriptions')
-    .update({ status: 'cancelled', ...(stripeCustomerId ? { stripe_customer_id: stripeCustomerId } : {}) })
+    .update({ status: 'cancelled', cancelled_at: new Date().toISOString(), ...(stripeCustomerId ? { stripe_customer_id: stripeCustomerId } : {}) })
     .eq('id', sub.id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 

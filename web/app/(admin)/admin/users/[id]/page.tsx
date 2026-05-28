@@ -31,6 +31,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
   const [
     { data: user },
     { data: sub },
+    { data: allSubs },
     { data: recentJumps },
     { count: jumpCount },
     { data: ffData },
@@ -39,9 +40,11 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
     { count: totalUsers },
     { data: adminNotes },
     { data: authUserData },
+    { data: subEvents },
   ] = await Promise.all([
     db.from('users').select('*, home_dropzone_id').eq('id', id).single(),
     db.from('subscriptions').select('*').eq('user_id', id).order('started_at', { ascending: false }).limit(1).maybeSingle(),
+    db.from('subscriptions').select('id, status, plan, price_at_signup, started_at, renews_at, refunded_at, refunded_amount, cancelled_at').eq('user_id', id).order('started_at', { ascending: false }),
     db.from('jumps').select(`
       id, jump_number, date, jump_type, created_at,
       dropzone:dropzones(name, region)
@@ -55,6 +58,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
     db.from('users').select('*', { count: 'exact', head: true }).lte('created_at', (await db.from('users').select('created_at').eq('id', id).single()).data?.created_at ?? ''),
     db.from('audit_log').select('id, reason, created_at').eq('action', 'admin_note').eq('target', `user:${id}`).order('created_at', { ascending: false }),
     db.auth.admin.getUserById(id),
+    db.from('subscription_events').select('id, event, metadata, created_at').eq('user_id', id).order('created_at', { ascending: false }),
   ])
 
   if (!user) notFound()
@@ -74,7 +78,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
   const ltv = sub ? renewalCount * Number(sub.price_at_signup) + Number(sub.price_at_signup) : 0
 
   const statusKind: Record<string, 'ok' | 'sky' | 'warn' | 'muted' | 'danger'> = {
-    active: 'ok', trial: 'sky', overdue: 'warn', cancelled: 'muted',
+    active: 'ok', trial: 'sky', overdue: 'warn', cancelled: 'muted', refunded: 'danger',
   }
 
   // Free trial detection — respects admin-extended trial_ends_at stored in user_metadata
@@ -90,8 +94,34 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
     !!sub?.renews_at &&
     new Date(sub.renews_at) > new Date()
 
-  // Build activity feed
-  const activityFeed: { icon: string; text: string; sub: string; time: string }[] = []
+  // Build activity feed — subscription events first, then jumps and sign-in
+  const activityFeed: { icon: string; text: string; sub: string; time: string; color?: string }[] = []
+
+  // Subscription events from the events log
+  const eventLabels: Record<string, { icon: string; text: (m: Record<string, unknown>) => string; subText: (m: Record<string, unknown>) => string; color: string }> = {
+    subscribed:                { icon: '$', color: 'bg-ok/10 text-ok',      text: (m) => `Subscribed · ${m.plan ?? 'Pro'} · $${m.price}`,           subText: () => 'New subscription' },
+    resubscribed_after_refund: { icon: '↻', color: 'bg-sky/10 text-sky',   text: (m) => `Re-subscribed · ${m.plan ?? 'Pro'} · $${m.price}`,         subText: () => 'After previous refund' },
+    cancelled:                 { icon: '✕', color: 'bg-danger/10 text-danger', text: () => 'Subscription cancelled',                                subText: () => '' },
+    cancelled_immediately:     { icon: '✕', color: 'bg-danger/10 text-danger', text: () => 'Subscription cancelled immediately',                     subText: () => 'Admin revoked' },
+    overdue:                   { icon: '!', color: 'bg-warn/10 text-warn',  text: () => 'Payment overdue',                                           subText: () => '' },
+    refunded:                  { icon: '↩', color: 'bg-warn/10 text-warn',  text: (m) => `Refunded · $${Number(m.refunded_amount ?? 0).toFixed(2)}`, subText: () => 'Access revoked' },
+    subscription_deleted:      { icon: '✕', color: 'bg-danger/10 text-danger', text: () => 'Stripe subscription deleted',                            subText: () => '' },
+  }
+  subEvents?.forEach(ev => {
+    const meta = (ev.metadata ?? {}) as Record<string, unknown>
+    const def = eventLabels[ev.event]
+    if (def) {
+      activityFeed.push({
+        icon: def.icon,
+        color: def.color,
+        text: def.text(meta),
+        sub: def.subText(meta),
+        time: fmtDateShort(ev.created_at),
+      })
+    }
+  })
+
+  // Recent jumps
   recentJumps?.forEach(j => {
     activityFeed.push({
       icon: '↓',
@@ -110,15 +140,6 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
             new Date(user.last_sign_in_at).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' }),
     })
   }
-  if (sub) {
-    activityFeed.push({
-      icon: '$',
-      text: `Subscription · ${sub.plan ?? 'Pro'} · $${sub.price_at_signup}`,
-      sub: `Started ${fmtDateShort(sub.started_at)}`,
-      time: fmtDateShort(sub.started_at),
-    })
-  }
-
   return (
     <div>
       {/* Breadcrumb */}
@@ -202,7 +223,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
           }>
             {activityFeed.length ? activityFeed.map((a, i) => (
               <div key={i} className="flex items-center gap-2.5 py-2.5 border-b border-dashed border-border last:border-0">
-                <div className="w-6 h-6 rounded bg-surface-2 text-fg-3 flex items-center justify-center font-mono text-[11px] shrink-0">
+                <div className={`w-6 h-6 rounded flex items-center justify-center font-mono text-[11px] shrink-0 ${a.color ?? 'bg-surface-2 text-fg-3'}`}>
                   {a.icon}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -244,6 +265,33 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
           notes={(adminNotes ?? []) as { id: string; reason: string; created_at: string }[]}
           customTrialEndsAt={customTrialEnd ?? null}
         />
+
+        {/* Subscription history — shown when user has multiple subs (e.g. re-subscribed after refund) */}
+        {(allSubs?.length ?? 0) > 1 && (
+          <AdminCard title="Subscription history">
+            <div className="space-y-2">
+              {allSubs!.map((s, i) => (
+                <div key={s.id} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
+                  <div>
+                    <div className="text-xs font-medium text-fg">{s.plan ?? 'Pro'} · ${Number(s.price_at_signup).toFixed(2)}</div>
+                    <div className="font-mono text-[10px] text-fg-3 mt-0.5">
+                      {fmtDateShort(s.started_at)}{s.renews_at ? ` → ${fmtDateShort(s.renews_at)}` : ''}
+                    </div>
+                    {s.refunded_at && (
+                      <div className="font-mono text-[10px] text-warn mt-0.5">
+                        Refunded ${Number(s.refunded_amount ?? s.price_at_signup).toFixed(2)} · {fmtDateShort(s.refunded_at)}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {i === 0 && <span className="font-mono text-[9px] text-fg-4 uppercase">latest</span>}
+                    <Badge kind={statusKind[s.status] ?? 'muted'}>{s.status.toUpperCase()}</Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </AdminCard>
+        )}
       </div>
     </div>
   )

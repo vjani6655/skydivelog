@@ -11,7 +11,7 @@ export default async function AdminSupportPage() {
     { count: closedCount },
   ] = await Promise.all([
     db.from('support_tickets')
-      .select('id, user_id, subject, category, status, severity, created_at, users(full_name)')
+      .select('id, user_id, name, email, subject, category, status, severity, message, created_at, users(full_name)')
       .not('status', 'eq', 'closed')
       .order('created_at', { ascending: false })
       .limit(50),

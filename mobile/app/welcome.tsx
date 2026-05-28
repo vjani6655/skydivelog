@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ImageBackground } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ImageBackground, Linking } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { spacing, radii } from '@/constants/tokens';
@@ -45,9 +45,9 @@ export default function WelcomeScreen() {
       <WelcomeHero />
 
       <View style={styles.content}>
-        <Text style={styles.title}>The logbook{'\n'}built for jumpers.{'\n'}By a jumper.</Text>
+        <Text style={styles.title}>The logbook{'\n'}built by a skydiver,{'\n'}for skydivers.</Text>
         <Text style={styles.subtitle}>
-          Sign every jump in your pocket. Track gear, currency and certifications. Built by skydivers, for skydivers.
+          Sign every jump in your pocket. Track gear, currency and certifications.
         </Text>
 
         <View style={styles.buttons}>
@@ -69,6 +69,11 @@ export default function WelcomeScreen() {
         </View>
 
         <Text style={styles.priceCaption}>$12 / year · cancel any time</Text>
+        <View style={styles.legalRow}>
+          <Text style={styles.legalLink} onPress={() => Linking.openURL('https://jumplogs.com/terms')}>Terms</Text>
+          <Text style={styles.legalSep}> · </Text>
+          <Text style={styles.legalLink} onPress={() => Linking.openURL('https://jumplogs.com/privacy')}>Privacy</Text>
+        </View>
       </View>
     </View>
   );
@@ -156,6 +161,23 @@ function makeStyles(c: ColorSet) {
     color: c.fg3,
     textAlign: 'center',
     marginTop: spacing[4],
+  },
+  legalRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: spacing[2],
+  },
+  legalLink: {
+    fontFamily: 'JetBrainsMono-Regular',
+    fontSize: 10,
+    color: c.fg4,
+    letterSpacing: 0.3,
+    textDecorationLine: 'underline',
+  },
+  legalSep: {
+    fontFamily: 'JetBrainsMono-Regular',
+    fontSize: 10,
+    color: c.fg4,
   },
   });
 }

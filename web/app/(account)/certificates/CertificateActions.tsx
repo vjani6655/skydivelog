@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import { Plus, X, FileText } from "lucide-react"
+import { Plus, X } from "lucide-react"
 
 type Category = "licence" | "rating" | "medical"
 
@@ -42,7 +42,7 @@ export default function CertificateActions() {
     if (!title.trim())       errs.title = "Required"
     if (!issuingBody.trim()) errs.issuingBody = "Required"
     if (!issuedDate)         errs.issuedDate = "Required"
-    if (expiresDate && issuedDate && expiresDate < issuedDate + "-01")
+    if (expiresDate && issuedDate && expiresDate < issuedDate)
       errs.expiresDate = "Expiry date cannot be before the issued date"
     if (Object.keys(errs).length) { setErrors(errs); return }
     setErrors({})
@@ -170,7 +170,7 @@ export default function CertificateActions() {
                 <div>
                   <label className={lbl}>Issued</label>
                   <input
-                    type="month"
+                    type="date"
                     className={inp}
                     value={issuedDate}
                     onChange={(e) => setIssuedDate(e.target.value)}
@@ -189,17 +189,6 @@ export default function CertificateActions() {
                 </div>
               </div>
 
-              {/* Attach document */}
-              <div className="flex items-center gap-4 p-4 bg-bg border border-border rounded-xl">
-                <FileText className="w-5 h-5 text-fg-3 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-fg">Attach document</p>
-                  <p className="text-xs text-fg-3 mt-0.5">PDF or image, up to 8 MB. Drag a file here or click to browse.</p>
-                </div>
-                <button className="h-8 px-3 rounded-lg border border-border text-xs font-medium text-fg-2 hover:bg-surface-2 transition-colors flex-shrink-0">
-                  Browse
-                </button>
-              </div>
             </div>
 
             {/* Footer */}

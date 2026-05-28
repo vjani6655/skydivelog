@@ -5,6 +5,7 @@ import {
 import { router } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import { supabase } from '@/lib/supabase';
 import { getUnreadCount } from '@/lib/notifications';
 import { spacing, radii } from '@/constants/tokens';
@@ -219,8 +220,10 @@ export default function ProfileScreen() {
 
         {/* Sign out */}
         <TouchableOpacity style={styles.signOut} onPress={handleSignOut} activeOpacity={0.8}>
+          <Ionicons name="log-out-outline" size={16} color={colors.danger} />
           <Text style={styles.signOutText}>Sign out</Text>
         </TouchableOpacity>
+        <Text style={styles.version}>v{Constants.expoConfig?.version ?? '1.0.0'}</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -255,7 +258,8 @@ function makeStyles(c: ColorSet) {
   menuSubBadgeText: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, letterSpacing: 0.5 },
   incompleteBadge: { backgroundColor: c.warn, borderRadius: 10, minWidth: 20, height: 20, paddingHorizontal: 6, justifyContent: 'center', alignItems: 'center', marginRight: spacing[1] },
   incompleteBadgeText: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, color: c.bg, fontWeight: '700' },
-  signOut: { paddingVertical: spacing[4], alignItems: 'center' },
+  signOut: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing[2], paddingVertical: spacing[3.5], borderWidth: 1, borderColor: c.danger, borderRadius: radii.lg, backgroundColor: c.dangerBg },
   signOutText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: c.danger },
+  version: { textAlign: 'center', fontFamily: 'JetBrainsMono-Regular', fontSize: 11, color: c.fg4, paddingBottom: spacing[4] },
   });
 }

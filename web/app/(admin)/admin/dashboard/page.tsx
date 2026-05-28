@@ -45,6 +45,7 @@ export default async function AdminDashboardPage() {
     { count: openTicketsCount },
     { count: bugTicketsCount },
     { data: activeSubs },
+    { data: cancelledInPeriod },
     { data: signups30d },
     { data: signupsPrior30d },
     { data: jumpStats },
@@ -52,6 +53,7 @@ export default async function AdminDashboardPage() {
     { data: recentJumps },
     { data: incidentTickets },
     { data: recentPayments },
+    { data: recentCancellations },
   ] = await Promise.all([
     db.from('users').select('*', { count: 'exact', head: true }),
     db.from('subscriptions').select('*', { count: 'exact', head: true }).eq('status', 'active'),
@@ -64,6 +66,7 @@ export default async function AdminDashboardPage() {
     db.from('support_tickets').select('*', { count: 'exact', head: true }).eq('status', 'open'),
     db.from('support_tickets').select('*', { count: 'exact', head: true }).eq('category', 'bug').eq('status', 'open'),
     db.from('subscriptions').select('price_at_signup').eq('status', 'active'),
+    db.from('subscriptions').select('price_at_signup').eq('status', 'cancelled').gt('renews_at', new Date().toISOString()).is('refunded_at', null),
     db.from('users').select('created_at').gte('created_at', thirtyDaysAgo),
     db.from('users').select('created_at').gte('created_at', sixtyDaysAgo).lt('created_at', thirtyDaysAgo),
     db.from('jumps').select('freefall_seconds').is('deleted_at', null),
@@ -71,10 +74,12 @@ export default async function AdminDashboardPage() {
     db.from('jumps').select('user_id, jump_number, jump_type, created_at, users(email, full_name)').is('deleted_at', null).order('created_at', { ascending: false }).limit(3),
     db.from('support_tickets').select('id, subject, category, status, created_at').eq('status', 'open').order('created_at', { ascending: false }).limit(3),
     db.from('subscriptions').select('price_at_signup, started_at, users(email)').eq('status', 'active').order('started_at', { ascending: false }).limit(3),
+    db.from('subscriptions').select('cancelled_at, price_at_signup, users(email, full_name)').eq('status', 'cancelled').not('cancelled_at', 'is', null).order('cancelled_at', { ascending: false }).limit(3),
   ])
 
-  // MRR / ARR
-  const totalAnnual = activeSubs?.reduce((s, sub) => s + Number(sub.price_at_signup), 0) ?? 0
+  // MRR / ARR — includes cancelled subs still within their paid period (not refunded)
+  const billableSubs = [...(activeSubs ?? []), ...(cancelledInPeriod ?? [])]
+  const totalAnnual = billableSubs.reduce((s, sub) => s + Number(sub.price_at_signup), 0)
   const mrr = Math.round(totalAnnual / 12)
   const arr = totalAnnual
 
@@ -132,6 +137,17 @@ export default async function AdminDashboardPage() {
       sub: user?.email ?? '',
       time: timeAgo(p.started_at),
       rawMs: new Date(p.started_at).getTime(),
+    })
+  })
+  recentCancellations?.forEach(c => {
+    const user = (Array.isArray(c.users) ? c.users[0] : c.users) as { email: string; full_name: string | null } | null
+    const nameEmail = [user?.full_name, user?.email].filter(Boolean).join(' · ')
+    activities.push({
+      icon: '✕', color: 'bg-danger/10 text-danger',
+      text: `Subscription cancelled`,
+      sub: nameEmail,
+      time: timeAgo(c.cancelled_at as string),
+      rawMs: new Date(c.cancelled_at as string).getTime(),
     })
   })
   activities.sort((a, b) => b.rawMs - a.rawMs)

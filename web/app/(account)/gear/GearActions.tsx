@@ -24,8 +24,6 @@ export default function GearActions() {
   const [makeModel, setMakeModel] = useState("")
   const [serialNumber, setSerialNumber] = useState("")
   const [manufacturedDate, setManufacturedDate] = useState("")
-  const [jumpsOn, setJumpsOn] = useState("")
-  const [wingLoading, setWingLoading] = useState("")
   const [lastRepack, setLastRepack] = useState("")
   const [repackReminder, setRepackReminder] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -37,8 +35,6 @@ export default function GearActions() {
     setMakeModel("")
     setSerialNumber("")
     setManufacturedDate("")
-    setJumpsOn("")
-    setWingLoading("")
     setLastRepack("")
     setRepackReminder(true)
     setErrors({})
@@ -51,7 +47,7 @@ export default function GearActions() {
     if (!manufacturedDate) errs.manufacturedDate = "Required"
     if (gearType === "canopy" && canopySubType === "reserve" && !lastRepack)
       errs.lastRepack = "Required for reserve"
-    if (lastRepack && manufacturedDate && lastRepack < manufacturedDate + "-01")
+    if (lastRepack && manufacturedDate && lastRepack < manufacturedDate)
       errs.lastRepack = "Repack date cannot be before manufacture date"
     if (Object.keys(errs).length) { setErrors(errs); return }
     setErrors({})
@@ -66,9 +62,7 @@ export default function GearActions() {
         make_model: makeModel.trim(),
         serial_number: serialNumber.trim(),
         manufactured_date: manufacturedDate || null,
-        jumps_on: jumpsOn ? Number(jumpsOn) : null,
-        wing_loading: wingLoading ? Number(wingLoading) : null,
-        last_repack_date: lastRepack || null,
+        last_repack_date: (gearType === "canopy" && canopySubType === "reserve") ? lastRepack || null : null,
         repack_reminder_enabled: gearType === "canopy" && canopySubType === "reserve" ? repackReminder : false,
       })
       if (error) { setErrors({ form: error.message }); return }
@@ -197,7 +191,7 @@ export default function GearActions() {
                 <div>
                   <label className={lbl}>Date of manufacture</label>
                   <input
-                    type="month"
+                    type="date"
                     className={inp}
                     value={manufacturedDate}
                     onChange={(e) => setManufacturedDate(e.target.value)}
@@ -206,46 +200,19 @@ export default function GearActions() {
                 </div>
               </div>
 
-              {/* Jumps / Wing loading / Last repack */}
-              <div className="grid grid-cols-3 gap-3">
+              {/* Last repack — reserve canopy only */}
+              {gearType === "canopy" && canopySubType === "reserve" && (
                 <div>
-                  <label className={lbl}>Jumps on</label>
+                  <label className={lbl}>Last repack</label>
                   <input
-                    type="number"
-                    min={0}
+                    type="date"
                     className={inp}
-                    placeholder="0"
-                    value={jumpsOn}
-                    onChange={(e) => setJumpsOn(e.target.value)}
+                    value={lastRepack}
+                    onChange={(e) => setLastRepack(e.target.value)}
                   />
+                  {err("lastRepack")}
                 </div>
-                {gearType === "canopy" && (
-                  <div>
-                    <label className={lbl}>Wing loading</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min={0}
-                      className={inp}
-                      placeholder="0.95"
-                      value={wingLoading}
-                      onChange={(e) => setWingLoading(e.target.value)}
-                    />
-                  </div>
-                )}
-                {(gearType === "canopy" || gearType === "rig") && (
-                  <div className={gearType === "rig" ? "col-span-2" : ""}>
-                    <label className={lbl}>Last repack</label>
-                    <input
-                      type="date"
-                      className={inp}
-                      value={lastRepack}
-                      onChange={(e) => setLastRepack(e.target.value)}
-                    />
-                    {err("lastRepack")}
-                  </div>
-                )}
-              </div>
+              )}
 
               {/* Repack reminder toggle — reserve only */}
               {gearType === "canopy" && canopySubType === "reserve" && (
@@ -255,14 +222,16 @@ export default function GearActions() {
                     <p className="text-xs text-fg-3 mt-0.5">Notify me 14 days before due.</p>
                   </div>
                   <button
+                    role="switch"
+                    aria-checked={repackReminder}
                     onClick={() => setRepackReminder((v) => !v)}
-                    className={`relative w-10 h-6 rounded-full transition-colors ${
+                    className={`relative flex-shrink-0 w-[46px] h-[26px] rounded-full transition-colors duration-200 focus:outline-none ${
                       repackReminder ? "bg-sky" : "bg-surface-3"
                     }`}
                   >
                     <span
-                      className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                        repackReminder ? "translate-x-4" : "translate-x-0.5"
+                      className={`absolute top-[3px] left-[3px] w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-200 ${
+                        repackReminder ? "translate-x-5" : "translate-x-0"
                       }`}
                     />
                   </button>

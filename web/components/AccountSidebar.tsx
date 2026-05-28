@@ -13,6 +13,7 @@ import {
   CreditCard,
   Receipt,
   LogOut,
+  LifeBuoy,
 } from "lucide-react"
 
 interface SidebarProps {
@@ -32,6 +33,7 @@ const NAV = [
   { href: "/settings",      label: "Settings",     icon: Settings },
   { href: "/subscription",  label: "Subscription", icon: CreditCard },
   { href: "/billing",       label: "Billing",      icon: Receipt },
+  { href: "/support",       label: "Support",      icon: LifeBuoy },
 ]
 
 function fmtRenews(iso: string | null) {

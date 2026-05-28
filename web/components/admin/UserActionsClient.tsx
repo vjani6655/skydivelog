@@ -18,6 +18,8 @@ type SubData = {
   payment_method_brand: string | null
   payment_method_last4: string | null
   stripe_subscription_id: string | null
+  refunded_at: string | null
+  refunded_amount: number | string | null
 }
 
 type NoteItem = {
@@ -26,7 +28,7 @@ type NoteItem = {
   created_at: string
 }
 
-type ActionKey = 'reset-password' | 'force-signout' | 'revoke-subscription' | 'lock' | 'delete'
+type ActionKey = 'reset-password' | 'force-signout' | 'revoke-subscription' | 'refund' | 'lock' | 'delete'
 
 export type UserActionsProps = {
   userId: string
@@ -72,6 +74,7 @@ export default function UserActionsClient({
   const [errors, setErrors]     = useState<Partial<Record<ActionKey, string>>>({})
   const [confirm, setConfirm]   = useState<ActionKey | null>(null)
   const [deleteEmail, setDeleteEmail] = useState('')
+  const [stripeWarning, setStripeWarning] = useState<string | null>(null)
 
   // Extend trial state
   const [extendDays, setExtendDays]       = useState(7)
@@ -101,6 +104,9 @@ export default function UserActionsClient({
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error ?? 'Something went wrong')
       setDone(prev => new Set(Array.from(prev).concat(action)))
+      if (action === 'refund' && data.stripe_error) {
+        setStripeWarning(`DB marked refunded, but Stripe failed: ${data.stripe_error}. Process manually in Stripe Dashboard.`)
+      }
       if (action === 'delete') {
         router.push('/admin/users')
         router.refresh()
@@ -195,44 +201,93 @@ export default function UserActionsClient({
               </div>
             ))}
 
-            {/* Extend / Revoke */}
+            {/* Extend / Revoke / Refund */}
             <div className="mt-3">
-              {done.has('revoke-subscription') ? (
-                <div className="py-1.5 text-center text-xs text-ok font-mono">✓ Subscription revoked</div>
-              ) : confirm === 'revoke-subscription' ? (
-                <div className="flex gap-1.5">
-                  <button
-                    onClick={() => callAction('revoke-subscription')}
-                    disabled={loading === 'revoke-subscription'}
-                    className="flex-1 py-1.5 bg-danger/10 border border-danger/40 rounded-sm text-xs text-danger font-medium hover:bg-danger/20 transition-colors disabled:opacity-50"
-                  >
-                    {loading === 'revoke-subscription' ? 'Revoking…' : 'Confirm revoke'}
-                  </button>
-                  <button
-                    onClick={() => setConfirm(null)}
-                    className="px-3 py-1.5 bg-surface-2 border border-border rounded-sm text-xs text-fg-3 hover:text-fg transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              ) : (
-                <div className="flex gap-2">
-                  <Link
-                    href={`/admin/revenue/subscriptions/${sub.id}/override`}
-                    className="flex-1 py-1.5 bg-surface-2 border border-border rounded-sm text-xs text-fg-2 hover:text-fg transition-colors text-center"
-                  >
-                    Extend
-                  </Link>
-                  <button
-                    onClick={() => setConfirm('revoke-subscription')}
-                    className="flex-1 py-1.5 bg-surface-2 border border-border rounded-sm text-xs text-danger hover:bg-danger/10 transition-colors"
-                  >
-                    Revoke
-                  </button>
+              {/* Already refunded */}
+              {(sub.refunded_at || done.has('refund')) && (
+                <div className="space-y-1">
+                  <div className="py-1.5 text-center text-xs text-fg-3 font-mono">
+                    ✓ Refunded{sub.refunded_amount ? ` · $${Number(sub.refunded_amount).toFixed(2)}` : ''} · {sub.refunded_at ? fmtDateShort(sub.refunded_at) : 'just now'}
+                  </div>
+                  {stripeWarning && (
+                    <div className="px-2 py-1.5 bg-danger/10 border border-danger/30 rounded-sm text-xs text-danger">
+                      ⚠ {stripeWarning}
+                    </div>
+                  )}
                 </div>
               )}
+
+              {/* Active sub: Extend + Revoke */}
+              {!sub.refunded_at && !done.has('refund') && sub.status !== 'cancelled' && sub.status !== 'refunded' && (
+                done.has('revoke-subscription') ? (
+                  <div className="py-1.5 text-center text-xs text-ok font-mono">✓ Subscription revoked</div>
+                ) : confirm === 'revoke-subscription' ? (
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={() => callAction('revoke-subscription')}
+                      disabled={loading === 'revoke-subscription'}
+                      className="flex-1 py-1.5 bg-danger/10 border border-danger/40 rounded-sm text-xs text-danger font-medium hover:bg-danger/20 transition-colors disabled:opacity-50"
+                    >
+                      {loading === 'revoke-subscription' ? 'Revoking…' : 'Confirm revoke'}
+                    </button>
+                    <button
+                      onClick={() => setConfirm(null)}
+                      className="px-3 py-1.5 bg-surface-2 border border-border rounded-sm text-xs text-fg-3 hover:text-fg transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Link
+                      href={`/admin/revenue/subscriptions/${sub.id}/override`}
+                      className="flex-1 py-1.5 bg-surface-2 border border-border rounded-sm text-xs text-fg-2 hover:text-fg transition-colors text-center"
+                    >
+                      Extend
+                    </Link>
+                    <button
+                      onClick={() => setConfirm('revoke-subscription')}
+                      className="flex-1 py-1.5 bg-surface-2 border border-border rounded-sm text-xs text-danger hover:bg-danger/10 transition-colors"
+                    >
+                      Revoke
+                    </button>
+                  </div>
+                )
+              )}
+
+              {/* Cancelled sub (not yet refunded): show Refund button */}
+              {!sub.refunded_at && !done.has('refund') && sub.status === 'cancelled' && (
+                confirm === 'refund' ? (
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={() => callAction('refund')}
+                      disabled={loading === 'refund'}
+                      className="flex-1 py-1.5 bg-warn/10 border border-warn/40 rounded-sm text-xs text-warn font-medium hover:bg-warn/20 transition-colors disabled:opacity-50"
+                    >
+                      {loading === 'refund' ? 'Processing…' : `Confirm refund \$${sub.price_at_signup}`}
+                    </button>
+                    <button
+                      onClick={() => setConfirm(null)}
+                      className="px-3 py-1.5 bg-surface-2 border border-border rounded-sm text-xs text-fg-3 hover:text-fg transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirm('refund')}
+                    className="w-full py-1.5 bg-surface-2 border border-border rounded-sm text-xs text-warn hover:bg-warn/10 transition-colors"
+                  >
+                    Issue refund…
+                  </button>
+                )
+              )}
+
               {errors['revoke-subscription'] && (
                 <div className="mt-1 font-mono text-[10px] text-danger">{errors['revoke-subscription']}</div>
+              )}
+              {errors['refund'] && (
+                <div className="mt-1 font-mono text-[10px] text-danger">{errors['refund']}</div>
               )}
             </div>
           </>

@@ -72,7 +72,7 @@ export async function cancelSubscriptionAction(): Promise<{ ok: boolean; error?:
 
   const { error: dbError } = await admin
     .from('subscriptions')
-    .update({ status: 'cancelled' })
+    .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
     .eq('id', sub.id)
 
   if (dbError) return { ok: false, error: dbError.message }

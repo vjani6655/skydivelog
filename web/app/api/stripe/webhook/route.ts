@@ -86,26 +86,55 @@ export async function POST(req: NextRequest) {
       payment_method_expiry: card ? `${card.exp_month}/${String(card.exp_year).slice(-2)}` : 'unknown',
     }
 
-    // Update the existing row for this user (covers the NULL stripe_subscription_id case).
-    // Insert only if no row exists yet.
+    // Check existing subscription — if refunded, insert a new row to preserve history.
+    // Otherwise update in place (covers the NULL stripe_subscription_id case).
     const { data: existing } = await admin
       .from('subscriptions')
-      .select('id')
+      .select('id, status')
       .eq('user_id', userId)
       .order('started_at', { ascending: false })
       .limit(1)
       .maybeSingle()
 
-    const { error } = existing
-      ? await admin.from('subscriptions').update(subData).eq('id', existing.id)
-      : await admin.from('subscriptions').insert(subData)
+    const wasRefunded = existing?.status === 'refunded'
 
-    if (error) {
-      console.error('[stripe/webhook] db upsert failed:', error.message)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+    let newSubId: string | undefined
+    if (!existing || wasRefunded) {
+      // Always insert a fresh row if there's no prior sub, or if prior sub was refunded
+      const { data: inserted, error } = await admin
+        .from('subscriptions')
+        .insert(subData)
+        .select('id')
+        .single()
+      if (error) {
+        console.error('[stripe/webhook] db insert failed:', error.message)
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+      newSubId = inserted?.id
+    } else {
+      const { error } = await admin.from('subscriptions').update(subData).eq('id', existing.id)
+      if (error) {
+        console.error('[stripe/webhook] db update failed:', error.message)
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+      newSubId = existing.id
     }
 
-    console.log('[stripe/webhook] subscription created/updated for user', userId)
+    // Log the subscription event
+    const eventType = wasRefunded ? 'resubscribed_after_refund' : 'subscribed'
+    await admin.from('subscription_events').insert({
+      user_id: userId,
+      sub_id: newSubId ?? null,
+      event: eventType,
+      metadata: {
+        plan: subData.plan,
+        price: subData.price_at_signup,
+        stripe_subscription_id: subscription.id,
+        previous_status: existing?.status ?? null,
+      },
+    })
+
+    console.log(`[stripe/webhook] ${eventType} for user`, userId)
   }
 
   // ── customer.subscription.updated ─────────────────────────────────────────
@@ -157,14 +186,18 @@ export async function POST(req: NextRequest) {
       .from('subscriptions')
       .update({ status: 'cancelled' })
       .eq('stripe_subscription_id', subscription.id)
-      .select('id')
+      .select('id, user_id')
+
+    let deletedUserId: string | null = bySubId?.[0]?.user_id ?? null
 
     if (!bySubId?.length) {
       const { data: byCustomerId } = await admin
         .from('subscriptions')
         .update({ status: 'cancelled', stripe_subscription_id: subscription.id })
         .eq('stripe_customer_id', subscription.customer as string)
-        .select('id')
+        .select('id, user_id')
+
+      deletedUserId = byCustomerId?.[0]?.user_id ?? null
 
       if (!byCustomerId?.length) {
         const userId = await resolveUserIdFromStripeCustomer(subscription.customer as string, admin)
@@ -173,8 +206,19 @@ export async function POST(req: NextRequest) {
             .from('subscriptions')
             .update({ status: 'cancelled', stripe_subscription_id: subscription.id, stripe_customer_id: subscription.customer as string })
             .eq('user_id', userId)
+          deletedUserId = userId
         }
       }
+    }
+
+    if (deletedUserId) {
+      const matchedSub = bySubId?.[0]
+      await admin.from('subscription_events').insert({
+        user_id: deletedUserId,
+        sub_id: matchedSub?.id ?? null,
+        event: 'subscription_deleted',
+        metadata: { stripe_subscription_id: subscription.id },
+      })
     }
   }
 

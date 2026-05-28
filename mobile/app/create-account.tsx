@@ -9,6 +9,7 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -105,14 +106,8 @@ export default function CreateAccountScreen() {
     setLoading(false);
     if (error) {
       setSubmitError(error.message);
-    } else if (!data.user || (data.user.identities?.length ?? 0) === 0) {
-      // Supabase silently 'succeeds' for existing emails (to prevent enumeration) —
-      // the user object comes back with an empty identities array in that case.
-      setEmailExists(true);
-      setErrors(prev => ({ ...prev, email: ' ' }));
     } else if (!data.session) {
-      // Supabase email confirmation is enabled — no session until the link is clicked.
-      // Send the user back to sign-in with a notice so they know what to do next.
+      // Email confirmation required — no session until the link is clicked.
       router.replace({ pathname: '/sign-in', params: { notice: 'Account created! Check your email for a confirmation link, then come back and sign in.' } });
     } else {
       router.push('/paywall');
@@ -259,9 +254,9 @@ export default function CreateAccountScreen() {
                 </View>
                 <Text style={styles.checkLabel}>
                   I agree to the{' '}
-                  <Text style={styles.checkLink}>Terms</Text>
+                  <Text style={styles.checkLink} onPress={() => Linking.openURL('https://jumplogs.com/terms')}>Terms</Text>
                   {' '}and{' '}
-                  <Text style={styles.checkLink}>Privacy Policy</Text>
+                  <Text style={styles.checkLink} onPress={() => Linking.openURL('https://jumplogs.com/privacy')}>Privacy Policy</Text>
                 </Text>
               </TouchableOpacity>
               {!!errors.agreed && <Text style={[styles.errorText, { marginTop: 4 }]}>{errors.agreed}</Text>}

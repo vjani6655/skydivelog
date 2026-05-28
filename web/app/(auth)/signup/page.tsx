@@ -79,15 +79,6 @@ export default function SignupPage() {
       return
     }
 
-    // Supabase silently 'succeeds' for existing emails (to prevent enumeration) — the
-    // user object comes back with an empty identities array in that case.
-    if (!data.user || (data.user.identities?.length ?? 0) === 0) {
-      setEmailExists(true)
-      setFieldErrors(prev => ({ ...prev, email: ' ' }))
-      setLoading(false)
-      return
-    }
-
     // Insert profile row
     if (data.user) {
       await supabase.from("users").upsert({

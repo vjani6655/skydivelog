@@ -20,6 +20,7 @@ export default async function AdminRevenuePage() {
 
   const [
     { data: activeSubs },
+    { data: cancelledInPeriod },
     { data: newSubs30d },
     { count: overdueCount },
     { count: cancelledCount },
@@ -29,6 +30,7 @@ export default async function AdminRevenuePage() {
     { data: renewing61_90d },
   ] = await Promise.all([
     db.from('subscriptions').select('price_at_signup, started_at, status').eq('status', 'active'),
+    db.from('subscriptions').select('price_at_signup, started_at, status').eq('status', 'cancelled').gt('renews_at', now.toISOString()).is('refunded_at', null),
     db.from('subscriptions').select('price_at_signup, started_at').gte('started_at', thirtyDaysAgo),
     db.from('subscriptions').select('*', { count: 'exact', head: true }).eq('status', 'overdue'),
     db.from('subscriptions').select('*', { count: 'exact', head: true }).eq('status', 'cancelled'),
@@ -38,8 +40,9 @@ export default async function AdminRevenuePage() {
     db.from('subscriptions').select('price_at_signup').eq('status', 'active').gt('renews_at', in60d).lte('renews_at', in90d),
   ])
 
-  // MRR / ARR
-  const totalAnnual = activeSubs?.reduce((s, sub) => s + Number(sub.price_at_signup), 0) ?? 0
+  // MRR / ARR — includes cancelled subs still within their paid period (not refunded)
+  const billableSubs = [...(activeSubs ?? []), ...(cancelledInPeriod ?? [])]
+  const totalAnnual = billableSubs.reduce((s, sub) => s + Number(sub.price_at_signup), 0)
   const mrr = Math.round(totalAnnual / 12)
   const arr = totalAnnual
 
@@ -47,8 +50,8 @@ export default async function AdminRevenuePage() {
   const netNew30d = newSubs30d?.reduce((s, sub) => s + Number(sub.price_at_signup) / 12, 0) ?? 0
 
   // MRR growth this calendar month
-  const mrrGrowthThisMonth = activeSubs
-    ?.filter(s => s.started_at >= thisMonthStart)
+  const mrrGrowthThisMonth = billableSubs
+    .filter(s => s.started_at >= thisMonthStart)
     .reduce((s, sub) => s + Number(sub.price_at_signup) / 12, 0) ?? 0
 
   // Churn rate
@@ -70,7 +73,7 @@ export default async function AdminRevenuePage() {
     months[key] = 0
     monthLabels.push(key)
   }
-  activeSubs?.forEach(sub => {
+  billableSubs.forEach(sub => {
     const d = new Date(sub.started_at)
     if ((now.getTime() - d.getTime()) <= 365 * 86400000) {
       const key = d.toLocaleString('en-AU', { month: 'short' })
