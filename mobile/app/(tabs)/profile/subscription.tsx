@@ -355,19 +355,19 @@ export default function SubscriptionScreen() {
 
         {/* Cancel subscription for active users */}
         {isActive && (
-          <TouchableOpacity
-            style={[styles.manageBtn, cancelling && { opacity: 0.5 }]}
-            onPress={handleCancelSubscription}
-            disabled={cancelling}
-            activeOpacity={0.7}
-          >
-            {cancelling
-              ? <ActivityIndicator size="small" color={colors.fg3} />
-              : <>
-                  <Text style={[styles.manageBtnText, { color: colors.fg3 }]}>Cancel subscription</Text>
-                </>
-            }
-          </TouchableOpacity>
+          <View style={styles.undoCancelBox}>
+            <TouchableOpacity
+              style={[styles.cancelBtn, cancelling && { opacity: 0.5 }]}
+              onPress={handleCancelSubscription}
+              disabled={cancelling}
+              activeOpacity={0.8}
+            >
+              {cancelling
+                ? <ActivityIndicator size="small" color={colors.danger} />
+                : <Text style={styles.cancelBtnText}>Cancel subscription</Text>
+              }
+            </TouchableOpacity>
+          </View>
         )}
 
         {/* Manage billing for active/overdue/grace */}
@@ -451,6 +451,8 @@ function makeStyles(c: ColorSet) {
   featureText: { fontFamily: 'InterTight-Regular', fontSize: 14, color: c.fg2 },
   subscribeBtn: { backgroundColor: c.sky, borderRadius: radii.md, paddingVertical: spacing[3], alignItems: 'center', justifyContent: 'center', minHeight: 46 },
   subscribeBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: '#fff' },
+  cancelBtn: { borderWidth: 1, borderColor: c.danger, borderRadius: radii.md, paddingVertical: spacing[3], alignItems: 'center', justifyContent: 'center', minHeight: 46 },
+  cancelBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: c.danger },
   manageBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing[1], paddingVertical: spacing[2] },
   manageBtnText: { fontFamily: 'InterTight-Medium', fontSize: 14, color: c.sky },
   undoCancelBox: { gap: spacing[2] },
