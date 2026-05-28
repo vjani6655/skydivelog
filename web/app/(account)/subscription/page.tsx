@@ -53,19 +53,21 @@ export default async function SubscriptionPage() {
     !!sub?.renews_at &&
     new Date(sub.renews_at) > new Date()
 
-  // Reconcile: if Stripe says cancel_at_period_end but DB still says active, fix it
-  if (isActive && sub?.stripe_subscription_id) {
+  // Reconcile via customer ID (works even if stripe_subscription_id is NULL in DB)
+  if (isActive && sub?.stripe_customer_id) {
     try {
-      const stripeSub = await stripe.subscriptions.retrieve(sub.stripe_subscription_id)
-      if (stripeSub.cancel_at_period_end) {
-        // Update UI immediately — don't wait for DB
+      const { data: stripeSubs } = await stripe.subscriptions.list({
+        customer: sub.stripe_customer_id,
+        limit: 5,
+      })
+      const activeSub = stripeSubs.find(s => s.status === 'active' || s.status === 'past_due')
+      if (activeSub?.cancel_at_period_end) {
         isActive = false
         isCancelledInGrace = !!sub.renews_at && new Date(sub.renews_at) > new Date()
-        // Best-effort DB reconciliation (fire and forget)
         createAdminClient()
           .from('subscriptions')
-          .update({ status: 'cancelled' })
-          .eq('stripe_subscription_id', sub.stripe_subscription_id)
+          .update({ status: 'cancelled', stripe_subscription_id: activeSub.id })
+          .eq('stripe_customer_id', sub.stripe_customer_id)
           .then(({ error }) => { if (error) console.error('[sub page reconcile]', error.message) })
           .catch(() => {})
       }

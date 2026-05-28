@@ -88,27 +88,43 @@ export async function POST(req: NextRequest) {
     // If cancel_at_period_end is true the user cancelled but still has access until
     // current_period_end. Store as 'cancelled' now so isCancelledInGrace works.
     const isCancelling = subscription.cancel_at_period_end
-    const { error } = await admin
-      .from('subscriptions')
-      .update({
-        status: isCancelling ? 'cancelled' : (STATUS_MAP[subscription.status] ?? 'active'),
-        renews_at: new Date((subscription.items.data[0]?.current_period_end ?? 0) * 1000).toISOString(),
-      })
-      .eq('stripe_subscription_id', subscription.id)
+    const newStatus = isCancelling ? 'cancelled' : (STATUS_MAP[subscription.status] ?? 'active')
+    const newRenewsAt = new Date((subscription.items.data[0]?.current_period_end ?? 0) * 1000).toISOString()
 
-    if (error) console.error('[stripe/webhook] update failed:', error.message)
+    // Try matching by subscription ID first
+    const { data: bySubId } = await admin
+      .from('subscriptions')
+      .update({ status: newStatus, renews_at: newRenewsAt })
+      .eq('stripe_subscription_id', subscription.id)
+      .select('id')
+
+    // Fall back to customer ID if the row was created before we stored stripe_subscription_id
+    if (!bySubId?.length) {
+      const { error } = await admin
+        .from('subscriptions')
+        .update({ status: newStatus, renews_at: newRenewsAt, stripe_subscription_id: subscription.id })
+        .eq('stripe_customer_id', subscription.customer as string)
+      if (error) console.error('[stripe/webhook] customer fallback update failed:', error.message)
+      else console.log('[stripe/webhook] updated via customer_id fallback for', subscription.customer)
+    }
   }
 
   // ── customer.subscription.deleted ─────────────────────────────────────────
   if (event.type === 'customer.subscription.deleted') {
     const subscription = event.data.object as Stripe.Subscription
 
-    const { error } = await admin
+    const { data: bySubId } = await admin
       .from('subscriptions')
       .update({ status: 'cancelled' })
       .eq('stripe_subscription_id', subscription.id)
+      .select('id')
 
-    if (error) console.error('[stripe/webhook] cancel update failed:', error.message)
+    if (!bySubId?.length) {
+      await admin
+        .from('subscriptions')
+        .update({ status: 'cancelled', stripe_subscription_id: subscription.id })
+        .eq('stripe_customer_id', subscription.customer as string)
+    }
   }
 
   return NextResponse.json({ received: true })
