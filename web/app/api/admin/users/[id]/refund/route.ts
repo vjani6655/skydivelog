@@ -48,10 +48,13 @@ export async function POST(
         subscription: sub.stripe_subscription_id,
         limit: 1,
       })
-      const paymentIntent = invoices.data[0]?.payment_intent
+      const invoice = invoices.data[0]
+      const paymentIntent = invoice
+        ? (invoice as unknown as { payment_intent?: string }).payment_intent
+        : undefined
       if (paymentIntent) {
         const refund = await stripe.refunds.create({
-          payment_intent: paymentIntent as string,
+          payment_intent: paymentIntent,
         })
         stripeRefundId = refund.id
         refundedAmount = refund.amount / 100 // cents → dollars
