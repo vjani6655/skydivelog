@@ -85,10 +85,13 @@ export async function POST(req: NextRequest) {
   if (event.type === 'customer.subscription.updated') {
     const subscription = event.data.object as Stripe.Subscription
 
+    // If cancel_at_period_end is true the user cancelled but still has access until
+    // current_period_end. Store as 'cancelled' now so isCancelledInGrace works.
+    const isCancelling = subscription.cancel_at_period_end
     const { error } = await admin
       .from('subscriptions')
       .update({
-        status: STATUS_MAP[subscription.status] ?? 'active',
+        status: isCancelling ? 'cancelled' : (STATUS_MAP[subscription.status] ?? 'active'),
         renews_at: new Date((subscription.items.data[0]?.current_period_end ?? 0) * 1000).toISOString(),
       })
       .eq('stripe_subscription_id', subscription.id)

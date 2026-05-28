@@ -31,6 +31,10 @@ export default async function AccountLayout({
 
   const fullName = profile?.full_name || user.email?.split("@")[0] || "User"
   const isPro = sub?.status === "active"
+  const isCancelledInGrace =
+    sub?.status === 'cancelled' &&
+    !!sub?.renews_at &&
+    new Date(sub.renews_at) > new Date()
 
   return (
     <div className="min-h-screen bg-bg flex">
@@ -44,6 +48,8 @@ export default async function AccountLayout({
         licenceNumber={profile?.licence_number ?? null}
         plan={isPro ? (sub?.plan?.startsWith('price_') ? 'annual' : (sub?.plan ?? 'annual')) : null}
         renewsAt={isPro ? sub?.renews_at ?? null : null}
+        cancelledInGrace={isCancelledInGrace}
+        cancelAt={isCancelledInGrace ? sub?.renews_at ?? null : null}
       />
       <main className="flex-1 min-w-0 overflow-auto px-12 py-8">
         {children}

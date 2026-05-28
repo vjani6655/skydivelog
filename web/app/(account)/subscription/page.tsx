@@ -46,11 +46,15 @@ export default async function SubscriptionPage() {
 
   const isActive = sub?.status === "active"
   const isTrial = sub?.status === "trial"
+  const isCancelledInGrace =
+    sub?.status === 'cancelled' &&
+    !!sub?.renews_at &&
+    new Date(sub.renews_at) > new Date()
 
   // Fetch billing address from Stripe if subscribed
   let billingAddress: Stripe.Address | null = null
   let billingName: string | null = null
-  if ((isActive || isTrial) && sub?.stripe_customer_id) {
+  if ((isActive || isTrial || isCancelledInGrace) && sub?.stripe_customer_id) {
     try {
       const customer = await stripe.customers.retrieve(sub.stripe_customer_id) as Stripe.Customer
       billingAddress = customer.address ?? null
@@ -60,8 +64,8 @@ export default async function SubscriptionPage() {
     }
   }
 
-  // Subscribed user view
-  if (isActive || isTrial) {
+  // Subscribed user view (active, trial, or cancelled-in-grace)
+  if (isActive || isTrial || isCancelledInGrace) {
     const planLabel = (sub.plan?.startsWith('price_') ? 'Pro' : sub.plan ?? 'Pro')
       .replace(/^./, (c: string) => c.toUpperCase())
 
@@ -74,35 +78,60 @@ export default async function SubscriptionPage() {
 
         {/* Main plan card */}
         <div
-          className="border border-sky rounded-[14px] p-8 mb-5"
-          style={{background: 'linear-gradient(135deg, rgba(74,158,255,0.18) 0%, transparent 100%)'}}
+          className={`border rounded-[14px] p-8 mb-5 ${
+            isCancelledInGrace
+              ? 'border-warn/40'
+              : 'border-sky'
+          }`}
+          style={{background: isCancelledInGrace
+            ? 'linear-gradient(135deg, rgba(251,191,36,0.08) 0%, transparent 100%)'
+            : 'linear-gradient(135deg, rgba(74,158,255,0.18) 0%, transparent 100%)'}}
         >
           <div className="flex items-start justify-between gap-8">
             {/* Left: badge + price */}
             <div className="flex-1">
               <div className="mb-[14px]">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-sky/10 border border-sky/30 font-mono text-xs font-semibold text-sky uppercase tracking-wide">
-                  <svg className="w-3 h-3" viewBox="0 0 32 32" fill="none">
-                    <path d="M16 4C9.37 4 4 9.37 4 16s5.37 12 12 12 12-5.37 12-12S22.63 4 16 4zm0 2c5.52 0 10 4.48 10 10s-4.48 10-10 10S6 21.52 6 16 10.48 6 16 6z" fill="currentColor" opacity="0.5"/>
-                    <path d="M22 10.5l-8 3.5-3.5 8 8-3.5 3.5-8z" fill="currentColor"/>
-                  </svg>
-                  {planLabel.toUpperCase()} · {isActive ? "ACTIVE" : "TRIAL"}
-                </span>
+                {isCancelledInGrace ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-warn/10 border border-warn/30 font-mono text-xs font-semibold text-warn uppercase tracking-wide">
+                    {planLabel.toUpperCase()} · CANCELLED
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-sky/10 border border-sky/30 font-mono text-xs font-semibold text-sky uppercase tracking-wide">
+                    <svg className="w-3 h-3" viewBox="0 0 32 32" fill="none">
+                      <path d="M16 4C9.37 4 4 9.37 4 16s5.37 12 12 12 12-5.37 12-12S22.63 4 16 4zm0 2c5.52 0 10 4.48 10 10s-4.48 10-10 10S6 21.52 6 16 10.48 6 16 6z" fill="currentColor" opacity="0.5"/>
+                      <path d="M22 10.5l-8 3.5-3.5 8 8-3.5 3.5-8z" fill="currentColor"/>
+                    </svg>
+                    {planLabel.toUpperCase()} · {isActive ? "ACTIVE" : "TRIAL"}
+                  </span>
+                )}
               </div>
 
               <div className="font-mono text-[40px] font-medium tracking-tight text-fg leading-none mb-[6px]">
                 ${Number(sub.price_at_signup ?? 5).toFixed(0)} / year
               </div>
-              <p className="text-sm text-fg-2">
-                Renews <span className="text-fg font-medium">{fmtDate(sub.renews_at)}</span>
-                {sub.started_at && <> · started {fmtDate(sub.started_at)}</>}
-              </p>
+              {isCancelledInGrace ? (
+                <p className="text-sm text-fg-2">
+                  Access until <span className="text-warn font-medium">{fmtDate(sub.renews_at)}</span>
+                  {sub.started_at && <> · started {fmtDate(sub.started_at)}</>}
+                </p>
+              ) : (
+                <p className="text-sm text-fg-2">
+                  Renews <span className="text-fg font-medium">{fmtDate(sub.renews_at)}</span>
+                  {sub.started_at && <> · started {fmtDate(sub.started_at)}</>}
+                </p>
+              )}
             </div>
 
             {/* Right: actions */}
             <div className="flex flex-col gap-2 flex-shrink-0 min-w-[200px]">
-              <ManageBillingButton label="Update card" />
-              <CancelSubscriptionButton />
+              {isCancelledInGrace ? (
+                <ManageBillingButton label="Reactivate subscription" />
+              ) : (
+                <>
+                  <ManageBillingButton label="Update card" />
+                  <CancelSubscriptionButton />
+                </>
+              )}
             </div>
           </div>
         </div>

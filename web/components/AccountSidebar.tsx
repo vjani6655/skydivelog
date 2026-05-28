@@ -20,6 +20,8 @@ interface SidebarProps {
   licenceNumber: string | null
   plan: string | null
   renewsAt: string | null
+  cancelledInGrace?: boolean
+  cancelAt?: string | null
 }
 
 const NAV = [
@@ -50,7 +52,7 @@ function initials(name: string) {
     .join("")
 }
 
-export default function AccountSidebar({ fullName, licenceNumber, plan, renewsAt }: SidebarProps) {
+export default function AccountSidebar({ fullName, licenceNumber, plan, renewsAt, cancelledInGrace, cancelAt }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
@@ -116,6 +118,15 @@ export default function AccountSidebar({ fullName, licenceNumber, plan, renewsAt
               </span>
               {renews && (
                 <span className="font-mono text-[10px] text-fg-3">RENEWS {renews.toUpperCase()}</span>
+              )}
+            </div>
+          ) : cancelledInGrace ? (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm bg-warn/10 border border-warn/25 text-[10px] font-semibold text-warn leading-none">
+                CANCELLED
+              </span>
+              {cancelAt && (
+                <span className="font-mono text-[10px] text-fg-3">UNTIL {fmtRenews(cancelAt)?.toUpperCase()}</span>
               )}
             </div>
           ) : (

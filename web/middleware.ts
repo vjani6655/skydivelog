@@ -69,10 +69,16 @@ export async function middleware(request: NextRequest) {
         .limit(1)
         .maybeSingle()
 
-      const isActive =
-        sub?.status === "active" &&
+      const isCancelledInGrace =
+        sub?.status === 'cancelled' &&
         sub?.renews_at != null &&
         new Date(sub.renews_at) > new Date()
+
+      const isActive =
+        (sub?.status === "active" &&
+        sub?.renews_at != null &&
+        new Date(sub.renews_at) > new Date()) ||
+        isCancelledInGrace
 
       if (!isActive) {
         const redirectUrl = request.nextUrl.clone()

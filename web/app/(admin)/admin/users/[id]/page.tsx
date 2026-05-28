@@ -85,6 +85,10 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
   const inTrial = !sub && Date.now() < trialEndDate.getTime()
   const trialExpired = !sub && Date.now() >= trialEndDate.getTime()
   const trialDaysLeft = Math.max(0, Math.ceil((trialEndDate.getTime() - Date.now()) / 86400000))
+  const isCancelledInGrace =
+    sub?.status === 'cancelled' &&
+    !!sub?.renews_at &&
+    new Date(sub.renews_at) > new Date()
 
   // Build activity feed
   const activityFeed: { icon: string; text: string; sub: string; time: string }[] = []
@@ -137,6 +141,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
           <div className="flex flex-wrap gap-1.5 mt-2.5">
             {sub && <Badge kind={statusKind[sub.status] ?? 'muted'}>{sub.status.toUpperCase()}</Badge>}
             {sub?.plan && <Badge kind="sky">{sub.plan.toUpperCase()}</Badge>}
+            {isCancelledInGrace && sub?.renews_at && <Badge kind="warn">UNTIL {fmtDateShort(sub.renews_at)}</Badge>}
             {inTrial && <Badge kind="sky">TRIAL · {trialDaysLeft}d left</Badge>}
             {trialExpired && <Badge kind="warn">TRIAL EXPIRED</Badge>}
             {user.country && <Badge kind="muted">{user.country}</Badge>}

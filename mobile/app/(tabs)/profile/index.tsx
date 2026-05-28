@@ -148,6 +148,11 @@ export default function ProfileScreen() {
               <Text style={[styles.subBadgeText, { color: subBadge.text }]}>{subBadge.label}</Text>
             </View>
           </View>
+          {cancelledInGrace && sub?.renews_at && (
+            <Text style={{ color: colors.fg3, fontSize: 11, marginTop: 4 }}>
+              Access until {new Date(sub.renews_at).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' })}
+            </Text>
+          )}
         </View>
 
         {/* Stats row */}
