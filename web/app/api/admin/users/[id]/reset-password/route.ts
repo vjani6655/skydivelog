@@ -31,14 +31,16 @@ export async function POST(
     .single()
   if (!target) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
-  // Use anon client so Supabase sends the actual reset email
+  // Use anon client so Supabase sends the actual reset email.
+  // flowType: 'implicit' ensures the verified token arrives as #access_token
+  // in the hash, which the reset-password page reads client-side.
   const anon = createAnonClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { auth: { persistSession: false, autoRefreshToken: false } },
+    { auth: { persistSession: false, autoRefreshToken: false, flowType: 'implicit' } },
   )
   const { error } = await anon.auth.resetPasswordForEmail(target.email, {
-    redirectTo: `${APP_URL}/api/auth/callback?next=/reset-password`,
+    redirectTo: `${APP_URL}/reset-password`,
   })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 

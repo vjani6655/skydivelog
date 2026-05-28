@@ -20,6 +20,9 @@ export default function ResetPasswordPage() {
   const supabase = createClient()
   const [password, setPassword] = useState("")
   const [linkError, setLinkError] = useState<string | null>(null)
+  const [sessionReady, setSessionReady] = useState(false)
+  // True when arriving via implicit flow (#access_token in hash)
+  const [awaitingRecovery, setAwaitingRecovery] = useState(false)
 
   useEffect(() => {
     // Check query params (PKCE error forwarded from callback)
@@ -32,6 +35,23 @@ export default function ResetPasswordPage() {
     } else if (errorCode) {
       setLinkError("This reset link is invalid or has already been used.")
     }
+
+    // If the hash contains an access_token it's an implicit-flow recovery redirect.
+    // Wait for the PASSWORD_RECOVERY event before allowing form submission.
+    if (hParams?.get("access_token") && hParams?.get("type") === "recovery") {
+      setAwaitingRecovery(true)
+    } else {
+      // PKCE flow: session already set via callback cookie — form is ready immediately
+      setSessionReady(true)
+    }
+
+    // Listen for PASSWORD_RECOVERY event (implicit flow: #access_token in hash)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') setSessionReady(true)
+    })
+    return () => subscription.unsubscribe()
+  // supabase is a stable createClient() instance — safe to omit from deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   const [confirm, setConfirm] = useState("")
   const [showPass, setShowPass] = useState(false)
@@ -83,6 +103,10 @@ export default function ResetPasswordPage() {
           >
             Request a new link
           </Link>
+        </div>
+      ) : awaitingRecovery && !sessionReady ? (
+        <div className="text-center py-8">
+          <p className="text-sm text-fg-3">Setting up your reset session…</p>
         </div>
       ) : (
         <>
