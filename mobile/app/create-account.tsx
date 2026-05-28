@@ -105,6 +105,11 @@ export default function CreateAccountScreen() {
     setLoading(false);
     if (error) {
       setSubmitError(error.message);
+    } else if (!data.user || (data.user.identities?.length ?? 0) === 0) {
+      // Supabase silently 'succeeds' for existing emails (to prevent enumeration) —
+      // the user object comes back with an empty identities array in that case.
+      setEmailExists(true);
+      setErrors(prev => ({ ...prev, email: ' ' }));
     } else if (!data.session) {
       // Supabase email confirmation is enabled — no session until the link is clicked.
       // Send the user back to sign-in with a notice so they know what to do next.
