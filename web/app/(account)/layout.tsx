@@ -38,25 +38,36 @@ export default async function AccountLayout({
     !!sub?.renews_at &&
     new Date(sub.renews_at) > new Date()
 
-  // Reconcile: check Stripe live state via customer ID (works even if stripe_subscription_id is NULL in DB)
-  if (isPro && sub?.stripe_customer_id) {
+  // Reconcile: check Stripe live state. Falls back to email lookup when stripe_customer_id is NULL in DB.
+  if (isPro) {
     try {
-      const { data: stripeSubs } = await stripe.subscriptions.list({
-        customer: sub.stripe_customer_id,
-        limit: 5,
-      })
-      const activeSub = stripeSubs.find(s => s.status === 'active' || s.status === 'past_due')
-      if (activeSub?.cancel_at_period_end) {
-        isPro = false
-        isCancelledInGrace = !!sub.renews_at && new Date(sub.renews_at) > new Date()
-        createAdminClient()
-          .from('subscriptions')
-          .update({ status: 'cancelled', stripe_subscription_id: activeSub.id })
-          .eq('stripe_customer_id', sub.stripe_customer_id)
-          .then(
-            ({ error }) => { if (error) console.error('[layout reconcile]', error.message) },
-            () => {}
-          )
+      let stripeCustomerId = sub?.stripe_customer_id ?? null
+
+      // Email fallback — handles the case where stripe_customer_id was never stored
+      if (!stripeCustomerId && user.email) {
+        const customers = await stripe.customers.list({ email: user.email, limit: 1 })
+        stripeCustomerId = customers.data[0]?.id ?? null
+      }
+
+      if (stripeCustomerId) {
+        const { data: stripeSubs } = await stripe.subscriptions.list({
+          customer: stripeCustomerId,
+          limit: 5,
+        })
+        const activeSub = stripeSubs.find(s => s.status === 'active' || s.status === 'past_due')
+        if (activeSub?.cancel_at_period_end) {
+          isPro = false
+          isCancelledInGrace = !!sub?.renews_at && new Date(sub!.renews_at) > new Date()
+          // Backfill both IDs; update by user_id so it works even when stripe_customer_id is NULL
+          createAdminClient()
+            .from('subscriptions')
+            .update({ status: 'cancelled', stripe_subscription_id: activeSub.id, stripe_customer_id: stripeCustomerId })
+            .eq('user_id', user.id)
+            .then(
+              ({ error }) => { if (error) console.error('[layout reconcile]', error.message) },
+              () => {}
+            )
+        }
       }
     } catch {
       // ignore — don't block page render if Stripe is unreachable

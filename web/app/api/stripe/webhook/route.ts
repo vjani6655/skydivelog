@@ -14,6 +14,22 @@ const STATUS_MAP: Record<string, string> = {
   unpaid: 'overdue',
 }
 
+// Helper: resolve our DB user_id from a Stripe customer (used when both IDs are missing in DB)
+async function resolveUserIdFromStripeCustomer(
+  stripeCustomerId: string,
+  admin: ReturnType<typeof createAdminClient>,
+): Promise<string | null> {
+  try {
+    const customer = await stripe.customers.retrieve(stripeCustomerId) as Stripe.Customer
+    if (!customer.email) return null
+    const { data } = await admin.auth.admin.listUsers({ perPage: 1000 })
+    const match = data?.users.find(u => u.email?.toLowerCase() === customer.email!.toLowerCase())
+    return match?.id ?? null
+  } catch {
+    return null
+  }
+}
+
 export async function POST(req: NextRequest) {
   const body = await req.text()
   const sig = req.headers.get('stripe-signature')
@@ -56,29 +72,40 @@ export async function POST(req: NextRequest) {
     const price = item?.price
     const product = price?.product as Stripe.Product | null
 
-    const { error } = await admin.from('subscriptions').upsert(
-      {
-        user_id: userId,
-        stripe_subscription_id: subscription.id,
-        stripe_customer_id: session.customer as string,
-        status: STATUS_MAP[subscription.status] ?? 'active',
-        plan: product?.name ?? price?.nickname ?? 'Pro',
-        price_at_signup: (price?.unit_amount ?? 0) / 100,
-        started_at: new Date(item.current_period_start * 1000).toISOString(),
-        renews_at: new Date(item.current_period_end * 1000).toISOString(),
-        payment_method_brand: card?.brand ?? 'unknown',
-        payment_method_last4: card?.last4 ?? '0000',
-        payment_method_expiry: card ? `${card.exp_month}/${String(card.exp_year).slice(-2)}` : 'unknown',
-      },
-      { onConflict: 'stripe_subscription_id' },
-    )
+    const subData = {
+      user_id: userId,
+      stripe_subscription_id: subscription.id,
+      stripe_customer_id: session.customer as string,
+      status: STATUS_MAP[subscription.status] ?? 'active',
+      plan: product?.name ?? price?.nickname ?? 'Pro',
+      price_at_signup: (price?.unit_amount ?? 0) / 100,
+      started_at: new Date(item.current_period_start * 1000).toISOString(),
+      renews_at: new Date(item.current_period_end * 1000).toISOString(),
+      payment_method_brand: card?.brand ?? 'unknown',
+      payment_method_last4: card?.last4 ?? '0000',
+      payment_method_expiry: card ? `${card.exp_month}/${String(card.exp_year).slice(-2)}` : 'unknown',
+    }
+
+    // Update the existing row for this user (covers the NULL stripe_subscription_id case).
+    // Insert only if no row exists yet.
+    const { data: existing } = await admin
+      .from('subscriptions')
+      .select('id')
+      .eq('user_id', userId)
+      .order('started_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const { error } = existing
+      ? await admin.from('subscriptions').update(subData).eq('id', existing.id)
+      : await admin.from('subscriptions').insert(subData)
 
     if (error) {
       console.error('[stripe/webhook] db upsert failed:', error.message)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    console.log('[stripe/webhook] subscription created for user', userId)
+    console.log('[stripe/webhook] subscription created/updated for user', userId)
   }
 
   // ── customer.subscription.updated ─────────────────────────────────────────
@@ -100,12 +127,25 @@ export async function POST(req: NextRequest) {
 
     // Fall back to customer ID if the row was created before we stored stripe_subscription_id
     if (!bySubId?.length) {
-      const { error } = await admin
+      const { data: byCustomerId } = await admin
         .from('subscriptions')
         .update({ status: newStatus, renews_at: newRenewsAt, stripe_subscription_id: subscription.id })
         .eq('stripe_customer_id', subscription.customer as string)
-      if (error) console.error('[stripe/webhook] customer fallback update failed:', error.message)
-      else console.log('[stripe/webhook] updated via customer_id fallback for', subscription.customer)
+        .select('id')
+
+      // 3rd fallback: both IDs null in DB — look up user by Stripe customer email
+      if (!byCustomerId?.length) {
+        const userId = await resolveUserIdFromStripeCustomer(subscription.customer as string, admin)
+        if (userId) {
+          await admin
+            .from('subscriptions')
+            .update({ status: newStatus, renews_at: newRenewsAt, stripe_subscription_id: subscription.id, stripe_customer_id: subscription.customer as string })
+            .eq('user_id', userId)
+          console.log('[stripe/webhook] updated via email fallback for customer', subscription.customer)
+        } else {
+          console.error('[stripe/webhook] could not resolve user for customer', subscription.customer)
+        }
+      }
     }
   }
 
@@ -120,10 +160,21 @@ export async function POST(req: NextRequest) {
       .select('id')
 
     if (!bySubId?.length) {
-      await admin
+      const { data: byCustomerId } = await admin
         .from('subscriptions')
         .update({ status: 'cancelled', stripe_subscription_id: subscription.id })
         .eq('stripe_customer_id', subscription.customer as string)
+        .select('id')
+
+      if (!byCustomerId?.length) {
+        const userId = await resolveUserIdFromStripeCustomer(subscription.customer as string, admin)
+        if (userId) {
+          await admin
+            .from('subscriptions')
+            .update({ status: 'cancelled', stripe_subscription_id: subscription.id, stripe_customer_id: subscription.customer as string })
+            .eq('user_id', userId)
+        }
+      }
     }
   }
 
