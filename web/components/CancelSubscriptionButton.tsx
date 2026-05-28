@@ -27,7 +27,7 @@ export default function CancelSubscriptionButton() {
     return (
       <div className="flex flex-col gap-2">
         <p className="text-sm text-fg-2 text-center">Cancel your subscription?</p>
-        <p className="text-xs text-fg-3 text-center">You'll keep access until the end of your billing period.</p>
+        <p className="text-xs text-fg-3 text-center">You&apos;ll keep access until the end of your billing period.</p>
         {error && <p className="text-xs text-red-500 text-center">{error}</p>}
         <div className="flex gap-2">
           <button
