@@ -59,31 +59,50 @@ export default async function SubscriptionPage() {
       let stripeCustomerId = sub?.stripe_customer_id ?? null
 
       if (!stripeCustomerId && user?.email) {
-        const customers = await stripe.customers.list({ email: user.email, limit: 1 })
-        stripeCustomerId = customers.data[0]?.id ?? null
+        const { data: customers } = await stripe.customers.list({ email: user.email, limit: 1 })
+        stripeCustomerId = customers[0]?.id ?? null
       }
 
       if (stripeCustomerId) {
         const { data: stripeSubs } = await stripe.subscriptions.list({
           customer: stripeCustomerId,
-          limit: 5,
+          status: 'all',
+          limit: 10,
         })
-        const activeSub = stripeSubs.find(s => s.status === 'active' || s.status === 'past_due')
-        if (activeSub?.cancel_at_period_end) {
+
+        const genuinelyActive = stripeSubs.find(
+          s => (s.status === 'active' || s.status === 'past_due' || s.status === 'trialing')
+            && !s.cancel_at_period_end
+        )
+
+        if (!genuinelyActive) {
           isActive = false
-          isCancelledInGrace = !!sub?.renews_at && new Date(sub!.renews_at) > new Date()
+          const cancellingSub = stripeSubs.find(
+            s => (s.status === 'active' || s.status === 'past_due') && s.cancel_at_period_end
+          )
+          if (cancellingSub) {
+            const periodEnd = new Date((cancellingSub.items.data[0]?.current_period_end ?? 0) * 1000)
+            isCancelledInGrace = periodEnd > new Date()
+          } else {
+            isCancelledInGrace = !!sub?.renews_at && new Date(sub!.renews_at) > new Date()
+          }
+          const subIdToBackfill = cancellingSub?.id ?? stripeSubs[0]?.id
           createAdminClient()
             .from('subscriptions')
-            .update({ status: 'cancelled', stripe_subscription_id: activeSub.id, stripe_customer_id: stripeCustomerId })
+            .update({
+              status: 'cancelled',
+              stripe_customer_id: stripeCustomerId,
+              ...(subIdToBackfill ? { stripe_subscription_id: subIdToBackfill } : {}),
+            })
             .eq('user_id', user!.id)
             .then(
               ({ error }) => { if (error) console.error('[sub page reconcile]', error.message) },
-              () => {}
+              (err) => { console.error('[sub page reconcile] db error:', err) }
             )
         }
       }
-    } catch {
-      // ignore — don't block page render if Stripe is unreachable
+    } catch (e) {
+      console.error('[sub page reconcile] stripe error:', e)
     }
   }
 

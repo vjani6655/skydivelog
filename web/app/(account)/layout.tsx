@@ -45,32 +45,53 @@ export default async function AccountLayout({
 
       // Email fallback — handles the case where stripe_customer_id was never stored
       if (!stripeCustomerId && user.email) {
-        const customers = await stripe.customers.list({ email: user.email, limit: 1 })
-        stripeCustomerId = customers.data[0]?.id ?? null
+        const { data: customers } = await stripe.customers.list({ email: user.email, limit: 1 })
+        stripeCustomerId = customers[0]?.id ?? null
       }
 
       if (stripeCustomerId) {
+        // status:'all' catches both cancel_at_period_end AND immediately-cancelled subs
         const { data: stripeSubs } = await stripe.subscriptions.list({
           customer: stripeCustomerId,
-          limit: 5,
+          status: 'all',
+          limit: 10,
         })
-        const activeSub = stripeSubs.find(s => s.status === 'active' || s.status === 'past_due')
-        if (activeSub?.cancel_at_period_end) {
+
+        // A 'genuinely active' sub: not cancelled, not scheduled to cancel
+        const genuinelyActive = stripeSubs.find(
+          s => (s.status === 'active' || s.status === 'past_due' || s.status === 'trialing')
+            && !s.cancel_at_period_end
+        )
+
+        if (!genuinelyActive) {
           isPro = false
-          isCancelledInGrace = !!sub?.renews_at && new Date(sub!.renews_at) > new Date()
-          // Backfill both IDs; update by user_id so it works even when stripe_customer_id is NULL
+          // Is the user still within a grace period?
+          const cancellingSub = stripeSubs.find(
+            s => (s.status === 'active' || s.status === 'past_due') && s.cancel_at_period_end
+          )
+          if (cancellingSub) {
+            const periodEnd = new Date((cancellingSub.items.data[0]?.current_period_end ?? 0) * 1000)
+            isCancelledInGrace = periodEnd > new Date()
+          } else {
+            isCancelledInGrace = !!sub?.renews_at && new Date(sub!.renews_at) > new Date()
+          }
+          const subIdToBackfill = cancellingSub?.id ?? stripeSubs[0]?.id
           createAdminClient()
             .from('subscriptions')
-            .update({ status: 'cancelled', stripe_subscription_id: activeSub.id, stripe_customer_id: stripeCustomerId })
+            .update({
+              status: 'cancelled',
+              stripe_customer_id: stripeCustomerId,
+              ...(subIdToBackfill ? { stripe_subscription_id: subIdToBackfill } : {}),
+            })
             .eq('user_id', user.id)
             .then(
               ({ error }) => { if (error) console.error('[layout reconcile]', error.message) },
-              () => {}
+              (err) => { console.error('[layout reconcile] db error:', err) }
             )
         }
       }
-    } catch {
-      // ignore — don't block page render if Stripe is unreachable
+    } catch (e) {
+      console.error('[layout reconcile] stripe error:', e)
     }
   }
 
