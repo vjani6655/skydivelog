@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
-import { Lock, Eye, EyeOff, Check, X } from "lucide-react"
+import { Lock, Eye, EyeOff, Check, X, AlertCircle } from "lucide-react"
 
 function StrengthRow({ ok, label }: { ok: boolean; label: string }) {
   return (
@@ -18,6 +19,19 @@ export default function ResetPasswordPage() {
   const router = useRouter()
   const supabase = createClient()
   const [password, setPassword] = useState("")
+  const [linkError, setLinkError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const hash = window.location.hash
+    if (!hash.includes("error=")) return
+    const params = new URLSearchParams(hash.slice(1))
+    const code = params.get("error_code")
+    if (code === "otp_expired") {
+      setLinkError("Your password reset link has expired.")
+    } else {
+      setLinkError("This reset link is invalid or has already been used.")
+    }
+  }, [])
   const [confirm, setConfirm] = useState("")
   const [showPass, setShowPass] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
@@ -53,10 +67,28 @@ export default function ResetPasswordPage() {
 
   return (
     <div className="bg-surface border border-border rounded-xl p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-fg tracking-tight mb-1.5">Choose a new password.</h1>
-        <p className="text-sm text-fg-3">At least 8 characters.</p>
-      </div>
+      {linkError ? (
+        <div className="text-center py-4">
+          <div className="w-12 h-12 rounded-full bg-danger-bg flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-6 h-6 text-danger" />
+          </div>
+          <h2 className="text-xl font-bold text-fg mb-2">Link expired.</h2>
+          <p className="text-sm text-fg-3 mb-6">
+            {linkError} Reset links are only valid for 60 minutes.
+          </p>
+          <Link
+            href="/forgot-password"
+            className="inline-flex items-center justify-center w-full bg-sky text-on-sky font-semibold rounded-sm py-2.5 text-sm hover:bg-sky/90 transition-colors"
+          >
+            Request a new link
+          </Link>
+        </div>
+      ) : (
+        <>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-fg tracking-tight mb-1.5">Choose a new password.</h1>
+          <p className="text-sm text-fg-3">At least 8 characters.</p>
+        </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
@@ -152,6 +184,8 @@ export default function ResetPasswordPage() {
           {loading ? "Updating…" : "Update password"}
         </button>
       </form>
+        </>
+      )}
     </div>
   )
 }

@@ -37,28 +37,39 @@ function formatFF(seconds: number | null): string {
 export default function ProfileScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const [profile, setProfile] = useState<{ full_name: string | null; licence_number: string | null } | null>(null);
+  const [profile, setProfile] = useState<{
+    full_name: string | null;
+    licence_number: string | null;
+    licence_rating: string | null;
+    country: string | null;
+    date_of_birth: string | null;
+    home_dropzone_id: string | null;
+    emergency_contact_name: string | null;
+    emergency_contact_relationship: string | null;
+    emergency_contact_phone: string | null;
+  } | null>(null);
   const [email, setEmail] = useState<string | null>(null);
   const [stats, setStats] = useState({ jumps: 0, ff: 0, dzs: 0 });
   const [loading, setLoading] = useState(true);
   const [userCreatedAt, setUserCreatedAt] = useState<string | null>(null);
+  const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
   const [sub, setSub] = useState<{ status: string; renews_at: string | null } | null>(null);
 
   useFocusEffect(useCallback(() => {
     (async () => {
       setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      const user = session?.user;
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
       setEmail(user.email ?? null);
 
       const [profileRes, jumpsRes, subRes] = await Promise.all([
-        supabase.from('users').select('full_name, licence_number').eq('id', user.id).single(),
+        supabase.from('users').select('full_name, licence_number, licence_rating, country, date_of_birth, home_dropzone_id, emergency_contact_name, emergency_contact_relationship, emergency_contact_phone').eq('id', user.id).single(),
         supabase.from('jumps').select('freefall_seconds, dropzone_id, jump_number').eq('user_id', user.id).is('deleted_at', null),
         supabase.from('subscriptions').select('status, renews_at').eq('user_id', user.id).order('started_at', { ascending: false }).limit(1).maybeSingle(),
       ]);
 
       setUserCreatedAt(user.created_at);
+      setTrialEndsAt((user.user_metadata?.trial_ends_at as string) ?? null);
       setSub(subRes.data ?? null);
 
       setProfile(profileRes.data ?? null);
@@ -85,10 +96,24 @@ export default function ProfileScreen() {
   const ini = initials(name, email);
 
   // Subscription / trial status
-  const trialEnd = userCreatedAt ? new Date(new Date(userCreatedAt).getTime() + 14 * 86400000) : null;
+  const trialEnd = trialEndsAt
+    ? new Date(trialEndsAt)
+    : userCreatedAt ? new Date(new Date(userCreatedAt).getTime() + 14 * 86400000) : null;
   const inTrial = !sub && !!trialEnd && Date.now() < trialEnd.getTime();
   const trialExpired = !sub && !!trialEnd && Date.now() >= trialEnd.getTime();
   const trialDaysLeft = trialEnd ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / 86400000)) : 0;
+  const incompleteCount = profile ? [
+    profile.full_name,
+    profile.licence_number,
+    profile.licence_rating,
+    profile.country,
+    profile.date_of_birth,
+    profile.home_dropzone_id,
+    profile.emergency_contact_name,
+    profile.emergency_contact_relationship,
+    profile.emergency_contact_phone,
+  ].filter(v => !v).length : 0;
+
   const subBadge = sub?.status === 'active'
     ? { label: 'ACTIVE', bg: colors.okBg, text: colors.ok }
     : sub?.status === 'overdue'
@@ -143,6 +168,11 @@ export default function ProfileScreen() {
             >
               <Ionicons name={item.icon as any} size={20} color={colors.fg2} />
               <Text style={styles.menuLabel}>{item.label}</Text>
+              {item.label === 'Edit profile' && incompleteCount > 0 && (
+                <View style={styles.incompleteBadge}>
+                  <Text style={styles.incompleteBadgeText}>{incompleteCount}</Text>
+                </View>
+              )}
               {item.label === 'Subscription' && (
                 <View style={[styles.menuSubBadge, { backgroundColor: subBadge.bg }]}>
                   <Text style={[styles.menuSubBadgeText, { color: subBadge.text }]}>{subBadge.label}</Text>
@@ -189,6 +219,8 @@ function makeStyles(c: ColorSet) {
   menuLabel: { flex: 1, fontFamily: 'InterTight-Medium', fontSize: 15, color: c.fg },
   menuSubBadge: { borderRadius: radii.sm, paddingHorizontal: spacing[2], paddingVertical: 2, marginRight: spacing[1] },
   menuSubBadgeText: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, letterSpacing: 0.5 },
+  incompleteBadge: { backgroundColor: c.warn, borderRadius: 10, minWidth: 20, height: 20, paddingHorizontal: 6, justifyContent: 'center', alignItems: 'center', marginRight: spacing[1] },
+  incompleteBadgeText: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, color: c.bg, fontWeight: '700' },
   signOut: { paddingVertical: spacing[4], alignItems: 'center' },
   signOutText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: c.danger },
   });

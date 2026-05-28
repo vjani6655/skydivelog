@@ -53,9 +53,10 @@ export async function middleware(request: NextRequest) {
 
   // Subscription gate: gated routes require an active subscription or active trial
   if (user && isGated) {
-    // Free trial: 14 days from account creation (no DB query needed)
-    const trialEnd = new Date(user.created_at)
-    trialEnd.setDate(trialEnd.getDate() + 14)
+    // Free trial: 14 days from account creation, extendable via admin (stored in user_metadata)
+    const trialEnd = user.user_metadata?.trial_ends_at
+      ? new Date(user.user_metadata.trial_ends_at as string)
+      : new Date(new Date(user.created_at).getTime() + 14 * 86400000)
     const inTrial = Date.now() < trialEnd.getTime()
 
     if (!inTrial) {

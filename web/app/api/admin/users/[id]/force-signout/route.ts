@@ -21,8 +21,27 @@ export async function POST(
     .maybeSingle()
   if (!adminRow) return new Response('Forbidden', { status: 403 })
 
-  const { error } = await db.auth.admin.signOut(params.id, 'global')
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  // The JS client's auth.admin.signOut(jwt) expects an access token, not a user ID.
+  // Use the Supabase admin REST endpoint directly to sign out all sessions by user ID.
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const serviceKey = process.env.SUPABASE_SECRET_KEY!
+  const resp = await fetch(
+    `${supabaseUrl}/auth/v1/admin/users/${params.id}/logout?scope=global`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${serviceKey}`,
+        apikey: serviceKey,
+      },
+    },
+  )
+  if (!resp.ok) {
+    const body = await resp.json().catch(() => ({}) as Record<string, string>)
+    return NextResponse.json(
+      { error: (body as Record<string, string>).message ?? (body as Record<string, string>).error ?? 'Sign-out failed' },
+      { status: resp.status },
+    )
+  }
 
   return NextResponse.json({ ok: true })
 }

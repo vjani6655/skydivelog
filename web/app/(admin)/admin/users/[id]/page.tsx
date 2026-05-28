@@ -38,6 +38,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
     { count: flaggedCount },
     { count: totalUsers },
     { data: adminNotes },
+    { data: authUserData },
   ] = await Promise.all([
     db.from('users').select('*, home_dropzone_id').eq('id', id).single(),
     db.from('subscriptions').select('*').eq('user_id', id).order('started_at', { ascending: false }).limit(1).maybeSingle(),
@@ -53,6 +54,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
       .in('jump_id', (await db.from('jumps').select('id').eq('user_id', id).is('deleted_at', null)).data?.map(j => j.id) ?? []),
     db.from('users').select('*', { count: 'exact', head: true }).lte('created_at', (await db.from('users').select('created_at').eq('id', id).single()).data?.created_at ?? ''),
     db.from('audit_log').select('id, reason, created_at').eq('action', 'admin_note').eq('target', `user:${id}`).order('created_at', { ascending: false }),
+    db.auth.admin.getUserById(id),
   ])
 
   if (!user) notFound()
@@ -75,9 +77,11 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
     active: 'ok', trial: 'sky', overdue: 'warn', cancelled: 'muted',
   }
 
-  // Free trial detection (14 days from account creation)
-  const trialEndDate = new Date(user.created_at)
-  trialEndDate.setDate(trialEndDate.getDate() + 14)
+  // Free trial detection — respects admin-extended trial_ends_at stored in user_metadata
+  const customTrialEnd = authUserData?.user?.user_metadata?.trial_ends_at as string | undefined
+  const trialEndDate = customTrialEnd
+    ? new Date(customTrialEnd)
+    : new Date(new Date(user.created_at).getTime() + 14 * 86400000)
   const inTrial = !sub && Date.now() < trialEndDate.getTime()
   const trialExpired = !sub && Date.now() >= trialEndDate.getTime()
   const trialDaysLeft = Math.max(0, Math.ceil((trialEndDate.getTime() - Date.now()) / 86400000))
@@ -233,6 +237,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
           trialEndDateIso={trialEndDate.toISOString()}
           userCreatedAt={user.created_at}
           notes={(adminNotes ?? []) as { id: string; reason: string; created_at: string }[]}
+          customTrialEndsAt={customTrialEnd ?? null}
         />
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { stripe } from '@/lib/stripe'
 import ApplyDiscountForm from '@/components/admin/ApplyDiscountForm'
 import { notFound } from 'next/navigation'
 
@@ -15,7 +16,7 @@ export default async function ApplyDiscountPage({ params }: { params: { id: stri
       .eq('user_id', params.id)
       .order('started_at', { ascending: false })
       .limit(1)
-      .single(),
+      .maybeSingle(),
     db.from('jumps').select('*', { count: 'exact', head: true })
       .eq('user_id', params.id)
       .is('deleted_at', null),
@@ -23,12 +24,22 @@ export default async function ApplyDiscountPage({ params }: { params: { id: stri
 
   if (!user) notFound()
 
+  // Fetch current plan price from Stripe so the discount form shows the real price
+  let planPrice = 9.99
+  try {
+    const price = await stripe.prices.retrieve(process.env.STRIPE_PRICE_ID!)
+    planPrice = (price.unit_amount ?? 999) / 100
+  } catch {
+    // fall back to default if Stripe is unreachable
+  }
+
   return (
     <ApplyDiscountForm
       user={user}
       subscription={subscription ?? null}
       userId={params.id}
       jumpCount={jumpCount ?? 0}
+      planPrice={planPrice}
     />
   )
 }

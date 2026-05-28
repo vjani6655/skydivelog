@@ -1,6 +1,6 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet,
+  View, Text, TextInput, TouchableOpacity, ScrollView, FlatList, StyleSheet,
   SafeAreaView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Modal,
 } from 'react-native';
 import { router } from 'expo-router';
@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { spacing, radii } from '@/constants/tokens';
 import type { ColorSet } from '@/constants/tokens';
 import { useColors } from '@/lib/theme';
+import { COUNTRIES } from '@/constants/countries';
 
 function FieldLabel({ text }: { text: string }) {
   const colors = useColors();
@@ -39,6 +40,8 @@ export default function EditProfileScreen() {
   const [licenceNumber, setLicenceNumber] = useState('');
   const [licenceRating, setLicenceRating] = useState('');
   const [country, setCountry] = useState('');
+  const [countryModalOpen, setCountryModalOpen] = useState(false);
+  const [countrySearch, setCountrySearch] = useState('');
   const [dob, setDob] = useState<Date | null>(null);
   const [dobOpen, setDobOpen] = useState(false);
   const [dobDraft, setDobDraft] = useState<Date>(new Date());
@@ -133,7 +136,17 @@ export default function EditProfileScreen() {
           <TextInput style={styles.input} value={licenceRating} onChangeText={setLicenceRating} placeholder="e.g. AFF-I, Coach" placeholderTextColor={colors.fg3} autoCapitalize="words" />
 
           <FieldLabel text="COUNTRY" />
-          <TextInput style={styles.input} value={country} onChangeText={setCountry} placeholder="Australia" placeholderTextColor={colors.fg3} autoCapitalize="words" />
+          <TouchableOpacity
+            style={styles.iconInputRow}
+            onPress={() => { setCountrySearch(''); setCountryModalOpen(true); }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="globe-outline" size={16} color={colors.fg3} style={styles.inputIcon} />
+            <Text style={[styles.iconInputField, { color: country ? colors.fg : colors.fg3 }]}>
+              {country || 'Select country…'}
+            </Text>
+            <Ionicons name="chevron-down" size={14} color={colors.fg3} style={{ marginRight: spacing[3] }} />
+          </TouchableOpacity>
 
           <FieldLabel text="DATE OF BIRTH" />
           <TouchableOpacity
@@ -155,7 +168,19 @@ export default function EditProfileScreen() {
                       <Text style={styles.dateModalCancelText}>Cancel</Text>
                     </TouchableOpacity>
                     <Text style={styles.dateModalTitle}>Date of Birth</Text>
-                    <TouchableOpacity onPress={() => { setDob(dobDraft); setDobOpen(false); }} style={styles.dateModalToolbarBtn}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        const cutoff = new Date();
+                        cutoff.setFullYear(cutoff.getFullYear() - 10);
+                        if (dobDraft >= cutoff) {
+                          Alert.alert('Invalid date', 'Date of birth must be more than 10 years ago.');
+                          return;
+                        }
+                        setDob(dobDraft);
+                        setDobOpen(false);
+                      }}
+                      style={styles.dateModalToolbarBtn}
+                    >
                       <Text style={styles.dateModalDoneText}>Done</Text>
                     </TouchableOpacity>
                   </View>
@@ -163,7 +188,7 @@ export default function EditProfileScreen() {
                     value={dobDraft}
                     mode="date"
                     display="spinner"
-                    maximumDate={new Date()}
+                    maximumDate={(() => { const d = new Date(); d.setFullYear(d.getFullYear() - 10); return d; })()}
                     onChange={(_, d) => { if (d) setDobDraft(d); }}
                     textColor={colors.fg}
                     themeVariant="dark"
@@ -172,6 +197,54 @@ export default function EditProfileScreen() {
                 </View>
               </TouchableOpacity>
             </TouchableOpacity>
+          </Modal>
+
+          {/* Country picker modal */}
+          <Modal transparent animationType="slide" visible={countryModalOpen} onRequestClose={() => setCountryModalOpen(false)}>
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+            <View style={styles.dateModalOverlay}>
+              <View style={[styles.dateModalSheet, { maxHeight: '75%' }]}>
+                <View style={styles.dateModalToolbar}>
+                  <TouchableOpacity onPress={() => setCountryModalOpen(false)} style={styles.dateModalToolbarBtn}>
+                    <Text style={styles.dateModalCancelText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.dateModalTitle}>Country</Text>
+                  <View style={{ width: 60 }} />
+                </View>
+                <View style={{ paddingHorizontal: spacing[4], paddingVertical: spacing[2] }}>
+                  <View style={[styles.iconInputRow, { marginBottom: 0 }]}>
+                    <Ionicons name="search" size={15} color={colors.fg3} style={styles.inputIcon} />
+                    <TextInput
+                      style={[styles.iconInputField, { paddingVertical: spacing[2] }]}
+                      value={countrySearch}
+                      onChangeText={setCountrySearch}
+                      placeholder="Search…"
+                      placeholderTextColor={colors.fg3}
+                      autoCorrect={false}
+                      autoCapitalize="words"
+                    />
+                  </View>
+                </View>
+                <FlatList
+                  data={COUNTRIES.filter(c => c.toLowerCase().includes(countrySearch.toLowerCase()))}
+                  keyExtractor={item => item}
+                  keyboardShouldPersistTaps="handled"
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={{ paddingHorizontal: spacing[5], paddingVertical: spacing[3.5], borderBottomWidth: 1, borderBottomColor: colors.border }}
+                      onPress={() => { setCountry(item); setCountryModalOpen(false); }}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={{ fontFamily: 'InterTight-Regular', fontSize: 15, color: item === country ? colors.sky : colors.fg }}>
+                        {item}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                  style={{ flexGrow: 0 }}
+                />
+              </View>
+            </View>
+            </KeyboardAvoidingView>
           </Modal>
 
           <FieldLabel text="HOME DROPZONE" />

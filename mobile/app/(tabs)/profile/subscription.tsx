@@ -52,19 +52,24 @@ export default function SubscriptionScreen() {
   const [subscribing, setSubscribing] = useState(false);
   const [sub, setSub] = useState<{ status: string; renews_at: string | null } | null>(null);
   const [userCreatedAt, setUserCreatedAt] = useState<string | null>(null);
+  const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [invoicesLoading, setInvoicesLoading] = useState(false);
 
   useFocusEffect(useCallback(() => {
     (async () => {
       setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { setLoading(false); return; }
-      setUserCreatedAt(session.user.created_at);
+      const [{ data: { user } }, { data: { session } }] = await Promise.all([
+        supabase.auth.getUser(),
+        supabase.auth.getSession(),
+      ]);
+      if (!user) { setLoading(false); return; }
+      setUserCreatedAt(user.created_at);
+      setTrialEndsAt((user.user_metadata?.trial_ends_at as string) ?? null);
       const { data } = await supabase
         .from('subscriptions')
         .select('status, renews_at')
-        .eq('user_id', session.user.id)
+        .eq('user_id', user.id)
         .order('started_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -76,7 +81,7 @@ export default function SubscriptionScreen() {
         setInvoicesLoading(true);
         try {
           const res = await fetch(`${WEB_URL}/api/stripe/invoices`, {
-            headers: { Authorization: `Bearer ${session.access_token}` },
+            headers: { Authorization: `Bearer ${session?.access_token ?? ''}` },
           });
           if (res.ok) {
             const json = await res.json();
@@ -133,9 +138,9 @@ export default function SubscriptionScreen() {
     );
   }
 
-  const trialEnd = userCreatedAt
-    ? new Date(new Date(userCreatedAt).getTime() + 14 * 86400000)
-    : null;
+  const trialEnd = trialEndsAt
+    ? new Date(trialEndsAt)
+    : userCreatedAt ? new Date(new Date(userCreatedAt).getTime() + 14 * 86400000) : null;
   const inTrial = !sub && !!trialEnd && Date.now() < trialEnd.getTime();
   const trialExpired = !sub && !!trialEnd && Date.now() >= trialEnd.getTime();
   const trialDaysLeft = trialEnd

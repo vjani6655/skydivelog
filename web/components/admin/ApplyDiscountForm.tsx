@@ -29,6 +29,7 @@ type Props = {
   subscription: SubRow | null
   userId: string
   jumpCount: number
+  planPrice: number
 }
 
 type DiscountKind = 'percent' | 'flat' | 'months' | 'lifetime'
@@ -46,7 +47,7 @@ function initials(name: string) {
   return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 }
 
-export default function ApplyDiscountForm({ user, subscription, userId, jumpCount }: Props) {
+export default function ApplyDiscountForm({ user, subscription, userId, jumpCount, planPrice }: Props) {
   const router = useRouter()
   const [kind,     setKind]     = useState<DiscountKind>('percent')
   const [pct,      setPct]      = useState(50)
@@ -56,7 +57,7 @@ export default function ApplyDiscountForm({ user, subscription, userId, jumpCoun
   const [notify,   setNotify]   = useState(true)
   const [applying, setApplying] = useState(false)
 
-  const currentPrice = Number(subscription?.price_at_signup ?? 5)
+  const currentPrice = Number(subscription?.price_at_signup ?? planPrice)
   const discountedPrice =
     kind === 'percent'  ? (currentPrice * (1 - pct / 100)).toFixed(2) :
     kind === 'flat'     ? Math.max(0, currentPrice - pct).toFixed(2) :

@@ -2,6 +2,16 @@
 
 import { useState, useTransition } from "react"
 import { updateProfile } from "./actions"
+import { COUNTRIES } from "@/lib/countries"
+
+// DOB must be at least 10 years in the past
+function dobTooRecent(iso: string | null): boolean {
+  if (!iso) return false
+  const dob = new Date(iso)
+  const cutoff = new Date()
+  cutoff.setFullYear(cutoff.getFullYear() - 10)
+  return dob > cutoff
+}
 
 interface ProfileData {
   full_name: string
@@ -29,6 +39,10 @@ export default function SettingsProfileForm({ profile, userId }: { profile: Prof
     e.preventDefault()
     setError(null)
     setSaved(false)
+    if (dobTooRecent(data.date_of_birth)) {
+      setError('Date of birth must be more than 10 years ago.')
+      return
+    }
     startTransition(async () => {
       const result = await updateProfile(userId, data)
       if (result?.error) {
@@ -103,13 +117,16 @@ export default function SettingsProfileForm({ profile, userId }: { profile: Prof
           </FieldGroup>
 
           <FieldGroup label="Country">
-            <input
-              type="text"
+            <select
               value={data.country ?? ""}
               onChange={set("country")}
-              className={inputCls}
-              placeholder="Australia"
-            />
+              className={`${inputCls} cursor-pointer`}
+            >
+              <option value="">Select country…</option>
+              {COUNTRIES.map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
           </FieldGroup>
 
           <FieldGroup label="Date of birth">
@@ -117,7 +134,8 @@ export default function SettingsProfileForm({ profile, userId }: { profile: Prof
               type="date"
               value={data.date_of_birth ?? ""}
               onChange={set("date_of_birth")}
-              className={inputCls}
+              max={(() => { const d = new Date(); d.setFullYear(d.getFullYear() - 10); return d.toISOString().split('T')[0] })()}
+              className={`${inputCls}${dobTooRecent(data.date_of_birth) ? ' border-danger' : ''}`}
             />
           </FieldGroup>
 

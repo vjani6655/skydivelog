@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ChevronRight } from 'lucide-react'
 import { AdminCard, Badge, Divider } from '@/components/admin/ui'
-import { createClient } from '@/lib/supabase/client'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -38,6 +37,7 @@ export type UserActionsProps = {
   trialEndDateIso: string
   userCreatedAt: string
   notes: NoteItem[]
+  customTrialEndsAt: string | null
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -62,7 +62,7 @@ const STATUS_BADGE: Record<string, 'ok' | 'sky' | 'warn' | 'muted' | 'danger'> =
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function UserActionsClient({
-  userId, userEmail, sub, inTrial, trialDaysLeft, trialEndDateIso, userCreatedAt, notes: initNotes,
+  userId, userEmail, sub, inTrial, trialDaysLeft, trialEndDateIso, userCreatedAt, notes: initNotes, customTrialEndsAt,
 }: UserActionsProps) {
   const router = useRouter()
 
@@ -72,6 +72,13 @@ export default function UserActionsClient({
   const [errors, setErrors]     = useState<Partial<Record<ActionKey, string>>>({})
   const [confirm, setConfirm]   = useState<ActionKey | null>(null)
   const [deleteEmail, setDeleteEmail] = useState('')
+
+  // Extend trial state
+  const [extendDays, setExtendDays]       = useState(7)
+  const [extendingTrial, setExtendingTrial] = useState(false)
+  const [extendTrialError, setExtendTrialError] = useState<string | null>(null)
+  const [extendedTrialEnd, setExtendedTrialEnd] = useState<string | null>(null)
+  const [showExtendTrial, setShowExtendTrial] = useState(false)
 
   // Admin notes state
   const [notes, setNotes]       = useState<NoteItem[]>(initNotes)
@@ -113,28 +120,15 @@ export default function UserActionsClient({
     setSavingNote(true)
     setNoteError(null)
     try {
-      const sb = createClient()
-      const { data: { user } } = await sb.auth.getUser()
-      if (!user) throw new Error('Not authenticated')
-
-      const { data: adminRow, error: adminErr } = await sb
-        .from('admins')
-        .select('id')
-        .eq('email', user.email!)
-        .single()
-      if (adminErr || !adminRow) throw new Error('Admin record not found')
-
-      const { data: note, error: insertErr } = await sb
-        .from('audit_log')
-        .insert({
-          admin_id: adminRow.id,
-          action: 'admin_note',
-          target: `user:${userId}`,
-          reason: noteText.trim(),
-        })
-        .select('id, reason, created_at')
-        .single()
-      if (insertErr || !note) throw insertErr ?? new Error('Insert failed')
+      const res = await fetch('/api/admin/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, note: noteText.trim() }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error ?? 'Failed to save note')
+      const note = data as NoteItem
+      if (!note?.id) throw new Error('Insert failed')
 
       setNotes(prev => [note as NoteItem, ...prev])
       setNoteText('')
@@ -143,6 +137,29 @@ export default function UserActionsClient({
       setNoteError(e instanceof Error ? e.message : 'Failed to save note')
     } finally {
       setSavingNote(false)
+    }
+  }
+
+  // ── Extend trial ────────────────────────────────────────────────────────────
+
+  async function handleExtendTrial() {
+    if (extendDays < 1) return
+    setExtendingTrial(true)
+    setExtendTrialError(null)
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/extend-trial`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ days: extendDays }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error ?? 'Failed')
+      setExtendedTrialEnd(data.trial_ends_at as string)
+      setShowExtendTrial(false)
+    } catch (e) {
+      setExtendTrialError(e instanceof Error ? e.message : 'Failed')
+    } finally {
+      setExtendingTrial(false)
     }
   }
 
@@ -225,17 +242,48 @@ export default function UserActionsClient({
               <Badge kind="sky">FREE TRIAL</Badge>
               <span className="font-mono text-lg font-semibold">{trialDaysLeft}d left</span>
             </div>
-            <div className="font-mono text-[10px] text-fg-3 mb-3">14-DAY TRIAL · NO CARD ON FILE</div>
+            <div className="font-mono text-[10px] text-fg-3 mb-3">
+              {customTrialEndsAt ? 'EXTENDED TRIAL' : '14-DAY TRIAL'} · NO CARD ON FILE
+            </div>
             <Divider />
             {([
               ['Trial started', fmtDateShort(userCreatedAt)],
-              ['Trial ends',    fmtDateShort(trialEndDateIso)],
+              ['Trial ends',    fmtDateShort(extendedTrialEnd ?? trialEndDateIso)],
             ] as [string, string][]).map(([k, v]) => (
               <div key={k} className="flex justify-between py-1.5 text-xs">
                 <span className="text-fg-2">{k}</span>
                 <span className="font-mono text-fg">{v}</span>
               </div>
             ))}
+            {/* Extend trial */}
+            {extendTrialError && (
+              <div className="font-mono text-[10px] text-danger mt-1">{extendTrialError}</div>
+            )}
+            {showExtendTrial ? (
+              <div className="mt-3 flex items-center gap-2">
+                <input
+                  type="number" min={1} max={365} value={extendDays}
+                  onChange={e => setExtendDays(Number(e.target.value))}
+                  className="w-16 px-2 py-1 bg-surface border border-border rounded-sm font-mono text-xs text-fg outline-none focus:border-sky/60 text-center"
+                />
+                <span className="text-xs text-fg-3">days</span>
+                <button
+                  onClick={handleExtendTrial}
+                  disabled={extendingTrial}
+                  className="flex-1 py-1 bg-sky/10 border border-sky/40 rounded-sm text-xs text-sky font-medium disabled:opacity-50 hover:bg-sky/20 transition-colors"
+                >
+                  {extendingTrial ? 'Extending…' : 'Extend'}
+                </button>
+                <button onClick={() => setShowExtendTrial(false)} className="px-2 py-1 bg-surface-2 border border-border rounded-sm text-xs text-fg-3 hover:text-fg transition-colors">✕</button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowExtendTrial(true)}
+                className="mt-3 w-full py-1.5 bg-surface-2 border border-border rounded-sm text-xs text-fg-2 hover:text-fg transition-colors"
+              >
+                Extend trial…
+              </button>
+            )}
           </>
         ) : (
           <>
@@ -244,13 +292,44 @@ export default function UserActionsClient({
             <Divider />
             {([
               ['Trial started', fmtDateShort(userCreatedAt)],
-              ['Trial ended',   fmtDateShort(trialEndDateIso)],
+              ['Trial ended',   fmtDateShort(extendedTrialEnd ?? trialEndDateIso)],
             ] as [string, string][]).map(([k, v]) => (
               <div key={k} className="flex justify-between py-1.5 text-xs">
                 <span className="text-fg-2">{k}</span>
                 <span className="font-mono text-fg">{v}</span>
               </div>
             ))}
+            {/* Re-open trial */}
+            {extendTrialError && (
+              <div className="font-mono text-[10px] text-danger mt-1">{extendTrialError}</div>
+            )}
+            {extendedTrialEnd ? (
+              <div className="mt-3 text-xs text-ok font-mono">✓ Trial extended to {fmtDateShort(extendedTrialEnd)}</div>
+            ) : showExtendTrial ? (
+              <div className="mt-3 flex items-center gap-2">
+                <input
+                  type="number" min={1} max={365} value={extendDays}
+                  onChange={e => setExtendDays(Number(e.target.value))}
+                  className="w-16 px-2 py-1 bg-surface border border-border rounded-sm font-mono text-xs text-fg outline-none focus:border-sky/60 text-center"
+                />
+                <span className="text-xs text-fg-3">days</span>
+                <button
+                  onClick={handleExtendTrial}
+                  disabled={extendingTrial}
+                  className="flex-1 py-1 bg-sky/10 border border-sky/40 rounded-sm text-xs text-sky font-medium disabled:opacity-50 hover:bg-sky/20 transition-colors"
+                >
+                  {extendingTrial ? 'Extending…' : 'Extend'}
+                </button>
+                <button onClick={() => setShowExtendTrial(false)} className="px-2 py-1 bg-surface-2 border border-border rounded-sm text-xs text-fg-3 hover:text-fg transition-colors">✕</button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowExtendTrial(true)}
+                className="mt-3 w-full py-1.5 bg-surface-2 border border-border rounded-sm text-xs text-fg-2 hover:text-fg transition-colors"
+              >
+                Extend / reopen trial…
+              </button>
+            )}
           </>
         )}
       </AdminCard>

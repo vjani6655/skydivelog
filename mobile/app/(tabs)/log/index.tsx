@@ -61,13 +61,13 @@ export default function LogScreen() {
   const [filterVisible, setFilterVisible] = useState(false);
   const [filter, setFilter] = useState<FilterState>(DEFAULT_FILTER);
   const [userCreatedAt, setUserCreatedAt] = useState<string | null>(null);
+  const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
   const [subActive, setSubActive] = useState(false);
 
   // ── data fetch ────────────────────────────────────────────────────────────
   const fetchAll = async () => {
     try {
-    const { data: sessionData } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
-    const user = sessionData?.session?.user;
+    const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } } as any));
     if (!user) { setLoading(false); return; }
 
     // Flush any locally-queued jumps first
@@ -92,6 +92,7 @@ export default function LogScreen() {
     ]);
 
     setUserCreatedAt(user.created_at);
+    setTrialEndsAt((user.user_metadata?.trial_ends_at as string) ?? null);
     setSubActive(subData?.status === 'active' || subData?.status === 'overdue');
 
     if (userData?.display_layout_jump_list) {
@@ -131,9 +132,9 @@ export default function LogScreen() {
   useFocusEffect(useCallback(() => { fetchAll(); }, []));
 
   // ── subscription gate ─────────────────────────────────────────────────────
-  const trialEnd = userCreatedAt
-    ? new Date(new Date(userCreatedAt).getTime() + 14 * 86400000)
-    : null;
+  const trialEnd = trialEndsAt
+    ? new Date(trialEndsAt)
+    : userCreatedAt ? new Date(new Date(userCreatedAt).getTime() + 14 * 86400000) : null;
   const inTrial = !subActive && !!trialEnd && Date.now() < trialEnd.getTime();
   const trialExpired = !subActive && !!trialEnd && Date.now() >= trialEnd.getTime();
 
