@@ -1,37 +1,21 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, SafeAreaView,
-  TouchableOpacity, ActivityIndicator,
+  TouchableOpacity, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import Toggle from '@/components/ui/Toggle';
 import { spacing, radii } from '@/constants/tokens';
 import type { ColorSet } from '@/constants/tokens';
 import { useColors } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
 import {
-  loadNotifPrefs,
-  saveNotifPref,
-  registerPushToken,
-  DEFAULT_PREFS,
   fetchNotifications,
   markNotificationRead,
   markAllNotificationsRead,
-  type NotifPrefs,
   type NotificationItem,
 } from '@/lib/notifications';
 
-const PREFS = [
-  { key: 'jump_logged' as const,    label: 'Jump logged confirmation',     section: 'ACTIVITY' },
-  { key: 'weekly_recap' as const,   label: 'Weekly recap',                 section: 'ACTIVITY' },
-  { key: 'cert_expiry' as const,    label: 'Certificate expiry reminders', section: 'REMINDERS' },
-  { key: 'repack_due' as const,     label: 'Repack due alerts',            section: 'REMINDERS' },
-  { key: 'currency_alert' as const, label: 'Currency warnings',            section: 'REMINDERS' },
-  { key: 'announcements' as const,  label: 'App announcements',            section: 'OTHER' },
-] as const;
-
-type PrefKey = typeof PREFS[number]['key'];
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -49,40 +33,38 @@ export default function NotificationsScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
-  const [prefs, setPrefs] = useState<NotifPrefs>(DEFAULT_PREFS);
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [markingAll, setMarkingAll] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  useFocusEffect(useCallback(() => {
-    (async () => {
-      setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      const user = session?.user;
-      if (!user) { setLoading(false); return; }
-
-      setUserId(user.id);
-
-      const [loaded, notifs] = await Promise.all([
-        loadNotifPrefs(supabase, user.id),
-        fetchNotifications(supabase, user.id),
-        registerPushToken(supabase, user.id),
-      ]);
-      if (loaded) setPrefs(loaded);
+  const load = useCallback(async (showFullLoader = false) => {
+    if (showFullLoader) setLoading(true);
+    setFetchError(null);
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
+    if (!user) { setLoading(false); return; }
+    setUserId(user.id);
+    try {
+      const notifs = await fetchNotifications(supabase, user.id);
       setNotifications(notifs);
-      setLoading(false);
-    })();
-  }, []));
+    } catch (e: any) {
+      setFetchError(e.message ?? 'Failed to load notifications');
+    }
+    setLoading(false);
+  }, []);
 
-  const toggle = async (key: PrefKey) => {
-    if (!userId) return;
-    const newVal = !prefs[key];
-    setPrefs(p => ({ ...p, [key]: newVal }));
-    await saveNotifPref(supabase, userId, key, newVal);
-  };
+  useFocusEffect(useCallback(() => { load(true); }, [load]));
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load(false);
+    setRefreshing(false);
+  }, [load]);
 
   const handleNotifPress = async (n: NotificationItem) => {
     if (!n.read) {
@@ -103,8 +85,6 @@ export default function NotificationsScreen() {
     setMarkingAll(false);
   };
 
-  const sections = [...new Set(PREFS.map(p => p.section))];
-
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.header}>
@@ -121,12 +101,21 @@ export default function NotificationsScreen() {
         )}
       </View>
 
-      <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.body}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.sky} />}
+      >
         {loading ? (
           <ActivityIndicator color={colors.sky} style={{ marginTop: spacing[8] }} />
+        ) : fetchError ? (
+          <View style={styles.emptyCard}>
+            <Ionicons name="alert-circle-outline" size={28} color={colors.danger} />
+            <Text style={styles.errorText}>Could not load notifications</Text>
+            <Text style={styles.errorDetail}>{fetchError}</Text>
+          </View>
         ) : (
           <>
-            {/* ── Inbox ── */}
             <View style={styles.sectionRow}>
               <Text style={styles.sectionTitle}>INBOX</Text>
               {unreadCount > 0 && (
@@ -167,25 +156,6 @@ export default function NotificationsScreen() {
               </View>
             )}
 
-            {/* ── Preferences ── */}
-            <Text style={[styles.sectionTitle, { marginTop: spacing[6] }]}>NOTIFICATION PREFERENCES</Text>
-
-            {sections.map(section => {
-              const items = PREFS.filter(p => p.section === section);
-              return (
-                <View key={section}>
-                  <Text style={styles.subSectionTitle}>{section}</Text>
-                  <View style={styles.card}>
-                    {items.map(({ key, label }, i) => (
-                      <View key={key} style={[styles.prefRow, i === items.length - 1 && styles.rowLast]}>
-                        <Text style={styles.prefLabel}>{label}</Text>
-                        <Toggle on={prefs[key]} onChange={() => toggle(key)} />
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              );
-            })}
           </>
         )}
       </ScrollView>
@@ -204,7 +174,6 @@ function makeStyles(c: ColorSet) {
     body:              { padding: spacing[5], paddingBottom: spacing[12], gap: spacing[2] },
     sectionRow:        { flexDirection: 'row', alignItems: 'center', gap: spacing[2], marginBottom: spacing[2] },
     sectionTitle:      { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: c.fg3, textTransform: 'uppercase' },
-    subSectionTitle:   { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: c.fg4, textTransform: 'uppercase', marginTop: spacing[3], marginBottom: spacing[2] },
     unreadBadge:       { backgroundColor: c.sky, borderRadius: radii.pill, minWidth: 18, height: 18, paddingHorizontal: spacing[1], alignItems: 'center', justifyContent: 'center' },
     unreadBadgeText:   { fontFamily: 'InterTight-SemiBold', fontSize: 11, color: '#fff' },
     card:              { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.lg, overflow: 'hidden' },
@@ -220,104 +189,8 @@ function makeStyles(c: ColorSet) {
     notifTitleUnread:  { fontFamily: 'InterTight-SemiBold', color: c.fg },
     notifBody:         { fontFamily: 'InterTight-Regular', fontSize: 13, color: c.fg3, lineHeight: 18 },
     notifTime:         { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, color: c.fg4 },
-    prefRow:           { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing[4], paddingVertical: spacing[3.5], borderBottomWidth: 1, borderBottomColor: c.border },
-    prefLabel:         { fontFamily: 'InterTight-Medium', fontSize: 15, color: c.fg, flex: 1 },
+    errorText:         { fontFamily: 'InterTight-SemiBold', fontSize: 14, color: c.danger },
+    errorDetail:       { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, color: c.fg4, textAlign: 'center' },
   });
 }
 
-
-const PREFS = [
-  { key: 'jump_logged' as const,    label: 'Jump logged confirmation',    section: 'ACTIVITY' },
-  { key: 'weekly_recap' as const,   label: 'Weekly recap',                section: 'ACTIVITY' },
-  { key: 'cert_expiry' as const,    label: 'Certificate expiry reminders', section: 'REMINDERS' },
-  { key: 'repack_due' as const,     label: 'Repack due alerts',            section: 'REMINDERS' },
-  { key: 'currency_alert' as const, label: 'Currency warnings',            section: 'REMINDERS' },
-  { key: 'announcements' as const,  label: 'App announcements',            section: 'OTHER' },
-] as const;
-
-type PrefKey = typeof PREFS[number]['key'];
-
-export default function NotificationsScreen() {
-  const colors = useColors();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
-  const [prefs, setPrefs] = useState<NotifPrefs>(DEFAULT_PREFS);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const user = session?.user;
-      if (!user) { setLoading(false); return; }
-
-      setUserId(user.id);
-
-      // Load prefs and (re)register token in parallel
-      const [loaded] = await Promise.all([
-        loadNotifPrefs(supabase, user.id),
-        registerPushToken(supabase, user.id),
-      ]);
-      if (loaded) setPrefs(loaded);
-      setLoading(false);
-    })();
-  }, []);
-
-  const toggle = async (key: PrefKey) => {
-    if (!userId) return;
-    const newVal = !prefs[key];
-    setPrefs(p => ({ ...p, [key]: newVal }));
-    await saveNotifPref(supabase, userId, key, newVal);
-  };
-
-  const sections = [...new Set(PREFS.map(p => p.section))];
-
-  return (
-    <SafeAreaView style={styles.screen}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
-          <Ionicons name="chevron-back" size={22} color={colors.fg} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Notifications</Text>
-        <View style={{ width: 36 }} />
-      </View>
-
-      <ScrollView contentContainerStyle={styles.body}>
-        {loading ? (
-          <ActivityIndicator color={colors.sky} style={{ marginTop: spacing[8] }} />
-        ) : (
-          sections.map(section => {
-            const items = PREFS.filter(p => p.section === section);
-            return (
-              <View key={section}>
-                <Text style={styles.sectionTitle}>{section}</Text>
-                <View style={styles.card}>
-                  {items.map(({ key, label }, i) => (
-                    <View key={key} style={[styles.row, i === items.length - 1 && styles.rowLast]}>
-                      <Text style={styles.rowLabel}>{label}</Text>
-                      <Toggle on={prefs[key]} onChange={() => toggle(key)} />
-                    </View>
-                  ))}
-                </View>
-              </View>
-            );
-          })
-        )}
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
-
-function makeStyles(c: ColorSet) {
-  return StyleSheet.create({
-  screen:      { flex: 1, backgroundColor: c.bg },
-  header:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing[5], paddingVertical: spacing[3], borderBottomWidth: 1, borderBottomColor: c.border },
-  backBtn:     { width: 36, height: 36, justifyContent: 'center' },
-  headerTitle: { flex: 1, textAlign: 'center', fontFamily: 'InterTight-SemiBold', fontSize: 17, color: c.fg },
-  body:        { padding: spacing[5], paddingBottom: spacing[12] },
-  sectionTitle:{ fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: c.fg3, marginBottom: spacing[2], marginTop: spacing[4] },
-  card:        { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.lg, overflow: 'hidden' },
-  row:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing[4], paddingVertical: spacing[3.5], borderBottomWidth: 1, borderBottomColor: c.border },
-  rowLast:     { borderBottomWidth: 0 },
-  rowLabel:    { fontFamily: 'InterTight-Medium', fontSize: 15, color: c.fg, flex: 1 },
-  });
-}

@@ -162,12 +162,13 @@ export async function fetchNotifications(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<NotificationItem[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('notifications')
     .select('id, title, body, data, read, created_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(50);
+  if (error) throw new Error(error.message);
   return (data ?? []) as NotificationItem[];
 }
 

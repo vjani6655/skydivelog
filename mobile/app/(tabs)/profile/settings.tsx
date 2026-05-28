@@ -11,6 +11,13 @@ import { spacing, radii } from '@/constants/tokens';
 import type { ColorSet } from '@/constants/tokens';
 import { useColors } from '@/lib/theme';
 import { usePrefs, type AltUnit, type DateFmt, type ThemePref } from '@/lib/prefsContext';
+import {
+  loadNotifPrefs,
+  saveNotifPref,
+  registerPushToken,
+  DEFAULT_PREFS,
+  type NotifPrefs,
+} from '@/lib/notifications';
 
 const LAYOUT_JUMP_LIST = ['Timeline', 'Compact', 'Cards'];
 const LAYOUT_JUMP_DETAIL = ['Standard', 'Cockpit', 'Photo-led'];
@@ -94,11 +101,10 @@ export default function SettingsScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { prefs, updatePrefs } = usePrefs();
-  const [currencyAlerts, setCurrencyAlerts] = useState(true);
+  const [notifPrefs, setNotifPrefs] = useState<NotifPrefs>(DEFAULT_PREFS);
+  const [notifUserId, setNotifUserId] = useState<string | null>(null);
   const [currencyMonths, setCurrencyMonths] = useState(1);
-  const [repackReminders, setRepackReminders] = useState(true);
   const [repackDays, setRepackDays] = useState(30);
-  const [certExpiry, setCertExpiry] = useState(true);
   const [certDays, setCertDays] = useState(30);
   const [layoutList, setLayoutList] = useState('Timeline');
   const [layoutDetail, setLayoutDetail] = useState('Standard');
@@ -112,7 +118,12 @@ export default function SettingsScreen() {
       const { data: { session } } = await supabase.auth.getSession();
       const user = session?.user;
       if (!user) return;
-      const { data } = await supabase.from('users').select('display_layout_jump_list, display_layout_jump_detail, display_layout_stats_overview, currency_alert_months, repack_reminder_days, cert_expiry_warning_days').eq('id', user.id).single();
+      setNotifUserId(user.id);
+      const [{ data }, loadedPrefs] = await Promise.all([
+        supabase.from('users').select('display_layout_jump_list, display_layout_jump_detail, display_layout_stats_overview, currency_alert_months, repack_reminder_days, cert_expiry_warning_days').eq('id', user.id).single(),
+        loadNotifPrefs(supabase, user.id),
+        registerPushToken(supabase, user.id),
+      ]);
       if (data) {
         if (data.display_layout_jump_list) setLayoutList(data.display_layout_jump_list);
         if (data.display_layout_jump_detail) setLayoutDetail(data.display_layout_jump_detail);
@@ -121,9 +132,16 @@ export default function SettingsScreen() {
         if (data.repack_reminder_days != null) setRepackDays(data.repack_reminder_days);
         if (data.cert_expiry_warning_days != null) setCertDays(data.cert_expiry_warning_days);
       }
+      if (loadedPrefs) setNotifPrefs(loadedPrefs);
       setLoaded(true);
     })();
   }, []);
+
+  const togglePref = async (key: keyof NotifPrefs, value: boolean) => {
+    if (!notifUserId) return;
+    setNotifPrefs(p => ({ ...p, [key]: value }));
+    await saveNotifPref(supabase, notifUserId, key, value);
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -166,7 +184,13 @@ export default function SettingsScreen() {
       <ScrollView style={styles.flex} contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
         <SectionTitle text="NOTIFICATIONS" />
         <View style={styles.card}>
-          <ToggleRow label="Currency alerts" value={currencyAlerts} onChange={setCurrencyAlerts} />
+          <ToggleRow label="Jump logged confirmation" value={notifPrefs.jump_logged} onChange={v => togglePref('jump_logged', v)} />
+          <View style={styles.rowDivider} />
+          <ToggleRow label="Weekly recap" value={notifPrefs.weekly_recap} onChange={v => togglePref('weekly_recap', v)} />
+          <View style={styles.rowDivider} />
+          <ToggleRow label="App announcements" value={notifPrefs.announcements} onChange={v => togglePref('announcements', v)} />
+          <View style={styles.rowDivider} />
+          <ToggleRow label="Currency alerts" value={notifPrefs.currency_alert} onChange={v => togglePref('currency_alert', v)} />
           <View style={styles.threshRow}>
             <Text style={styles.threshLabel}>ALERT WINDOW</Text>
             <View style={styles.threshChips}>
@@ -178,7 +202,7 @@ export default function SettingsScreen() {
             </View>
           </View>
           <View style={styles.rowDivider} />
-          <ToggleRow label="Repack reminders" value={repackReminders} onChange={setRepackReminders} />
+          <ToggleRow label="Repack reminders" value={notifPrefs.repack_due} onChange={v => togglePref('repack_due', v)} />
           <View style={styles.threshRow}>
             <Text style={styles.threshLabel}>DAYS BEFORE</Text>
             <View style={styles.threshChips}>
@@ -190,7 +214,7 @@ export default function SettingsScreen() {
             </View>
           </View>
           <View style={styles.rowDivider} />
-          <ToggleRow label="Cert expiry warnings" value={certExpiry} onChange={setCertExpiry} />
+          <ToggleRow label="Cert expiry warnings" value={notifPrefs.cert_expiry} onChange={v => togglePref('cert_expiry', v)} />
           <View style={styles.threshRow}>
             <Text style={styles.threshLabel}>DAYS BEFORE</Text>
             <View style={styles.threshChips}>

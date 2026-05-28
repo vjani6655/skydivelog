@@ -1,6 +1,6 @@
 import { useCallback, useState, useMemo } from 'react';
 import {
-  View, Text, TouchableOpacity, ScrollView, StyleSheet, SafeAreaView, ActivityIndicator,
+  View, Text, TouchableOpacity, ScrollView, StyleSheet, SafeAreaView, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
@@ -56,37 +56,46 @@ export default function ProfileScreen() {
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
   const [sub, setSub] = useState<{ status: string; renews_at: string | null } | null>(null);
   const [unreadNotifs, setUnreadNotifs] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setLoading(false); return; }
+    setEmail(user.email ?? null);
+
+    const [profileRes, jumpsRes, subRes, unreadCount] = await Promise.all([
+      supabase.from('users').select('full_name, licence_number, licence_rating, country, date_of_birth, home_dropzone_id, emergency_contact_name, emergency_contact_relationship, emergency_contact_phone').eq('id', user.id).single(),
+      supabase.from('jumps').select('freefall_seconds, dropzone_id, jump_number').eq('user_id', user.id).is('deleted_at', null),
+      supabase.from('subscriptions').select('status, renews_at').eq('user_id', user.id).order('started_at', { ascending: false }).limit(1).maybeSingle(),
+      getUnreadCount(supabase, user.id).catch(() => 0),
+    ]);
+
+    setUnreadNotifs(unreadCount as number);
+    setUserCreatedAt(user.created_at);
+    setTrialEndsAt((user.user_metadata?.trial_ends_at as string) ?? null);
+    setSub(subRes.data ?? null);
+
+    setProfile(profileRes.data ?? null);
+    const jumps = jumpsRes.data ?? [];
+    const totalFF = jumps.reduce((s, j) => s + (j.freefall_seconds ?? 0), 0);
+    const dzCount = new Set(jumps.map(j => j.dropzone_id).filter(Boolean)).size;
+    // Use the highest jump number as the career total — correctly reflects
+    // users who started logging mid-career (e.g. started at jump #250)
+    const maxJumpNum = jumps.reduce((mx, j) => Math.max(mx, (j as any).jump_number ?? 0), 0);
+    setStats({ jumps: maxJumpNum || jumps.length, ff: totalFF, dzs: dzCount });
+    setLoading(false);
+  }, []);
 
   useFocusEffect(useCallback(() => {
-    (async () => {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setLoading(false); return; }
-      setEmail(user.email ?? null);
+    setLoading(true);
+    load();
+  }, [load]));
 
-      const [profileRes, jumpsRes, subRes, unreadCount] = await Promise.all([
-        supabase.from('users').select('full_name, licence_number, licence_rating, country, date_of_birth, home_dropzone_id, emergency_contact_name, emergency_contact_relationship, emergency_contact_phone').eq('id', user.id).single(),
-        supabase.from('jumps').select('freefall_seconds, dropzone_id, jump_number').eq('user_id', user.id).is('deleted_at', null),
-        supabase.from('subscriptions').select('status, renews_at').eq('user_id', user.id).order('started_at', { ascending: false }).limit(1).maybeSingle(),
-        getUnreadCount(supabase, user.id).catch(() => 0),
-      ]);
-
-      setUnreadNotifs(unreadCount as number);
-      setUserCreatedAt(user.created_at);
-      setTrialEndsAt((user.user_metadata?.trial_ends_at as string) ?? null);
-      setSub(subRes.data ?? null);
-
-      setProfile(profileRes.data ?? null);
-      const jumps = jumpsRes.data ?? [];
-      const totalFF = jumps.reduce((s, j) => s + (j.freefall_seconds ?? 0), 0);
-      const dzCount = new Set(jumps.map(j => j.dropzone_id).filter(Boolean)).size;
-      // Use the highest jump number as the career total — correctly reflects
-      // users who started logging mid-career (e.g. started at jump #250)
-      const maxJumpNum = jumps.reduce((mx, j) => Math.max(mx, (j as any).jump_number ?? 0), 0);
-      setStats({ jumps: maxJumpNum || jumps.length, ff: totalFF, dzs: dzCount });
-      setLoading(false);
-    })();
-  }, []));
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }, [load]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -139,7 +148,11 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.body}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.sky} />}
+      >
         {/* Avatar row */}
         <View style={styles.hero}>
           <View style={styles.avatar}>
