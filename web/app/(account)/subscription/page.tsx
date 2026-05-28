@@ -68,8 +68,10 @@ export default async function SubscriptionPage() {
           .from('subscriptions')
           .update({ status: 'cancelled', stripe_subscription_id: activeSub.id })
           .eq('stripe_customer_id', sub.stripe_customer_id)
-          .then(({ error }) => { if (error) console.error('[sub page reconcile]', error.message) })
-          .catch(() => {})
+          .then(
+            ({ error }) => { if (error) console.error('[sub page reconcile]', error.message) },
+            () => {}
+          )
       }
     } catch {
       // ignore — don't block page render if Stripe is unreachable
