@@ -59,9 +59,8 @@ export default function SubscriptionScreen() {
   useFocusEffect(useCallback(() => {
     (async () => {
       setLoading(true);
-      const [{ data: { user } }, { data: { session } }] = await Promise.all([
+      const [{ data: { user } }] = await Promise.all([
         supabase.auth.getUser(),
-        supabase.auth.getSession(),
       ]);
       if (!user) { setLoading(false); return; }
       setUserCreatedAt(user.created_at);
@@ -80,12 +79,15 @@ export default function SubscriptionScreen() {
       if (data?.status === 'active' || data?.status === 'overdue') {
         setInvoicesLoading(true);
         try {
-          const res = await fetch(`${WEB_URL}/api/stripe/invoices`, {
-            headers: { Authorization: `Bearer ${session?.access_token ?? ''}` },
-          });
-          if (res.ok) {
-            const json = await res.json();
-            setInvoices(json.invoices ?? []);
+          const { data: { session: freshSession } } = await supabase.auth.refreshSession();
+          if (freshSession) {
+            const res = await fetch(`${WEB_URL}/api/stripe/invoices`, {
+              headers: { Authorization: `Bearer ${freshSession.access_token}` },
+            });
+            if (res.ok) {
+              const json = await res.json();
+              setInvoices(json.invoices ?? []);
+            }
           }
         } catch {
           // silently ignore — invoices are supplementary info
@@ -99,8 +101,14 @@ export default function SubscriptionScreen() {
   const handleSubscribe = async () => {
     setSubscribing(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { Alert.alert('Not signed in'); return; }
+      // refreshSession() exchanges the refresh token for a guaranteed-fresh access token,
+      // avoiding "Unauthorized" errors from stale cached JWTs (e.g. after background time)
+      const { data: { session }, error: refreshErr } = await supabase.auth.refreshSession();
+      if (refreshErr || !session) {
+        Alert.alert('Session expired', 'Please sign in again.');
+        router.replace('/welcome' as never);
+        return;
+      }
       const res = await fetch(`${WEB_URL}/api/stripe/mobile-checkout`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${session.access_token}` },
