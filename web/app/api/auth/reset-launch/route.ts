@@ -1,49 +1,70 @@
 export const dynamic = 'force-dynamic'
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
+import { NextResponse } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.jumplogs.com'
 
+// ---------------------------------------------------------------------------
+// POST — called when the user clicks "Continue to reset password" on the page
+// below. Form submits are never pre-fetched by email link scanners, so the
+// single-use token is only consumed when a real user actually clicks.
+// ---------------------------------------------------------------------------
+export async function POST(request: Request) {
+  const formData = await request.formData()
+  const tokenHash = formData.get('t') as string | null
+
+  if (!tokenHash) {
+    return NextResponse.redirect(`${APP_URL}/reset-password?error_code=otp_expired`, { status: 303 })
+  }
+
+  const cookieStore = await cookies()
+  // Build the redirect we'll return on success so we can attach cookies to it.
+  const successResponse = NextResponse.redirect(`${APP_URL}/reset-password`, { status: 303 })
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return cookieStore.getAll() },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options)
+            successResponse.cookies.set(name, value, options)
+          })
+        },
+      },
+    },
+  )
+
+  const { error } = await supabase.auth.verifyOtp({
+    type: 'recovery',
+    token_hash: tokenHash,
+  })
+
+  if (error) {
+    return NextResponse.redirect(`${APP_URL}/reset-password?error_code=otp_expired`, { status: 303 })
+  }
+
+  return successResponse
+}
+
+// ---------------------------------------------------------------------------
+// GET — email links here. Returns a simple HTML page so scanners only see a
+// form with no actionable href; the token is never exposed as a plain link.
+// ---------------------------------------------------------------------------
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
+  const tokenHash = searchParams.get('t')
 
-  let verifyUrl: string | null = null
-
-  // c = base64-encoded GoTrue action_link from admin.generateLink (preferred)
-  const c = searchParams.get('c')
-  if (c) {
-    try {
-      const decoded = Buffer.from(decodeURIComponent(c), 'base64').toString('utf8')
-      const u = new URL(decoded)
-      // Only allow Supabase project URLs
-      if (u.hostname.endsWith('.supabase.co')) {
-        verifyUrl = decoded
-      }
-    } catch {
-      // invalid — fall through
-    }
+  if (!tokenHash) {
+    return NextResponse.redirect(`${APP_URL}/reset-password?error_code=otp_expired`)
   }
 
-  // t = TokenHash from Supabase email template (legacy fallback)
-  if (!verifyUrl) {
-    const tokenHash = searchParams.get('t')
-    if (tokenHash) {
-      verifyUrl =
-        `${SUPABASE_URL}/auth/v1/verify` +
-        `?token=${encodeURIComponent(tokenHash)}` +
-        `&type=recovery` +
-        `&redirect_to=${encodeURIComponent(`${APP_URL}/reset-password`)}`
-    }
-  }
-
-  if (!verifyUrl) {
-    return Response.redirect(`${APP_URL}/reset-password?error_code=otp_expired`)
-  }
-
-  // Base64-encode the verify URL so it is NOT a plain href in the email.
-  // Email security scanners follow plain href links and can consume single-use
-  // Supabase tokens before the user clicks. Encoding the URL and decoding it
-  // via JavaScript (which scanners don't execute) prevents pre-consumption.
-  const encoded = Buffer.from(verifyUrl).toString('base64')
+  // Escape for HTML attribute safety
+  const safeToken = tokenHash.replace(/[&"<>]/g, '')
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -78,15 +99,11 @@ export async function GET(request: Request) {
   <div class="card">
     <h1>Reset your password</h1>
     <p>Click below to choose a new password for your JumpLogs account.</p>
-    <button id="btn">Continue to reset password</button>
+    <form method="POST" action="/api/auth/reset-launch" onsubmit="var b=this.querySelector('button');b.disabled=true;b.textContent='Redirecting\u2026';">
+      <input type="hidden" name="t" value="${safeToken}" />
+      <button type="submit">Continue to reset password</button>
+    </form>
   </div>
-  <script>
-    document.getElementById('btn').addEventListener('click', function () {
-      this.disabled = true;
-      this.textContent = 'Redirecting\u2026';
-      window.location.href = atob('${encoded}');
-    });
-  </script>
 </body>
 </html>`
 
