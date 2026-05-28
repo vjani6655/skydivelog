@@ -51,6 +51,7 @@ export default function SubscriptionScreen() {
   const [loading, setLoading] = useState(true);
   const [subscribing, setSubscribing] = useState(false);
   const [undoCancelling, setUndoCancelling] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [sub, setSub] = useState<{ status: string; renews_at: string | null } | null>(null);
   const [userCreatedAt, setUserCreatedAt] = useState<string | null>(null);
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
@@ -128,6 +129,52 @@ export default function SubscriptionScreen() {
   const handleManageBilling = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (session) await Linking.openURL(`${WEB_URL}/billing`);
+  };
+
+  const handleCancelSubscription = () => {
+    Alert.alert(
+      'Cancel subscription?',
+      'You\'ll keep access until the end of your billing period. No refund will be issued.',
+      [
+        { text: 'Keep subscription', style: 'cancel' },
+        {
+          text: 'Cancel subscription',
+          style: 'destructive',
+          onPress: async () => {
+            setCancelling(true);
+            try {
+              const { data: { session }, error: refreshErr } = await supabase.auth.refreshSession();
+              if (refreshErr || !session) {
+                Alert.alert('Session expired', 'Please sign in again.');
+                return;
+              }
+              const res = await fetch(`${WEB_URL}/api/stripe/cancel-subscription`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${session.access_token}` },
+              });
+              const json = await res.json();
+              if (json.ok) {
+                const { data } = await supabase
+                  .from('subscriptions')
+                  .select('status, renews_at')
+                  .eq('user_id', session.user.id)
+                  .order('started_at', { ascending: false })
+                  .limit(1)
+                  .maybeSingle();
+                setSub(data ?? null);
+                Alert.alert('Subscription cancelled', `Your access continues until ${fmtDate(data?.renews_at ?? null)}.`);
+              } else {
+                Alert.alert('Error', json.error ?? 'Could not cancel subscription');
+              }
+            } catch {
+              Alert.alert('Error', 'Could not connect to server');
+            } finally {
+              setCancelling(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleUndoCancel = async () => {
@@ -306,7 +353,24 @@ export default function SubscriptionScreen() {
           </View>
         )}
 
-        {/* Manage billing for active/overdue */}
+        {/* Cancel subscription for active users */}
+        {isActive && (
+          <TouchableOpacity
+            style={[styles.manageBtn, cancelling && { opacity: 0.5 }]}
+            onPress={handleCancelSubscription}
+            disabled={cancelling}
+            activeOpacity={0.7}
+          >
+            {cancelling
+              ? <ActivityIndicator size="small" color={colors.fg3} />
+              : <>
+                  <Text style={[styles.manageBtnText, { color: colors.fg3 }]}>Cancel subscription</Text>
+                </>
+            }
+          </TouchableOpacity>
+        )}
+
+        {/* Manage billing for active/overdue/grace */}
         {(isActive || isOverdue || isCancelledInGrace) && (
           <TouchableOpacity style={styles.manageBtn} onPress={handleManageBilling} activeOpacity={0.7}>
             <Text style={styles.manageBtnText}>Manage billing</Text>
