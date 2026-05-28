@@ -57,6 +57,7 @@ export default function CreateAccountScreen() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Errors>(EMPTY_ERRORS);
   const [submitError, setSubmitError] = useState('');
+  const [emailExists, setEmailExists] = useState(false);
 
   const clear = (field: keyof Errors) => {
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }));
@@ -83,6 +84,10 @@ export default function CreateAccountScreen() {
     setLoading(false);
     if (error) {
       setSubmitError(error.message);
+    } else if (data.user?.identities?.length === 0) {
+      // Supabase returns no error but empty identities when the email already exists
+      setEmailExists(true);
+      setErrors(prev => ({ ...prev, email: ' ' }));
     } else if (!data.session) {
       // Supabase email confirmation is enabled — no session until the link is clicked.
       // Send the user back to sign-in with a notice so they know what to do next.
@@ -143,10 +148,24 @@ export default function CreateAccountScreen() {
                   keyboardType="email-address"
                   autoComplete="email"
                   value={email}
-                  onChangeText={v => { setEmail(v); clear('email'); }}
+                  onChangeText={v => { setEmail(v); clear('email'); setEmailExists(false); }}
                 />
               </View>
-              {!!errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+              {!!errors.email?.trim() && !emailExists && <Text style={styles.errorText}>{errors.email}</Text>}
+              {emailExists && (
+                <View style={styles.emailExistsBox}>
+                  <Text style={styles.emailExistsText}>An account with this email already exists.</Text>
+                  <View style={styles.emailExistsActions}>
+                    <TouchableOpacity onPress={() => router.replace('/sign-in' as never)} activeOpacity={0.7}>
+                      <Text style={styles.emailExistsLink}>Sign in</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.emailExistsSep}> · </Text>
+                    <TouchableOpacity onPress={() => router.replace('/forgot-password' as never)} activeOpacity={0.7}>
+                      <Text style={styles.emailExistsLink}>Reset password</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
             </View>
 
             {/* Password */}
@@ -314,6 +333,30 @@ function makeStyles(c: ColorSet) {
     fontSize: 12,
     color: c.danger,
     marginTop: 2,
+  },
+  emailExistsBox: {
+    marginTop: 6,
+    gap: 4,
+  },
+  emailExistsText: {
+    fontFamily: 'InterTight-Regular',
+    fontSize: 12,
+    color: c.danger,
+  },
+  emailExistsActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  emailExistsLink: {
+    fontFamily: 'InterTight-SemiBold',
+    fontSize: 12,
+    color: c.sky,
+    textDecorationLine: 'underline',
+  },
+  emailExistsSep: {
+    fontFamily: 'InterTight-Regular',
+    fontSize: 12,
+    color: c.fg3,
   },
   inputIcon: {
     marginRight: spacing[2],

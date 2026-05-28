@@ -18,6 +18,7 @@ export default function SignupPage() {
   const [agreed, setAgreed] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [emailExists, setEmailExists] = useState(false)
   const [loading, setLoading] = useState(false)
 
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -58,6 +59,14 @@ export default function SignupPage() {
 
     if (signUpError) {
       setError(signUpError.message)
+      setLoading(false)
+      return
+    }
+
+    // Supabase returns no error but empty identities when the email already exists
+    if (data.user?.identities?.length === 0) {
+      setEmailExists(true)
+      setFieldErrors(prev => ({ ...prev, email: ' ' }))
       setLoading(false)
       return
     }
@@ -112,12 +121,21 @@ export default function SignupPage() {
               type="email"
               autoComplete="email"
               value={email}
-              onChange={(e) => { setEmail(e.target.value); clearField("email") }}
-              className={`w-full bg-surface-2 border rounded-sm pl-9 pr-4 py-2.5 text-sm text-fg placeholder:text-fg-4 focus:outline-none transition-colors ${fieldErrors.email ? "border-danger/60 focus:border-danger" : "border-border focus:border-sky"}`}
+              onChange={(e) => { setEmail(e.target.value); clearField("email"); setEmailExists(false) }}
+              className={`w-full bg-surface-2 border rounded-sm pl-9 pr-4 py-2.5 text-sm text-fg placeholder:text-fg-4 focus:outline-none transition-colors ${(fieldErrors.email || emailExists) ? "border-danger/60 focus:border-danger" : "border-border focus:border-sky"}`}
               placeholder="you@example.com"
             />
           </div>
-          {fieldErrors.email && <p className="mt-1 text-xs text-danger">{fieldErrors.email}</p>}
+          {emailExists ? (
+            <p className="mt-1 text-xs text-danger">
+              An account with this email already exists.{" "}
+              <Link href="/login" className="underline hover:opacity-75">Log in</Link>
+              {" or "}
+              <Link href="/forgot-password" className="underline hover:opacity-75">reset your password</Link>.
+            </p>
+          ) : fieldErrors.email?.trim() ? (
+            <p className="mt-1 text-xs text-danger">{fieldErrors.email}</p>
+          ) : null}
         </div>
 
         <div>
