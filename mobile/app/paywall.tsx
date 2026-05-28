@@ -80,8 +80,8 @@ export default function PaywallScreen() {
     setLoading(true);
     setError('');
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { setError('Not signed in. Please restart the app.'); setLoading(false); return; }
+      const { data: { session }, error: refreshErr } = await supabase.auth.refreshSession();
+      if (refreshErr || !session) { setError('Not signed in. Please restart the app.'); setLoading(false); return; }
       const res = await fetch(`${WEB_URL}/api/stripe/mobile-checkout`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${session.access_token}` },
