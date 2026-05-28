@@ -3,22 +3,30 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { verifyBearerToken } from '@/lib/supabase/bearer'
 import { stripe } from '@/lib/stripe'
 
 export async function POST(req: Request) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
   // Support both cookie-based (web) and Bearer token (mobile) auth
   const authHeader = req.headers.get('authorization')
+  let user = null
+
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.slice(7)
-    const { data: { user: tokenUser } } = await supabase.auth.getUser(token)
-    if (!tokenUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { data: { user: tokenUser }, error } = await verifyBearerToken(token)
+    if (error) console.error('[undo-cancel] bearer auth error:', error.message)
+    user = tokenUser ?? null
+  } else {
+    const supabase = await createClient()
+    const { data: { user: cookieUser }, error } = await supabase.auth.getUser()
+    if (error) console.error('[undo-cancel] cookie auth error:', error.message)
+    user = cookieUser ?? null
   }
 
-  const { data: sub } = await supabase
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const admin = createAdminClient()
+  const { data: sub } = await admin
     .from('subscriptions')
     .select('id, stripe_subscription_id, renews_at')
     .eq('user_id', user.id)
@@ -41,7 +49,6 @@ export async function POST(req: Request) {
   })
 
   // Restore status to active in our DB
-  const admin = createAdminClient()
   const { error } = await admin
     .from('subscriptions')
     .update({ status: 'active' })

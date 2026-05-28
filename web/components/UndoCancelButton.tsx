@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { undoCancelAction } from "@/app/(account)/subscription/actions"
 
 export default function UndoCancelButton() {
   const [loading, setLoading] = useState(false)
@@ -11,12 +12,11 @@ export default function UndoCancelButton() {
   const handleUndo = async () => {
     setLoading(true)
     setError(null)
-    const res = await fetch("/api/stripe/undo-cancel", { method: "POST" })
-    const data = await res.json()
-    if (data.ok) {
+    const result = await undoCancelAction()
+    if (result.ok) {
       router.refresh()
     } else {
-      setError(data.error ?? "Something went wrong")
+      setError(result.error ?? "Something went wrong")
       setLoading(false)
     }
   }
