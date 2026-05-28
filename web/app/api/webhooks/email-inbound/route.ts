@@ -201,3 +201,15 @@ export async function POST(req: Request) {
   await admin.from('support_tickets').update({ status: 'open' }).eq('id', ticketId)
 
   // Notify admin
+  const notif = ticketInboundReplyEmail({
+    fromName: ticket.name ?? fromName,
+    fromEmail,
+    ticketId,
+    topic: ticket.category,
+    replyText,
+  })
+  await sendEmail(notif)
+
+  console.log('[inbound] reply added to ticket', ticketId, '— msg id', newMsg?.id)
+  return NextResponse.json({ ok: true, messageId: newMsg?.id })
+}
