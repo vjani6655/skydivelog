@@ -5,22 +5,39 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.jumplogs.com'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
-  const tokenHash = searchParams.get('t')
 
-  if (!tokenHash) {
-    return Response.redirect(`${APP_URL}/reset-password?error_code=otp_expired`)
+  let verifyUrl: string | null = null
+
+  // c = base64-encoded GoTrue action_link from admin.generateLink (preferred)
+  const c = searchParams.get('c')
+  if (c) {
+    try {
+      const decoded = Buffer.from(decodeURIComponent(c), 'base64').toString('utf8')
+      const u = new URL(decoded)
+      // Only allow Supabase project URLs
+      if (u.hostname.endsWith('.supabase.co')) {
+        verifyUrl = decoded
+      }
+    } catch {
+      // invalid — fall through
+    }
   }
 
-  // Only allow the 'recovery' type to prevent misuse
-  const type = 'recovery'
-  const redirectTo = `${APP_URL}/reset-password`
+  // t = TokenHash from Supabase email template (legacy fallback)
+  if (!verifyUrl) {
+    const tokenHash = searchParams.get('t')
+    if (tokenHash) {
+      verifyUrl =
+        `${SUPABASE_URL}/auth/v1/verify` +
+        `?token=${encodeURIComponent(tokenHash)}` +
+        `&type=recovery` +
+        `&redirect_to=${encodeURIComponent(`${APP_URL}/reset-password`)}`
+    }
+  }
 
-  // Construct the Supabase verify URL from the token hash
-  const verifyUrl =
-    `${SUPABASE_URL}/auth/v1/verify` +
-    `?token=${encodeURIComponent(tokenHash)}` +
-    `&type=${type}` +
-    `&redirect_to=${encodeURIComponent(redirectTo)}`
+  if (!verifyUrl) {
+    return Response.redirect(`${APP_URL}/reset-password?error_code=otp_expired`)
+  }
 
   // Base64-encode the verify URL so it is NOT a plain href in the email.
   // Email security scanners follow plain href links and can consume single-use
