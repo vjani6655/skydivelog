@@ -92,7 +92,7 @@ export default async function SubscriptionPage() {
   }
 
   // Subscribed user view (active, trial, or cancelled-in-grace)
-  if (isActive || isTrial || isCancelledInGrace) {
+  if ((isActive || isTrial || isCancelledInGrace) && sub) {
     const planLabel = (sub.plan?.startsWith('price_') ? 'Pro' : sub.plan ?? 'Pro')
       .replace(/^./, (c: string) => c.toUpperCase())
 
