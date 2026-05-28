@@ -18,6 +18,7 @@
  */
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 
@@ -91,6 +92,32 @@ serve(async (req) => {
   });
 
   const result = await res.json();
+
+  // Log notifications to inbox (fire-and-forget)
+  try {
+    const db = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      serviceKey,
+      { auth: { persistSession: false } },
+    );
+    const { data: prefs } = await db
+      .from('notification_preferences')
+      .select('user_id')
+      .in('push_token', tokens);
+    if (prefs?.length) {
+      await db.from('notifications').insert(
+        prefs.map((p: { user_id: string }) => ({
+          user_id: p.user_id,
+          title: payload.title,
+          body: payload.body,
+          data: payload.data ?? {},
+        })),
+      );
+    }
+  } catch {
+    // non-fatal — don't fail the push response
+  }
+
   return new Response(JSON.stringify(result), {
     headers: { 'Content-Type': 'application/json' },
     status: res.status,

@@ -10,6 +10,7 @@ export default function ProfileLayout() {
       <Stack.Screen name="export" />
       <Stack.Screen name="tags" />
       <Stack.Screen name="notifications" />
+      <Stack.Screen name="notification-detail" />
     </Stack>
   );
 }

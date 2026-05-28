@@ -45,7 +45,7 @@ export default function WelcomeScreen() {
       <WelcomeHero />
 
       <View style={styles.content}>
-        <Text style={styles.title}>The logbook{'\n'}built for jumpers.</Text>
+        <Text style={styles.title}>The logbook{'\n'}built for jumpers.{'\n'}By a jumper.</Text>
         <Text style={styles.subtitle}>
           Sign every jump in your pocket. Track gear, currency and certifications. Built by skydivers, for skydivers.
         </Text>

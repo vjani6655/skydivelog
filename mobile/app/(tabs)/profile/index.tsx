@@ -6,6 +6,7 @@ import { router } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
+import { getUnreadCount } from '@/lib/notifications';
 import { spacing, radii } from '@/constants/tokens';
 import type { ColorSet } from '@/constants/tokens';
 import { useColors } from '@/lib/theme';
@@ -54,6 +55,7 @@ export default function ProfileScreen() {
   const [userCreatedAt, setUserCreatedAt] = useState<string | null>(null);
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
   const [sub, setSub] = useState<{ status: string; renews_at: string | null } | null>(null);
+  const [unreadNotifs, setUnreadNotifs] = useState(0);
 
   useFocusEffect(useCallback(() => {
     (async () => {
@@ -62,12 +64,14 @@ export default function ProfileScreen() {
       if (!user) { setLoading(false); return; }
       setEmail(user.email ?? null);
 
-      const [profileRes, jumpsRes, subRes] = await Promise.all([
+      const [profileRes, jumpsRes, subRes, unreadCount] = await Promise.all([
         supabase.from('users').select('full_name, licence_number, licence_rating, country, date_of_birth, home_dropzone_id, emergency_contact_name, emergency_contact_relationship, emergency_contact_phone').eq('id', user.id).single(),
         supabase.from('jumps').select('freefall_seconds, dropzone_id, jump_number').eq('user_id', user.id).is('deleted_at', null),
         supabase.from('subscriptions').select('status, renews_at').eq('user_id', user.id).order('started_at', { ascending: false }).limit(1).maybeSingle(),
+        getUnreadCount(supabase, user.id).catch(() => 0),
       ]);
 
+      setUnreadNotifs(unreadCount as number);
       setUserCreatedAt(user.created_at);
       setTrialEndsAt((user.user_metadata?.trial_ends_at as string) ?? null);
       setSub(subRes.data ?? null);
@@ -183,6 +187,11 @@ export default function ProfileScreen() {
               {item.label === 'Edit profile' && incompleteCount > 0 && (
                 <View style={styles.incompleteBadge}>
                   <Text style={styles.incompleteBadgeText}>{incompleteCount}</Text>
+                </View>
+              )}
+              {item.label === 'Notifications' && unreadNotifs > 0 && (
+                <View style={styles.incompleteBadge}>
+                  <Text style={styles.incompleteBadgeText}>{unreadNotifs}</Text>
                 </View>
               )}
               {item.label === 'Subscription' && (

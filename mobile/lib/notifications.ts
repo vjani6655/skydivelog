@@ -146,3 +146,57 @@ export async function saveNotifPref(
     .from('notification_preferences')
     .upsert({ user_id: userId, [DB_FIELD[key]]: value }, { onConflict: 'user_id' });
 }
+
+// ─── Notification inbox ──────────────────────────────────────────────────────
+
+export interface NotificationItem {
+  id: string;
+  title: string;
+  body: string;
+  data: Record<string, unknown>;
+  read: boolean;
+  created_at: string;
+}
+
+export async function fetchNotifications(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<NotificationItem[]> {
+  const { data } = await supabase
+    .from('notifications')
+    .select('id, title, body, data, read, created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(50);
+  return (data ?? []) as NotificationItem[];
+}
+
+export async function markNotificationRead(
+  supabase: SupabaseClient,
+  id: string,
+): Promise<void> {
+  await supabase.from('notifications').update({ read: true }).eq('id', id);
+}
+
+export async function markAllNotificationsRead(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<void> {
+  await supabase
+    .from('notifications')
+    .update({ read: true })
+    .eq('user_id', userId)
+    .eq('read', false);
+}
+
+export async function getUnreadCount(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<number> {
+  const { count } = await supabase
+    .from('notifications')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('read', false);
+  return count ?? 0;
+}
