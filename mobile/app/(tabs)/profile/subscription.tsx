@@ -19,7 +19,7 @@ const PRO_FEATURES = [
   'Priority support',
 ];
 
-const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'https://skydivelog.app';
+const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'https://www.jumplogs.com';
 
 function fmtDate(s: string | null) {
   if (!s) return null;
@@ -50,6 +50,7 @@ export default function SubscriptionScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [loading, setLoading] = useState(true);
   const [subscribing, setSubscribing] = useState(false);
+  const [undoCancelling, setUndoCancelling] = useState(false);
   const [sub, setSub] = useState<{ status: string; renews_at: string | null } | null>(null);
   const [userCreatedAt, setUserCreatedAt] = useState<string | null>(null);
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
@@ -75,25 +76,23 @@ export default function SubscriptionScreen() {
       setSub(data ?? null);
       setLoading(false);
 
-      // Fetch invoice history if subscribed
-      if (data?.status === 'active' || data?.status === 'overdue') {
-        setInvoicesLoading(true);
-        try {
-          const { data: { session: freshSession } } = await supabase.auth.refreshSession();
-          if (freshSession) {
-            const res = await fetch(`${WEB_URL}/api/stripe/invoices`, {
-              headers: { Authorization: `Bearer ${freshSession.access_token}` },
-            });
-            if (res.ok) {
-              const json = await res.json();
-              setInvoices(json.invoices ?? []);
-            }
+      // Fetch invoice history for all users — they may have past invoices regardless of current status
+      setInvoicesLoading(true);
+      try {
+        const { data: { session: freshSession } } = await supabase.auth.refreshSession();
+        if (freshSession) {
+          const res = await fetch(`${WEB_URL}/api/stripe/invoices`, {
+            headers: { Authorization: `Bearer ${freshSession.access_token}` },
+          });
+          if (res.ok) {
+            const json = await res.json();
+            setInvoices(json.invoices ?? []);
           }
-        } catch {
-          // silently ignore — invoices are supplementary info
-        } finally {
-          setInvoicesLoading(false);
         }
+      } catch {
+        // silently ignore — invoices are supplementary info
+      } finally {
+        setInvoicesLoading(false);
       }
     })();
   }, []));
@@ -129,6 +128,40 @@ export default function SubscriptionScreen() {
   const handleManageBilling = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (session) await Linking.openURL(`${WEB_URL}/billing`);
+  };
+
+  const handleUndoCancel = async () => {
+    setUndoCancelling(true);
+    try {
+      const { data: { session }, error: refreshErr } = await supabase.auth.refreshSession();
+      if (refreshErr || !session) {
+        Alert.alert('Session expired', 'Please sign in again.');
+        return;
+      }
+      const res = await fetch(`${WEB_URL}/api/stripe/undo-cancel`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const json = await res.json();
+      if (json.ok) {
+        // Refresh subscription data
+        const { data } = await supabase
+          .from('subscriptions')
+          .select('status, renews_at')
+          .eq('user_id', session.user.id)
+          .order('started_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        setSub(data ?? null);
+        Alert.alert('Subscription restored', 'Your cancellation has been undone. Your subscription continues as normal.');
+      } else {
+        Alert.alert('Error', json.error ?? 'Could not restore subscription');
+      }
+    } catch {
+      Alert.alert('Error', 'Could not connect to server');
+    } finally {
+      setUndoCancelling(false);
+    }
   };
 
   if (loading) {
@@ -255,19 +288,22 @@ export default function SubscriptionScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Reactivate nudge for cancelled-in-grace users */}
+        {/* Undo cancellation for grace-period users — they already paid, no new charge */}
         {isCancelledInGrace && (
-          <TouchableOpacity
-            style={[styles.subscribeBtn, subscribing && { opacity: 0.6 }]}
-            onPress={handleSubscribe}
-            disabled={subscribing}
-            activeOpacity={0.8}
-          >
-            {subscribing
-              ? <ActivityIndicator color="#fff" size="small" />
-              : <Text style={styles.subscribeBtnText}>Reactivate · $12/yr</Text>
-            }
-          </TouchableOpacity>
+          <View style={styles.undoCancelBox}>
+            <TouchableOpacity
+              style={[styles.subscribeBtn, undoCancelling && { opacity: 0.6 }]}
+              onPress={handleUndoCancel}
+              disabled={undoCancelling}
+              activeOpacity={0.8}
+            >
+              {undoCancelling
+                ? <ActivityIndicator color="#fff" size="small" />
+                : <Text style={styles.subscribeBtnText}>Undo cancellation</Text>
+              }
+            </TouchableOpacity>
+            <Text style={styles.undoCancelNote}>No new charge — your paid access continues until {fmtDate(sub?.renews_at ?? null)}</Text>
+          </View>
         )}
 
         {/* Manage billing for active/overdue */}
@@ -278,8 +314,8 @@ export default function SubscriptionScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Invoice history — shown when subscribed */}
-        {(isActive || isOverdue || isCancelledInGrace) && (
+        {/* Invoice history — shown for all users with past invoices */}
+        {(invoicesLoading || invoices.length > 0) && (
           <View style={styles.invoiceSection}>
             <Text style={styles.invoiceSectionTitle}>Invoice History</Text>
 
@@ -353,6 +389,8 @@ function makeStyles(c: ColorSet) {
   subscribeBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: '#fff' },
   manageBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing[1], paddingVertical: spacing[2] },
   manageBtnText: { fontFamily: 'InterTight-Medium', fontSize: 14, color: c.sky },
+  undoCancelBox: { gap: spacing[2] },
+  undoCancelNote: { fontFamily: 'InterTight-Regular', fontSize: 12, color: c.fg3, textAlign: 'center' },
   invoiceSection: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.lg, overflow: 'hidden' },
   invoiceSectionTitle: { fontFamily: 'InterTight-SemiBold', fontSize: 11, color: c.fg4, letterSpacing: 1.2, textTransform: 'uppercase', paddingHorizontal: spacing[4], paddingTop: spacing[3], paddingBottom: spacing[2] },
   invoiceEmpty: { paddingHorizontal: spacing[4], paddingVertical: spacing[3] },

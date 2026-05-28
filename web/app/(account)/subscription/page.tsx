@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import UpgradeButton from "@/components/UpgradeButton"
 import ManageBillingButton from "@/components/ManageBillingButton"
+import UndoCancelButton from "@/components/UndoCancelButton"
 import CancelSubscriptionButton from "@/components/CancelSubscriptionButton"
 import { Check } from "lucide-react"
 import { stripe } from "@/lib/stripe"
@@ -141,7 +142,10 @@ export default async function SubscriptionPage() {
             {/* Right: actions */}
             <div className="flex flex-col gap-2 flex-shrink-0 min-w-[200px]">
               {isCancelledInGrace ? (
-                <ManageBillingButton label="Reactivate subscription" />
+                <div className="flex flex-col gap-2">
+                  <UndoCancelButton />
+                  <p className="text-[11px] text-fg-4 text-center">No new charge — your paid access continues until {fmtDate(sub.renews_at)}</p>
+                </div>
               ) : (
                 <>
                   <ManageBillingButton label="Update card" />
