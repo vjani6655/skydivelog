@@ -44,6 +44,22 @@ export default function SignupPage() {
     setLoading(true)
     setError(null)
 
+    // Server-side check — reliable across all Supabase versions
+    const checkRes = await fetch('/api/auth/check-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    })
+    if (checkRes.ok) {
+      const { exists } = await checkRes.json()
+      if (exists) {
+        setEmailExists(true)
+        setFieldErrors(prev => ({ ...prev, email: ' ' }))
+        setLoading(false)
+        return
+      }
+    }
+
     const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
@@ -59,14 +75,6 @@ export default function SignupPage() {
 
     if (signUpError) {
       setError(signUpError.message)
-      setLoading(false)
-      return
-    }
-
-    // Supabase returns no error but empty identities when the email already exists
-    if (data.user?.identities?.length === 0) {
-      setEmailExists(true)
-      setFieldErrors(prev => ({ ...prev, email: ' ' }))
       setLoading(false)
       return
     }

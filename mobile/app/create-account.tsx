@@ -69,6 +69,27 @@ export default function CreateAccountScreen() {
     if (Object.values(e).some(v => v)) return;
     setSubmitError('');
     setLoading(true);
+
+    // Server-side check — reliable across all Supabase versions
+    try {
+      const checkRes = await fetch(`${WEB_URL}/api/auth/check-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      if (checkRes.ok) {
+        const { exists } = await checkRes.json();
+        if (exists) {
+          setEmailExists(true);
+          setErrors(prev => ({ ...prev, email: ' ' }));
+          setLoading(false);
+          return;
+        }
+      }
+    } catch {
+      // If the check fails, proceed with signUp (will show a generic error if needed)
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
@@ -84,10 +105,6 @@ export default function CreateAccountScreen() {
     setLoading(false);
     if (error) {
       setSubmitError(error.message);
-    } else if (data.user?.identities?.length === 0) {
-      // Supabase returns no error but empty identities when the email already exists
-      setEmailExists(true);
-      setErrors(prev => ({ ...prev, email: ' ' }));
     } else if (!data.session) {
       // Supabase email confirmation is enabled — no session until the link is clicked.
       // Send the user back to sign-in with a notice so they know what to do next.
