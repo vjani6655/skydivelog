@@ -5,7 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAnonClient } from '@supabase/supabase-js'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://jumplogs.com'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.jumplogs.com'
 
 export async function POST(
   _req: Request,
@@ -38,7 +38,7 @@ export async function POST(
     { auth: { persistSession: false, autoRefreshToken: false } },
   )
   const { error } = await anon.auth.resetPasswordForEmail(target.email, {
-    redirectTo: `${APP_URL}/reset-password`,
+    redirectTo: `${APP_URL}/api/auth/callback?next=/reset-password`,
   })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
