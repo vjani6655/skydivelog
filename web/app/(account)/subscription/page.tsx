@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import UpgradeButton from "@/components/UpgradeButton"
 import ManageBillingButton from "@/components/ManageBillingButton"
 import CancelSubscriptionButton from "@/components/CancelSubscriptionButton"
@@ -37,19 +38,34 @@ export default async function SubscriptionPage() {
   const { data: sub } = await supabase
     .from("subscriptions")
     .select(
-      "status, plan, price_at_signup, started_at, renews_at, payment_method_brand, payment_method_last4, payment_method_expiry, stripe_customer_id"
+      "status, plan, price_at_signup, started_at, renews_at, payment_method_brand, payment_method_last4, payment_method_expiry, stripe_customer_id, stripe_subscription_id"
     )
     .eq("user_id", user!.id)
     .order("started_at", { ascending: false })
     .limit(1)
     .maybeSingle()
 
-  const isActive = sub?.status === "active"
+  let isActive = sub?.status === "active"
   const isTrial = sub?.status === "trial"
-  const isCancelledInGrace =
+  let isCancelledInGrace =
     sub?.status === 'cancelled' &&
     !!sub?.renews_at &&
     new Date(sub.renews_at) > new Date()
+
+  // Reconcile: if Stripe says cancel_at_period_end but DB still says active, fix it
+  if (isActive && sub?.stripe_subscription_id) {
+    try {
+      const stripeSub = await stripe.subscriptions.retrieve(sub.stripe_subscription_id)
+      if (stripeSub.cancel_at_period_end) {
+        const admin = createAdminClient()
+        await admin.from('subscriptions').update({ status: 'cancelled' }).eq('stripe_subscription_id', sub.stripe_subscription_id)
+        isActive = false
+        isCancelledInGrace = !!sub.renews_at && new Date(sub.renews_at) > new Date()
+      }
+    } catch {
+      // ignore — don't block page render if Stripe is unreachable
+    }
+  }
 
   // Fetch billing address from Stripe if subscribed
   let billingAddress: Stripe.Address | null = null
