@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { verifyBearerToken } from '@/lib/supabase/bearer'
 import { stripe } from '@/lib/stripe'
 
 export async function POST(req: NextRequest) {
@@ -9,12 +10,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const admin = createAdminClient()
-  const { data: { user }, error } = await admin.auth.getUser(token)
+  const { data: { user }, error } = await verifyBearerToken(token)
   if (error || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const admin = createAdminClient()
   const { data: existingSub } = await admin
     .from('subscriptions')
     .select('stripe_customer_id')

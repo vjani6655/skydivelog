@@ -14,7 +14,8 @@ export async function GET(req: NextRequest) {
   const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null
 
   if (token) {
-    const { data: { user }, error } = await admin.auth.getUser(token)
+    const { verifyBearerToken } = await import('@/lib/supabase/bearer')
+    const { data: { user }, error } = await verifyBearerToken(token)
     if (error || !user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     userId = user.id
   } else {
