@@ -9,7 +9,7 @@
 
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { sendEmail, ticketReplyEmail, ticketReplyAddress } from '@/lib/email'
+import { ticketReplyEmail, ticketReplyAddress } from '@/lib/email'
 
 export const dynamic = 'force-dynamic'
 
@@ -88,11 +88,29 @@ export async function GET(req: Request) {
   results.reply_to_address = ticketReplyAddress(ticketId)
   results.email_template = { subject: template.subject, to: recipientEmail }
 
-  try {
-    await sendEmail({ to: recipientEmail, ...template })
-    results.email_send = 'OK — check Resend Sending logs'
-  } catch (e) {
-    results.email_send = `ERROR: ${e instanceof Error ? e.message : String(e)}`
+  // Call Resend directly so we can capture the actual response body
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) {
+    results.email_send = 'ERROR: RESEND_API_KEY not set'
+  } else {
+    const resendBody: Record<string, unknown> = {
+      from: 'Jump Logs Support <support@jumplogs.com>',
+      to: recipientEmail,
+      subject: template.subject,
+      html: template.html,
+      reply_to: ticketReplyAddress(ticketId),
+    }
+    const resendRes = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify(resendBody),
+    })
+    const resendData = await resendRes.json()
+    results.email_send = {
+      status: resendRes.status,
+      ok: resendRes.ok,
+      response: resendData,
+    }
   }
 
   // 4. Check env vars
