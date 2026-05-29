@@ -47,8 +47,20 @@ function verifyResendSignature(
 
 /** Strip quoted reply content from plain-text email bodies. */
 function stripQuotedText(raw: string): string {
-  const lines = raw.split('\n')
+  // Normalize line endings
+  const normalized = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+
+  // Gmail wraps long "On <date>, <name> wrote:" headers across multiple lines.
+  // Collapse those first so the single-line pattern can match.
+  const collapsed = normalized.replace(/\nOn (.|\n)*?wrote:\s*\n/m, (match) => {
+    // If it looks like a quote header, replace the whole block with a sentinel
+    if (/wrote:\s*$/.test(match.trimEnd())) return '\n__QUOTE_START__\n'
+    return match
+  })
+
+  const lines = collapsed.split('\n')
   const cutPatterns = [
+    /^__QUOTE_START__$/,
     /^On .+wrote:\s*$/,
     /^>.*$/,
     /^-{3,}/,
