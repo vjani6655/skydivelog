@@ -4,7 +4,7 @@
 // Set INBOUND_EMAIL_DOMAIN  — subdomain configured for Resend inbound (e.g. reply.jumplogs.com)
 //                            Resend POSTs to /api/webhooks/email-inbound when mail arrives.
 
-const FROM           = 'Jump Logs Support <support@jumplogs.com>'
+const FROM           = 'Jump Logs Support <support@reply.jumplogs.com>'
 const ADMIN_EMAIL    = process.env.ADMIN_NOTIFY_EMAIL    ?? 'support@jumplogs.com'
 const INBOUND_DOMAIN = process.env.INBOUND_EMAIL_DOMAIN  ?? 'reply.jumplogs.com'
 
