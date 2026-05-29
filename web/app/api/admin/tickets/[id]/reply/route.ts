@@ -28,7 +28,7 @@ export async function POST(
   // Get ticket details for email
   const { data: ticket } = await db
     .from('support_tickets')
-    .select('id, name, email, subject, category, status')
+    .select('id, user_id, name, email, subject, category, status')
     .eq('id', params.id)
     .maybeSingle()
   if (!ticket) return NextResponse.json({ error: 'Ticket not found' }, { status: 404 })
