@@ -143,7 +143,7 @@ export default function GearScreen() {
         ListHeaderComponent={activeFilter === 'due' ? (
           <View style={styles.infoBanner}>
             <Ionicons name="information-circle-outline" size={15} color={colors.warn} style={{ marginTop: 1 }} />
-            <Text style={styles.infoBannerText}>Items due for maintenance within 30 days — reserve canopy repacks and AAD services.</Text>
+            <Text style={styles.infoBannerText}>Items overdue or due for maintenance within 30 days — reserve canopy repacks and AAD services.</Text>
           </View>
         ) : null}
         renderItem={({ item: g }) => {

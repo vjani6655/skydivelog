@@ -132,9 +132,12 @@ const PageHeader = ({
   </View>
 )
 
-const PageFooter = ({ exportedAt }: { exportedAt: string }) => (
+const PageFooter = ({ exportedAt, verifyCode }: { exportedAt: string; verifyCode?: string }) => (
   <View style={s.footer}>
-    <Text style={s.footerText}>JUMPLOGS.APP · EXPORTED {exportedAt}</Text>
+    <Text style={s.footerText}>JUMPLOGS.COM · EXPORTED {exportedAt}</Text>
+    {verifyCode ? (
+      <Text style={s.footerText}>VERIFY: JUMPLOGS.COM/VERIFY · {verifyCode.slice(0,4).toUpperCase()}-{verifyCode.slice(4,8).toUpperCase()}-{verifyCode.slice(8).toUpperCase()}</Text>
+    ) : null}
   </View>
 )
 
@@ -169,12 +172,13 @@ const SigCurve = () => (
 // ─── Per-jump page ────────────────────────────────────────────────────────────
 
 function SinglePage({
-  jump, jumper, pageInfo, exportedAt,
+  jump, jumper, pageInfo, exportedAt, verifyCode,
 }: {
   jump: PdfJump
   jumper: JumperProfile
   pageInfo: string
   exportedAt: string
+  verifyCode?: string
 }) {
   const isStudent = jump.jumper_type === 'student'
   const { day, date } = fmtJumpDate(jump.date)
@@ -373,7 +377,7 @@ function SinglePage({
         )}
       </View>
 
-      <PageFooter exportedAt={exportedAt} />
+      <PageFooter exportedAt={exportedAt} verifyCode={verifyCode} />
     </Page>
   )
 }
@@ -383,9 +387,11 @@ function SinglePage({
 export function SingleDocument({
   jumps,
   jumper,
+  verifyCode,
 }: {
   jumps: PdfJump[]
   jumper: JumperProfile
+  verifyCode?: string
 }) {
   const exportedAt = fmtExportedAt()
 
@@ -402,6 +408,7 @@ export function SingleDocument({
           jumper={jumper}
           pageInfo={`${String(i + 1).padStart(2, '0')} / ${String(jumps.length).padStart(2, '0')}`}
           exportedAt={exportedAt}
+          verifyCode={verifyCode}
         />
       ))}
     </Document>

@@ -53,11 +53,11 @@ export default function CertificatesScreen() {
 
   useFocusEffect(useCallback(() => { fetchCerts(); }, []));
 
-  const expiringSoon = certs.filter(c => c.expires_date && daysUntil(c.expires_date) <= 30 && daysUntil(c.expires_date) >= 0).length;
+  const expiringSoon = certs.filter(c => c.expires_date && daysUntil(c.expires_date) <= 30).length;
 
   const filtered = certs.filter(c => {
     if (activeFilter === 'all') return true;
-    if (activeFilter === 'expiring') return !!c.expires_date && daysUntil(c.expires_date) <= 30 && daysUntil(c.expires_date) >= 0;
+    if (activeFilter === 'expiring') return !!c.expires_date && daysUntil(c.expires_date) <= 30;
     return c.category === activeFilter;
   });
 
@@ -69,7 +69,7 @@ export default function CertificatesScreen() {
         <View>
           <Text style={styles.title}>Certificates</Text>
           {expiringSoon > 0 ? (
-            <Text style={[styles.sub, { color: colors.warn }]}>{expiringSoon} EXPIRING SOON</Text>
+            <Text style={[styles.sub, { color: colors.warn }]}>{expiringSoon} OVERDUE OR EXPIRING</Text>
           ) : (
             <Text style={styles.sub}>{certs.length} CERTIFICATES</Text>
           )}
@@ -110,7 +110,7 @@ export default function CertificatesScreen() {
         ListHeaderComponent={activeFilter === 'expiring' ? (
           <View style={styles.infoBanner}>
             <Ionicons name="information-circle-outline" size={15} color={colors.warn} style={{ marginTop: 1 }} />
-            <Text style={styles.infoBannerText}>Certificates appear here when they expire within the next 30 days.</Text>
+            <Text style={styles.infoBannerText}>Certificates that are expired or expire within the next 30 days.</Text>
           </View>
         ) : null}
         renderItem={({ item: c }) => {

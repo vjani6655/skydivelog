@@ -182,8 +182,8 @@ export async function POST(request: Request) {
   // ── Render PDF ────────────────────────────────────────────────────────────
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pdfDoc: any = layout === 'single'
-    ? React.createElement(SingleDocument, { jumps: pdfJumps, jumper })
-    : React.createElement(TenDocument,    { jumps: pdfJumps, jumper })
+    ? React.createElement(SingleDocument, { jumps: pdfJumps, jumper, verifyCode })
+    : React.createElement(TenDocument,    { jumps: pdfJumps, jumper, verifyCode })
 
   let pdfStream: NodeJS.ReadableStream
   try {

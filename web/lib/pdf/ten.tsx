@@ -123,9 +123,12 @@ const PageHeader = ({
   </View>
 )
 
-const PageFooter = ({ exportedAt }: { exportedAt: string }) => (
+const PageFooter = ({ exportedAt, verifyCode }: { exportedAt: string; verifyCode?: string }) => (
   <View style={s.footer}>
-    <Text style={s.footerText}>JUMPLOGS.APP · EXPORTED {exportedAt}</Text>
+    <Text style={s.footerText}>JUMPLOGS.COM · EXPORTED {exportedAt}</Text>
+    {verifyCode ? (
+      <Text style={s.footerText}>VERIFY: JUMPLOGS.COM/VERIFY · {verifyCode.slice(0,4).toUpperCase()}-{verifyCode.slice(4,8).toUpperCase()}-{verifyCode.slice(8).toUpperCase()}</Text>
+    ) : null}
   </View>
 )
 
@@ -305,7 +308,7 @@ function JumpCard({ jump }: { jump: PdfJump }) {
 // ─── Per-page component ───────────────────────────────────────────────────────
 
 function TenPage({
-  jumps, jumper, pageInfo, exportedAt, firstJumpNum, lastJumpNum,
+  jumps, jumper, pageInfo, exportedAt, firstJumpNum, lastJumpNum, verifyCode,
 }: {
   jumps: PdfJump[]
   jumper: JumperProfile
@@ -313,6 +316,7 @@ function TenPage({
   exportedAt: string
   firstJumpNum: number
   lastJumpNum: number
+  verifyCode?: string
 }) {
   // Pair jumps into rows of 2
   const rows: Array<[PdfJump, PdfJump | null]> = []
@@ -373,7 +377,7 @@ function TenPage({
         ))}
       </View>
 
-      <PageFooter exportedAt={exportedAt} />
+      <PageFooter exportedAt={exportedAt} verifyCode={verifyCode} />
     </Page>
   )
 }
@@ -383,9 +387,11 @@ function TenPage({
 export function TenDocument({
   jumps,
   jumper,
+  verifyCode,
 }: {
   jumps: PdfJump[]
   jumper: JumperProfile
+  verifyCode?: string
 }) {
   const exportedAt = fmtExportedAt()
 
@@ -410,6 +416,7 @@ export function TenDocument({
           exportedAt={exportedAt}
           firstJumpNum={pageJumps[0].jump_number}
           lastJumpNum={pageJumps[pageJumps.length - 1].jump_number}
+          verifyCode={verifyCode}
         />
       ))}
     </Document>
