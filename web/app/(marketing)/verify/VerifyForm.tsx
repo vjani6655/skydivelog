@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { Search, Loader2 } from "lucide-react"
+import { Search } from "lucide-react"
 
 export default function VerifyForm({ initialCode }: { initialCode?: string }) {
   const [code, setCode] = useState(initialCode ?? "")

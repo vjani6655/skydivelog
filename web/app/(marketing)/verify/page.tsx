@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin"
-import { ShieldCheck, ShieldAlert, User, Hash, MapPin, Plane, Clock, ArrowRight, ChevronDown, ChevronUp } from "lucide-react"
+import { ShieldCheck, ShieldAlert, User, Plane, ArrowRight } from "lucide-react"
 import VerifyForm from "./VerifyForm"
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
