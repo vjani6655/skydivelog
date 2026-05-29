@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic'
 
 // Only allow in non-production or when DEBUG_EMAIL_TEST secret matches
 function isAllowed(req: Request): boolean {
-  const secret = process.env.DEBUG_EMAIL_TEST_SECRET
+  const secret = process.env.DEBUG_EMAIL_TEST_SECRET ?? process.env.INBOUND_WEBHOOK_SECRET
   if (!secret) return process.env.NODE_ENV !== 'production'
   const url = new URL(req.url)
   return url.searchParams.get('secret') === secret
