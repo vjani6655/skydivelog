@@ -48,6 +48,23 @@ const CATEGORIES: Category[] = [
   },
 ];
 
+// ─── DB mapping ─────────────────────────────────────────────────────────────────
+
+// Map mobile category keys → support_ticket_category_enum values
+const CATEGORY_TO_DB: Record<CategoryKey, string> = {
+  bug:     'bug',
+  feature: 'feature',
+  account: 'billing',
+  other:   'support',
+};
+
+const CATEGORY_TO_SUBJECT: Record<CategoryKey, string> = {
+  bug:     'Bug report',
+  feature: 'Feature request',
+  account: 'Account / billing enquiry',
+  other:   'General enquiry',
+};
+
 // ─── Bug detail fields ────────────────────────────────────────────────────────
 
 const BUG_FIELDS: { key: string; label: string; placeholder: string; multiline?: boolean }[] = [
@@ -98,11 +115,17 @@ export default function ContactScreen() {
         if (extras) body = body ? `${body}\n\n${extras}` : extras;
       }
 
-      await supabase.from('support_messages').insert({
-        user_id: user.id,
-        category,
-        message: body,
+      const { error: insertError } = await supabase.from('support_tickets').insert({
+        user_id:  user.id,
+        email:    user.email ?? '',
+        subject:  CATEGORY_TO_SUBJECT[category],
+        category: CATEGORY_TO_DB[category],
+        message:  body,
+        status:   'open',
+        severity: 'normal',
+        source:   'mobile',
       });
+      if (insertError) throw insertError;
 
       Alert.alert(
         'Message sent',

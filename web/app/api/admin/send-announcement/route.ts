@@ -26,14 +26,14 @@ export async function POST(request: Request) {
   if (!adminRow) return new Response('Forbidden', { status: 403 })
 
   // 2. Parse and validate body
-  let body_: { title: string; body: string; channels: string[]; segment: string; deepLink?: string; scheduleMode: string }
+  let body_: { title: string; body: string; channels: string[]; segment: string; deepLink?: string; scheduleMode: string; userIds?: string[] }
   try {
     body_ = await request.json()
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
-  const { title, body, channels, segment, deepLink, scheduleMode } = body_
+  const { title, body, channels, segment, deepLink, scheduleMode, userIds: explicitUserIds } = body_
   if (!title?.trim() || !body?.trim()) {
     return NextResponse.json({ error: 'title and body are required' }, { status: 400 })
   }
@@ -73,7 +73,9 @@ export async function POST(request: Request) {
   const SUBSCRIPTION_SEGMENTS = ['active', 'trial', 'overdue']
   let userIds: string[] | null = null
 
-  if (SUBSCRIPTION_SEGMENTS.includes(segment)) {
+  if (segment === 'specific' && Array.isArray(explicitUserIds) && explicitUserIds.length > 0) {
+    userIds = explicitUserIds
+  } else if (SUBSCRIPTION_SEGMENTS.includes(segment)) {
     const { data: subs } = await db
       .from('subscriptions')
       .select('user_id')

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { ChevronDown, Send, CheckCircle, X } from 'lucide-react'
 import { Badge, Avatar } from '@/components/admin/ui'
 import { createClient } from '@/lib/supabase/client'
@@ -112,6 +112,52 @@ export default function SupportInbox({ initialTickets, openCount, waitingCount, 
   useEffect(() => {
     if (selected) loadMessages(selected.id)
   }, [selected, loadMessages])
+
+  // ── Realtime subscriptions ────────────────────────────────────────────────
+  // Keep a stable ref to selected so the channel callbacks can read current value
+  const selectedRef = useRef(selected)
+  useEffect(() => { selectedRef.current = selected }, [selected])
+
+  useEffect(() => {
+    const sb = createClient()
+
+    // Watch for new inbound messages — append to thread if it belongs to open ticket
+    const msgChannel = sb
+      .channel('admin-ticket-messages')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'ticket_messages' },
+        (payload) => {
+          const msg = payload.new as Message
+          if (msg.ticket_id === selectedRef.current?.id) {
+            setMessages(prev => {
+              if (prev.some(m => m.id === msg.id)) return prev
+              return [...prev, msg]
+            })
+          }
+        },
+      )
+      .subscribe()
+
+    // Watch for ticket status changes — update list + selected in place
+    const ticketChannel = sb
+      .channel('admin-support-tickets')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'support_tickets' },
+        (payload) => {
+          const updated = payload.new as Ticket
+          setTickets(prev => prev.map(t => t.id === updated.id ? { ...t, ...updated } : t))
+          setSelected(prev => prev?.id === updated.id ? { ...prev, ...updated } : prev)
+        },
+      )
+      .subscribe()
+
+    return () => {
+      sb.removeChannel(msgChannel)
+      sb.removeChannel(ticketChannel)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleSend() {
     if (!reply.trim() || !selected) return
