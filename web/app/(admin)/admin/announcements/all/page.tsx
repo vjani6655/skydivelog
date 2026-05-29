@@ -5,11 +5,6 @@ import { AdminPageHeader, Badge } from '@/components/admin/ui'
 import Link from 'next/link'
 import { ArrowLeft, Bell } from 'lucide-react'
 
-function fmtDate(s: string | null) {
-  if (!s) return '—'
-  return new Date(s).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' })
-}
-
 function fmtDateTime(s: string | null) {
   if (!s) return '—'
   return new Date(s).toLocaleString('en-AU', {
