@@ -115,9 +115,17 @@ export default function ContactScreen() {
         if (extras) body = body ? `${body}\n\n${extras}` : extras;
       }
 
+      // Look up full name from profile
+      const { data: profile } = await supabase
+        .from('users')
+        .select('full_name')
+        .eq('id', user.id)
+        .maybeSingle();
+
       const { error: insertError } = await supabase.from('support_tickets').insert({
         user_id:  user.id,
-        email:    user.email ?? '',
+        name:     profile?.full_name ?? null,
+        email:    user.email ?? null,
         subject:  CATEGORY_TO_SUBJECT[category],
         category: CATEGORY_TO_DB[category],
         message:  body,

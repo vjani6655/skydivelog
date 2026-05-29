@@ -50,15 +50,29 @@ export async function POST(
   // Mark ticket as waiting (for user to reply)
   await db.from('support_tickets').update({ status: 'waiting' }).eq('id', params.id)
 
+  // Resolve recipient email — ticket.email may be null for mobile-submitted tickets,
+  // fall back to the auth user's email from the users table
+  let recipientEmail = ticket.email ?? null
+  let recipientName  = ticket.name ?? null
+  if (!recipientEmail && ticket.user_id) {
+    const { data: userRow } = await db
+      .from('users')
+      .select('email, full_name')
+      .eq('id', ticket.user_id)
+      .maybeSingle()
+    recipientEmail = userRow?.email ?? null
+    if (!recipientName) recipientName = userRow?.full_name ?? null
+  }
+
   // Email the user
-  if (ticket.email) {
+  if (recipientEmail) {
     const template = ticketReplyEmail({
-      name:         ticket.name ?? 'there',
+      name:         recipientName ?? 'there',
       replyMessage: message.trim(),
       ticketId:     params.id,
       topic:        ticket.category,
     })
-    await sendEmail({ to: ticket.email, ...template })
+    await sendEmail({ to: recipientEmail, ...template })
   }
 
   return NextResponse.json({ ok: true, message: msg })
