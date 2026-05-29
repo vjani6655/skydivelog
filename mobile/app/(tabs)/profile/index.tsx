@@ -19,6 +19,7 @@ const MENU_ITEMS = [
   { label: 'Export logbook', icon: 'download-outline', route: '/(tabs)/profile/export' },
   { label: 'Manage tags', icon: 'pricetag-outline', route: '/(tabs)/log/tags' },
   { label: 'Notifications', icon: 'notifications-outline', route: '/(tabs)/profile/notifications' },
+  { label: 'Contact us', icon: 'mail-outline', route: '/(tabs)/profile/contact' },
 ] as const;
 
 function initials(name: string | null | undefined, email: string | null | undefined) {

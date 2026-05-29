@@ -1,7 +1,7 @@
 import { useCallback, useState, useMemo } from 'react';
 import {
   View, Text, FlatList, StyleSheet, SafeAreaView, ActivityIndicator,
-  TouchableOpacity, RefreshControl,
+  TouchableOpacity, RefreshControl, ScrollView,
 } from 'react-native';
 import { useFocusEffect, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +14,16 @@ import type { Certificate } from '@/lib/types';
 function daysUntil(dateStr: string): number {
   return Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000);
 }
+
+type FilterKey = 'all' | 'licence' | 'rating' | 'medical' | 'expiring';
+
+const FILTER_CHIPS: { key: FilterKey; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'licence', label: 'Licences' },
+  { key: 'rating', label: 'Ratings' },
+  { key: 'medical', label: 'Medical' },
+  { key: 'expiring', label: 'Expiring soon' },
+];
 
 function fmtMY(iso: string): string {
   return new Date(iso).toLocaleDateString('en-AU', { month: 'short', year: 'numeric' });
@@ -29,6 +39,7 @@ export default function CertificatesScreen() {
   const [certs, setCerts] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
 
   const fetchCerts = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -43,6 +54,12 @@ export default function CertificatesScreen() {
   useFocusEffect(useCallback(() => { fetchCerts(); }, []));
 
   const expiringSoon = certs.filter(c => c.expires_date && daysUntil(c.expires_date) <= 30 && daysUntil(c.expires_date) >= 0).length;
+
+  const filtered = certs.filter(c => {
+    if (activeFilter === 'all') return true;
+    if (activeFilter === 'expiring') return !!c.expires_date && daysUntil(c.expires_date) <= 30 && daysUntil(c.expires_date) >= 0;
+    return c.category === activeFilter;
+  });
 
   if (loading) return <View style={[styles.center, { backgroundColor: colors.bg }]}><ActivityIndicator color={colors.sky} /></View>;
 
@@ -66,11 +83,36 @@ export default function CertificatesScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Filter chips */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.chipScroll}
+        contentContainerStyle={styles.chipContent}
+      >
+        {FILTER_CHIPS.map(f => (
+          <TouchableOpacity
+            key={f.key}
+            style={[styles.chip, activeFilter === f.key && styles.chipActive]}
+            onPress={() => setActiveFilter(f.key)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.chipText, activeFilter === f.key && styles.chipTextActive]}>{f.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
       <FlatList
-        data={certs}
+        data={filtered}
         keyExtractor={c => c.id}
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchCerts(); }} tintColor={colors.sky} />}
+        ListHeaderComponent={activeFilter === 'expiring' ? (
+          <View style={styles.infoBanner}>
+            <Ionicons name="information-circle-outline" size={15} color={colors.warn} style={{ marginTop: 1 }} />
+            <Text style={styles.infoBannerText}>Certificates appear here when they expire within the next 30 days.</Text>
+          </View>
+        ) : null}
         renderItem={({ item: c }) => {
           const hasExpiry = !!c.expires_date;
           const days = hasExpiry ? daysUntil(c.expires_date!) : null;
@@ -80,7 +122,7 @@ export default function CertificatesScreen() {
           const iconBg = isDanger ? 'rgba(255,107,107,0.12)' : isWarn ? 'rgba(255,183,74,0.12)' : 'rgba(74,158,255,0.12)';
 
           return (
-            <View style={styles.card}>
+            <TouchableOpacity style={styles.card} onPress={() => router.push(`/(tabs)/certificates/${c.id}` as any)} activeOpacity={0.75}>
               <View style={styles.cardRow}>
                 <View style={[styles.certIcon, { backgroundColor: iconBg }]}>
                   <Ionicons name="ribbon-outline" size={20} color={iconColor} />
@@ -103,7 +145,7 @@ export default function CertificatesScreen() {
                   </Text>
                 </View>
               </View>
-            </View>
+            </TouchableOpacity>
           );
         }}
         ListEmptyComponent={
@@ -127,7 +169,15 @@ function makeStyles(c: ColorSet) {
   sub: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, letterSpacing: 0.8, color: c.fg3, marginTop: 3 },
   iconBtn: { width: 36, height: 36, borderRadius: radii.md, backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, justifyContent: 'center', alignItems: 'center' },
   addBtn: { backgroundColor: c.sky, borderColor: c.sky },
-  list: { paddingHorizontal: spacing[5], paddingBottom: spacing[10] },
+  chipScroll: { flexGrow: 0, marginBottom: spacing[2] },
+  chipContent: { paddingHorizontal: spacing[5], gap: spacing[2] },
+  chip: { paddingHorizontal: spacing[3], paddingVertical: spacing[1.5], borderRadius: radii.pill, backgroundColor: c.surface, borderWidth: 1, borderColor: c.border },
+  chipActive: { backgroundColor: c.sky, borderColor: c.sky },
+  chipText: { fontFamily: 'InterTight-Medium', fontSize: 13, color: c.fg2 },
+  chipTextActive: { color: c.onSky },
+  list: { paddingHorizontal: spacing[5], paddingTop: spacing[3], paddingBottom: spacing[10] },
+  infoBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing[2], backgroundColor: 'rgba(255,183,74,0.1)', borderWidth: 1, borderColor: 'rgba(255,183,74,0.25)', borderRadius: radii.md, padding: spacing[3], marginBottom: spacing[3] },
+  infoBannerText: { flex: 1, fontFamily: 'InterTight-Regular', fontSize: 13, color: c.warn, lineHeight: 18 },
   card: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, padding: spacing[3.5], marginBottom: spacing[3] },
   cardRow: { flexDirection: 'row', gap: spacing[3] },
   certIcon: { width: 40, height: 40, borderRadius: radii.md, justifyContent: 'center', alignItems: 'center', flexShrink: 0 },

@@ -64,7 +64,7 @@ export default function SignupPage() {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/api/auth/callback`,
+        emailRedirectTo: `${window.location.origin}/api/auth/callback?next=/email-confirmed`,
         data: {
           full_name: fullName,
           licence_number: licenceNumber,

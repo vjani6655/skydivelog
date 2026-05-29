@@ -5,11 +5,55 @@ import {
 } from 'react-native';
 import { useFocusEffect, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Svg, Path, Line, Rect } from 'react-native-svg';
 import { supabase } from '@/lib/supabase';
 import { spacing, radii } from '@/constants/tokens';
 import type { ColorSet } from '@/constants/tokens';
 import { useColors } from '@/lib/theme';
 import type { Gear } from '@/lib/types';
+
+const REPACK_INTERVAL_DAYS = 180;
+
+function daysUntilRepack(g: Gear): number | null {
+  if (g.type !== 'canopy' || g.canopy_sub_type !== 'reserve' || !g.repack_reminder_enabled) return null;
+  if (!g.next_repack_date) return null;
+  return Math.ceil((new Date(g.next_repack_date).getTime() - Date.now()) / 86400000);
+}
+
+function daysUntilService(g: Gear): number | null {
+  if (g.type !== 'aad') return null;
+  if (!g.next_service_date) return null;
+  return Math.ceil((new Date(g.next_service_date).getTime() - Date.now()) / 86400000);
+}
+
+function isDueSoon(g: Gear): boolean {
+  if (g.type === 'canopy' && g.canopy_sub_type === 'reserve' && g.repack_reminder_enabled) {
+    if (!g.next_repack_date) return true;
+    const days = daysUntilRepack(g);
+    return days !== null && days <= 30;
+  }
+  if (g.type === 'aad') {
+    if (!g.next_service_date) return true;
+    const days = daysUntilService(g);
+    return days !== null && days <= 30;
+  }
+  return false;
+}
+
+function CanopyIcon({ size, color }: { size: number; color: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 64 64" fill="none">
+      <Path d="M6 28 C 8 18, 14 14, 22 14 L 42 14 C 50 14, 56 18, 58 28 L 50 26 L 42 28 L 32 26 L 22 28 L 14 26 Z" fill={color} stroke={color} strokeWidth={2} strokeLinejoin="round" />
+      <Line x1="14" y1="26" x2="16" y2="14" stroke={color} strokeOpacity={0.45} strokeWidth={1.5} />
+      <Line x1="22" y1="28" x2="24" y2="14" stroke={color} strokeOpacity={0.45} strokeWidth={1.5} />
+      <Line x1="32" y1="26" x2="32" y2="14" stroke={color} strokeOpacity={0.45} strokeWidth={1.5} />
+      <Line x1="42" y1="28" x2="40" y2="14" stroke={color} strokeOpacity={0.45} strokeWidth={1.5} />
+      <Line x1="50" y1="26" x2="48" y2="14" stroke={color} strokeOpacity={0.45} strokeWidth={1.5} />
+      <Path d="M10 28 L 32 50 L 54 28" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+      <Rect x="29" y="48" width="6" height="10" rx="3" fill={color} />
+    </Svg>
+  );
+}
 
 type FilterKey = 'All' | 'rig' | 'canopy' | 'aad' | 'due';
 
@@ -21,21 +65,9 @@ const FILTER_CHIPS: { key: FilterKey; label: string }[] = [
   { key: 'due', label: 'Due soon' },
 ];
 
-const TYPE_ICON: Record<string, string> = {
-  rig: 'briefcase-outline',
-  canopy: 'umbrella-outline',
-  reserve: 'shield-checkmark-outline',
-  aad: 'hardware-chip-outline',
-  other: 'cube-outline',
-};
-
 export default function GearScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-
-  function gearStatusColor(_g: Gear): string {
-    return colors.sky;
-  }
 
   const [gear, setGear] = useState<Gear[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,7 +92,7 @@ export default function GearScreen() {
 
   const filtered = gear.filter(g => {
     if (activeFilter === 'All') return true;
-    if (activeFilter === 'due') return false; // placeholder
+    if (activeFilter === 'due') return isDueSoon(g);
     return g.type === activeFilter;
   });
 
@@ -108,27 +140,76 @@ export default function GearScreen() {
         keyExtractor={g => g.id}
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchGear(); }} tintColor={colors.sky} />}
+        ListHeaderComponent={activeFilter === 'due' ? (
+          <View style={styles.infoBanner}>
+            <Ionicons name="information-circle-outline" size={15} color={colors.warn} style={{ marginTop: 1 }} />
+            <Text style={styles.infoBannerText}>Items due for maintenance within 30 days — reserve canopy repacks and AAD services.</Text>
+          </View>
+        ) : null}
         renderItem={({ item: g }) => {
-          const iconColor = gearStatusColor(g);
+          const days = daysUntilRepack(g);
+          const serviceDays = daysUntilService(g);
+          const isOverdue = days !== null && days < 0;
+          const isWarn = days !== null && days >= 0 && days <= 30;
+          const notSetUp = g.type === 'canopy' && g.canopy_sub_type === 'reserve' && g.repack_reminder_enabled && !g.next_repack_date;
+          const isServiceOverdue = serviceDays !== null && serviceDays < 0;
+          const isServiceWarn = serviceDays !== null && serviceDays >= 0 && serviceDays <= 30;
+          const aadNotSetUp = g.type === 'aad' && !g.next_service_date;
+          const iconColor = (isOverdue || isServiceOverdue) ? colors.danger
+            : (isWarn || notSetUp || isServiceWarn || aadNotSetUp) ? colors.warn
+            : colors.sky;
           return (
             <TouchableOpacity style={styles.card} onPress={() => router.push(`/(tabs)/gear/${g.id}`)} activeOpacity={0.7}>
               <View style={styles.cardRow}>
                 <View style={[styles.gearIcon, { borderColor: iconColor }]}>
-                  <Ionicons name={(TYPE_ICON[g.type] ?? 'cube-outline') as any} size={22} color={iconColor} />
+                  {g.type === 'canopy' ? (
+                    <CanopyIcon size={22} color={iconColor} />
+                  ) : g.type === 'rig' ? (
+                    <Ionicons name="bag-handle-outline" size={22} color={iconColor} />
+                  ) : (
+                    <Ionicons name="hardware-chip-outline" size={22} color={iconColor} />
+                  )}
                 </View>
                 <View style={styles.cardInfo}>
                   <View style={styles.cardTop}>
                     <Text style={styles.gearName}>{g.make_model}</Text>
-                    <View style={[styles.badge, styles.badgeOk]}>
-                      <Text style={[styles.badgeText, { color: colors.ok }]}>In service</Text>
-                    </View>
+                    {(notSetUp || aadNotSetUp) ? (
+                      <View style={[styles.badge, styles.badgeWarn]}>
+                        <Text style={[styles.badgeText, { color: colors.warn }]}>SETUP NEEDED</Text>
+                      </View>
+                    ) : (isOverdue && days !== null) ? (
+                      <View style={[styles.badge, styles.badgeDanger]}>
+                        <Text style={[styles.badgeText, { color: colors.danger }]}>OVERDUE {-days}D</Text>
+                      </View>
+                    ) : (isServiceOverdue && serviceDays !== null) ? (
+                      <View style={[styles.badge, styles.badgeDanger]}>
+                        <Text style={[styles.badgeText, { color: colors.danger }]}>SERVICE OVERDUE {-serviceDays}D</Text>
+                      </View>
+                    ) : (isWarn && days !== null) ? (
+                      <View style={[styles.badge, styles.badgeWarn]}>
+                        <Text style={[styles.badgeText, { color: colors.warn }]}>DUE IN {days}D</Text>
+                      </View>
+                    ) : (isServiceWarn && serviceDays !== null) ? (
+                      <View style={[styles.badge, styles.badgeWarn]}>
+                        <Text style={[styles.badgeText, { color: colors.warn }]}>SERVICE IN {serviceDays}D</Text>
+                      </View>
+                    ) : (
+                      <View style={[styles.badge, styles.badgeOk]}>
+                        <Text style={[styles.badgeText, { color: colors.ok }]}>In service</Text>
+                      </View>
+                    )}
                   </View>
                   {g.serial_number ? (
                     <Text style={styles.gearSN}>S/N {g.serial_number}</Text>
                   ) : null}
-                  <View style={styles.progressTrack}>
-                    <View style={[styles.progressFill, { width: '70%', backgroundColor: colors.ok }]} />
-                  </View>
+                  {days !== null && !notSetUp ? (
+                    <View style={styles.progressTrack}>
+                      <View style={[styles.progressFill, {
+                        width: `${Math.max(0, Math.min(100, ((REPACK_INTERVAL_DAYS - Math.max(0, days)) / REPACK_INTERVAL_DAYS) * 100))}%`,
+                        backgroundColor: isOverdue ? colors.danger : isWarn ? colors.warn : colors.ok,
+                      }]} />
+                    </View>
+                  ) : null}
                 </View>
               </View>
             </TouchableOpacity>
@@ -161,7 +242,9 @@ function makeStyles(c: ColorSet) {
   chipActive: { backgroundColor: c.sky, borderColor: c.sky },
   chipText: { fontFamily: 'InterTight-Medium', fontSize: 13, color: c.fg2 },
   chipTextActive: { color: c.onSky },
-  list: { paddingHorizontal: spacing[5], paddingBottom: spacing[10] },
+  list: { paddingHorizontal: spacing[5], paddingTop: spacing[3], paddingBottom: spacing[10] },
+  infoBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing[2], backgroundColor: 'rgba(255,183,74,0.1)', borderWidth: 1, borderColor: 'rgba(255,183,74,0.25)', borderRadius: radii.md, padding: spacing[3], marginBottom: spacing[3] },
+  infoBannerText: { flex: 1, fontFamily: 'InterTight-Regular', fontSize: 13, color: c.warn, lineHeight: 18 },
   card: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, padding: spacing[3.5], marginBottom: spacing[3] },
   cardRow: { flexDirection: 'row', gap: spacing[3] },
   gearIcon: { width: 44, height: 44, borderRadius: radii.md, backgroundColor: c.surface2, borderWidth: 1, justifyContent: 'center', alignItems: 'center', flexShrink: 0 },

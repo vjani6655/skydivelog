@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import { useFonts } from 'expo-font';
 import { Stack, router } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -78,10 +79,43 @@ export default function RootLayout() {
       setSession(session);
       if (session?.user) {
         registerPushToken(supabase, session.user.id).catch(() => null);
+
+        // Track last sign-in time and platform (fire-and-forget, non-critical)
+        if (_event === 'SIGNED_IN') {
+          supabase.from('users').update({
+            last_sign_in_at: new Date().toISOString(),
+            last_sign_in_platform: Platform.OS,
+          }).eq('id', session.user.id).then(() => null);
+        }
       }
     });
 
     return () => subscription.unsubscribe();
+  }, []);
+
+  // Deep-link to notification detail when the user taps a push notification
+  useEffect(() => {
+    let sub: { remove: () => void } | undefined;
+    try {
+      const Notifs = require('expo-notifications');
+      sub = Notifs.addNotificationResponseReceivedListener((response: any) => {
+        const content = response.notification.request.content;
+        const data: Record<string, unknown> = content.data ?? {};
+        router.push({
+          pathname: '/(tabs)/profile/notification-detail' as any,
+          params: {
+            id: (data.notification_id as string) ?? '',
+            title: content.title ?? '',
+            body: content.body ?? '',
+            created_at: new Date().toISOString(),
+            data: JSON.stringify(data),
+          },
+        });
+      });
+    } catch {
+      // expo-notifications not available in this environment
+    }
+    return () => sub?.remove();
   }, []);
 
   useEffect(() => {

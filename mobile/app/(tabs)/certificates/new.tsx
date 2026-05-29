@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet,
-  SafeAreaView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Modal,
+  SafeAreaView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Modal, Image,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import { supabase } from '@/lib/supabase';
 import { spacing, radii } from '@/constants/tokens';
 import type { ColorSet } from '@/constants/tokens';
@@ -22,8 +24,8 @@ function Label({ text }: { text: string }) {
   return <Text style={{ fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: colors.fg3, marginBottom: spacing[1.5] }}>{text}</Text>;
 }
 
-function DateField({ label, value, onChange, optional, error }: {
-  label: string; value: Date | null; onChange: (d: Date) => void; optional?: boolean; error?: string;
+function DateField({ label, value, onChange, optional, error, minimumDate }: {
+  label: string; value: Date | null; onChange: (d: Date) => void; optional?: boolean; error?: string; minimumDate?: Date | null;
 }) {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -39,7 +41,7 @@ function DateField({ label, value, onChange, optional, error }: {
   return (
     <View style={styles.flex}>
       <Label text={label} />
-      <TouchableOpacity style={[styles.dateBtn, !!error && { borderColor: colors.danger }]} onPress={() => { setDraft(value ?? new Date()); setOpen(true); }} activeOpacity={0.7}>
+      <TouchableOpacity style={[styles.dateBtn, !!error && { borderColor: colors.danger }]} onPress={() => { setDraft(value ?? (minimumDate ?? new Date())); setOpen(true); }} activeOpacity={0.7}>
         <Ionicons name="calendar-outline" size={15} color={value ? colors.fg : colors.fg3} style={{ marginRight: spacing[2] }} />
         <Text style={[styles.dateBtnText, !value && { color: colors.fg3 }]}>{display}</Text>
       </TouchableOpacity>
@@ -61,6 +63,7 @@ function DateField({ label, value, onChange, optional, error }: {
                 mode="date"
                 display="spinner"
                 onChange={(_, selected) => { if (selected) setDraft(selected); }}
+                minimumDate={minimumDate ?? undefined}
                 textColor={colors.fg}
                 themeVariant="dark"
                 style={{ height: 216 }}
@@ -74,6 +77,10 @@ function DateField({ label, value, onChange, optional, error }: {
   );
 }
 
+function hasFormData(title: string, issuingBody: string, referenceNumber: string): boolean {
+  return title.trim().length > 0 || issuingBody.trim().length > 0 || referenceNumber.trim().length > 0;
+}
+
 export default function NewCertificateScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -83,6 +90,9 @@ export default function NewCertificateScreen() {
   const [issuedDate, setIssuedDate] = useState<Date | null>(new Date());
   const [expiresDate, setExpiresDate] = useState<Date | null>(null);
   const [referenceNumber, setReferenceNumber] = useState('');
+  const [documentUri, setDocumentUri] = useState<string | null>(null);
+  const [documentName, setDocumentName] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<{
     title?: string;
@@ -93,19 +103,98 @@ export default function NewCertificateScreen() {
 
   const clearError = (field: string) => setErrors(e => ({ ...e, [field]: undefined }));
 
+  const clearForm = () => {
+    setTitle('');
+    setIssuingBody('');
+    setIssuedDate(new Date());
+    setExpiresDate(null);
+    setReferenceNumber('');
+    setDocumentUri(null);
+    setDocumentName(null);
+    setErrors({});
+  };
+
+  const confirmSwitch = (newCategory: typeof category) => {
+    if (category !== newCategory && hasFormData(title, issuingBody, referenceNumber)) {
+      Alert.alert(
+        'Unsaved changes',
+        'Your data will be lost if you switch category. Save first or discard.',
+        [
+          { text: 'Stay', style: 'cancel' },
+          { text: 'Discard & switch', style: 'destructive', onPress: () => { clearForm(); setCategory(newCategory); } },
+        ],
+      );
+    } else {
+      setCategory(newCategory);
+    }
+  };
+
+  const handleUpload = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['image/*'],
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled || !result.assets?.length) return;
+      const asset = result.assets[0];
+      if (asset.size !== undefined && asset.size > 10 * 1024 * 1024) {
+        Alert.alert('File too large', 'Please choose an image under 10 MB.');
+        return;
+      }
+      setDocumentUri(asset.uri);
+      setDocumentName(asset.name ?? 'photo');
+    } catch {
+      Alert.alert('Error', 'Could not open document picker.');
+    }
+  };
+
   const handleSave = async () => {
     const errs: { title?: string; issuingBody?: string; issuedDate?: string; expiresDate?: string } = {};
     if (!title.trim())        errs.title        = 'Title is required';
     if (!issuingBody.trim()) errs.issuingBody   = 'Issuing body is required';
     if (!issuedDate)         errs.issuedDate    = 'Issue date is required';
-    if (expiresDate && issuedDate && expiresDate < issuedDate)
-      errs.expiresDate = 'Expiry cannot be before the issued date';
+    if (expiresDate && issuedDate && expiresDate <= issuedDate)
+      errs.expiresDate = 'Expiry must be after the issue date';
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setSaving(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const user = session?.user;
       if (!user) { Alert.alert('Error', 'Not signed in'); return; }
+
+      let documentFileUrl: string | null = null;
+      if (documentUri) {
+        setUploading(true);
+        try {
+          const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
+          const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
+          const fileExt = (documentName?.split('.').pop() ?? 'jpg').toLowerCase();
+          const filePath = `${user.id}/${Date.now()}.${fileExt}`;
+          const mimeType = `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`;
+          const { data: { session: uploadSession } } = await supabase.auth.getSession();
+          const uploadUrl = `${supabaseUrl}/storage/v1/object/certificates/${filePath}`;
+          const uploadResult = await FileSystem.uploadAsync(uploadUrl, documentUri!, {
+            httpMethod: 'POST',
+            uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+            headers: {
+              Authorization: `Bearer ${uploadSession?.access_token ?? supabaseAnonKey}`,
+              apikey: supabaseAnonKey,
+              'Content-Type': mimeType,
+              'x-upsert': 'false',
+            },
+          });
+          if (uploadResult.status >= 200 && uploadResult.status < 300) {
+            const { data: { publicUrl } } = supabase.storage.from('certificates').getPublicUrl(filePath);
+            documentFileUrl = publicUrl;
+          } else {
+            Alert.alert('Upload failed', `Status ${uploadResult.status}: ${uploadResult.body}`);
+            return;
+          }
+        } finally {
+          setUploading(false);
+        }
+      }
+
       const { error } = await supabase.from('certificates').insert({
         user_id: user.id,
         category,
@@ -114,9 +203,12 @@ export default function NewCertificateScreen() {
         issued_date: issuedDate!.toISOString().slice(0, 10),
         expires_date: expiresDate ? expiresDate.toISOString().slice(0, 10) : null,
         reference_number: referenceNumber.trim() || null,
+        document_file_url: documentFileUrl,
       });
       if (error) { Alert.alert('Error saving certificate', error.message); return; }
       router.back();
+    } catch (e: any) {
+      Alert.alert('Save failed', e?.message ?? String(e));
     } finally {
       setSaving(false);
     }
@@ -129,8 +221,8 @@ export default function NewCertificateScreen() {
           <Ionicons name="close" size={22} color={colors.fg} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Add certificate</Text>
-        <TouchableOpacity onPress={handleSave} disabled={saving} activeOpacity={0.7}>
-          {saving ? <ActivityIndicator size="small" color={colors.sky} /> : <Text style={styles.saveBtn}>Save</Text>}
+        <TouchableOpacity onPress={handleSave} disabled={saving || uploading} activeOpacity={0.7}>
+          {saving || uploading ? <ActivityIndicator size="small" color={colors.sky} /> : <Text style={styles.saveBtn}>Save</Text>}
         </TouchableOpacity>
       </View>
 
@@ -142,7 +234,7 @@ export default function NewCertificateScreen() {
               <TouchableOpacity
                 key={c.key}
                 style={[styles.catCard, category === c.key && styles.catCardActive]}
-                onPress={() => setCategory(c.key)}
+                onPress={() => confirmSwitch(c.key)}
                 activeOpacity={0.7}
               >
                 <Text style={[styles.catLabel, category === c.key && styles.catLabelActive]}>{c.label}</Text>
@@ -180,8 +272,8 @@ export default function NewCertificateScreen() {
           {!!errors.issuingBody && <Text style={styles.errorText}>{errors.issuingBody}</Text>}
 
           <View style={styles.row2}>
-            <DateField label="ISSUED" value={issuedDate} onChange={d => { setIssuedDate(d); clearError('issuedDate'); }} error={errors.issuedDate} />
-            <DateField label="EXPIRES" value={expiresDate} onChange={d => { setExpiresDate(d); clearError('expiresDate'); }} optional error={errors.expiresDate} />
+            <DateField label="ISSUED" value={issuedDate} onChange={d => { setIssuedDate(d); if (expiresDate && expiresDate <= d) setExpiresDate(null); clearError('issuedDate'); }} error={errors.issuedDate} />
+            <DateField label="EXPIRES" value={expiresDate} onChange={d => { setExpiresDate(d); clearError('expiresDate'); }} optional error={errors.expiresDate} minimumDate={issuedDate ? new Date(issuedDate.getTime() + 86400000) : undefined} />
           </View>
 
           <Label text="REFERENCE / NUMBER" />
@@ -199,15 +291,24 @@ export default function NewCertificateScreen() {
             autoCorrect={false}
           />
 
-          <View style={styles.attachRow}>
-            <View style={styles.attachInfo}>
-              <Text style={styles.attachTitle}>Attach document</Text>
-              <Text style={styles.attachSub}>PDF or image.</Text>
+          <TouchableOpacity style={styles.attachRow} onPress={handleUpload} activeOpacity={0.7}>
+            {documentUri ? (
+              <Image source={{ uri: documentUri }} style={styles.photoThumb} resizeMode="cover" />
+            ) : (
+              <View style={styles.uploadPlaceholder}>
+                <Ionicons name="camera-outline" size={22} color={colors.fg3} />
+              </View>
+            )}
+            <View style={styles.uploadInfo}>
+              <Text style={styles.attachTitle}>{documentUri ? (documentName ?? 'Photo selected') : 'Add a photo'}</Text>
+              <Text style={styles.attachSub}>{documentUri ? 'Tap to change' : 'JPG, PNG — max 10 MB'}</Text>
             </View>
-            <TouchableOpacity style={styles.uploadBtn} activeOpacity={0.7}>
-              <Text style={styles.uploadBtnText}>Upload</Text>
-            </TouchableOpacity>
-          </View>
+            {documentUri && (
+              <TouchableOpacity onPress={() => { setDocumentUri(null); setDocumentName(null); }} hitSlop={8}>
+                <Ionicons name="close-circle" size={20} color={colors.fg3} />
+              </TouchableOpacity>
+            )}
+          </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -241,12 +342,13 @@ function makeStyles(c: ColorSet) {
   dateModalTitle: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: c.fg },
   dateModalCancelText: { fontFamily: 'InterTight-Regular', fontSize: 15, color: c.fg2 },
   dateModalDoneText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: c.sky, textAlign: 'right' },
-  attachRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, paddingHorizontal: spacing[4], paddingVertical: spacing[4], marginBottom: spacing[4] },
-  attachInfo: { flex: 1 },
-  attachTitle: { fontFamily: 'InterTight-Medium', fontSize: 15, color: c.fg },
-  attachSub: { fontFamily: 'InterTight-Regular', fontSize: 13, color: c.fg3, marginTop: 2 },
-  uploadBtn: { backgroundColor: c.surface2, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, paddingHorizontal: spacing[4], paddingVertical: spacing[2] },
-  uploadBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 13, color: c.fg },
+  attachRow: { flexDirection: 'row', alignItems: 'center', gap: spacing[3], backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, padding: spacing[3], marginBottom: spacing[4] },
+  photoThumb: { width: 52, height: 52, borderRadius: radii.sm },
+  uploadPlaceholder: { width: 52, height: 52, borderRadius: radii.sm, backgroundColor: c.surface2, justifyContent: 'center', alignItems: 'center' },
+  uploadInfo: { flex: 1 },
+  attachTitle: { fontFamily: 'InterTight-Medium', fontSize: 14, color: c.fg },
+  attachSub: { fontFamily: 'InterTight-Regular', fontSize: 12, color: c.fg3, marginTop: 2 },
   errorText: { fontFamily: 'InterTight-Regular', fontSize: 12, color: c.danger, marginTop: -spacing[3], marginBottom: spacing[3] },
   });
 }
+

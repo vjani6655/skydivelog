@@ -11,6 +11,7 @@ export default function ProfileLayout() {
       <Stack.Screen name="tags" />
       <Stack.Screen name="notifications" />
       <Stack.Screen name="notification-detail" />
+      <Stack.Screen name="contact" />
     </Stack>
   );
 }

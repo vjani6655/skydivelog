@@ -73,7 +73,7 @@ export default function NotificationsScreen() {
     }
     router.push({
       pathname: '/(tabs)/profile/notification-detail' as any,
-      params: { id: n.id, title: n.title, body: n.body, created_at: n.created_at },
+      params: { id: n.id, title: n.title, body: n.body, created_at: n.created_at, data: JSON.stringify(n.data) },
     });
   };
 

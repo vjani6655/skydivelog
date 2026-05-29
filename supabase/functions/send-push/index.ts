@@ -72,11 +72,54 @@ serve(async (req) => {
     });
   }
 
-  const messages = tokens.map((token) => ({
+  // Look up user IDs for all tokens so we can insert inbox rows before sending
+  const db = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    serviceKey,
+    { auth: { persistSession: false } },
+  );
+
+  const { data: prefs } = await db
+    .from('notification_preferences')
+    .select('user_id, push_token')
+    .in('push_token', tokens);
+
+  const tokenToUser = new Map<string, string>();
+  (prefs ?? []).forEach((p: { user_id: string; push_token: string }) => {
+    tokenToUser.set(p.push_token, p.user_id);
+  });
+
+  // Generate a UUID per token so we can include notification_id in the push
+  // payload before we insert — no chicken-and-egg problem.
+  const enriched = tokens.map((token) => {
+    const userId = tokenToUser.get(token);
+    const notifId = userId ? crypto.randomUUID() : undefined;
+    return { token, userId, notifId };
+  });
+
+  // Insert notification inbox rows first (so the ID is known before push sends)
+  const rows = enriched
+    .filter((e) => e.userId && e.notifId)
+    .map((e) => ({
+      id: e.notifId,
+      user_id: e.userId,
+      title: payload.title,
+      body: payload.body,
+      // Store extra caller data + the notification's own ID so the app can
+      // deep-link directly to this row.
+      data: { ...(payload.data ?? {}), notification_id: e.notifId },
+    }));
+
+  if (rows.length > 0) {
+    await db.from('notifications').insert(rows);
+  }
+
+  // Build push messages — include notification_id so tapping deep-links correctly
+  const messages = enriched.map(({ token, notifId }) => ({
     to: token,
     title: payload.title,
     body: payload.body,
-    data: payload.data ?? {},
+    data: { ...(payload.data ?? {}), ...(notifId ? { notification_id: notifId } : {}) },
     sound: payload.sound ?? 'default',
     ...(payload.badge !== undefined ? { badge: payload.badge } : {}),
   }));
@@ -92,31 +135,6 @@ serve(async (req) => {
   });
 
   const result = await res.json();
-
-  // Log notifications to inbox (fire-and-forget)
-  try {
-    const db = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      serviceKey,
-      { auth: { persistSession: false } },
-    );
-    const { data: prefs } = await db
-      .from('notification_preferences')
-      .select('user_id')
-      .in('push_token', tokens);
-    if (prefs?.length) {
-      await db.from('notifications').insert(
-        prefs.map((p: { user_id: string }) => ({
-          user_id: p.user_id,
-          title: payload.title,
-          body: payload.body,
-          data: payload.data ?? {},
-        })),
-      );
-    }
-  } catch {
-    // non-fatal — don't fail the push response
-  }
 
   return new Response(JSON.stringify(result), {
     headers: { 'Content-Type': 'application/json' },

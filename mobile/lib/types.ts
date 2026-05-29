@@ -79,6 +79,7 @@ export interface Gear {
   id: string
   user_id: string
   type: 'rig' | 'canopy' | 'aad'
+  canopy_sub_type: 'main' | 'reserve' | null
   make_model: string
   serial_number: string
   manufactured_date: string | null
@@ -86,8 +87,21 @@ export interface Gear {
   jumps_on: number | null
   hours: number | null
   last_repack_date: string | null
+  next_repack_date: string | null
+  next_service_date: string | null
   repack_reminder_enabled: boolean
+  photo_url: string | null
   created_at: string
+}
+
+// ─── Edit log ────────────────────────────────────────────────────────────────
+export interface EditLogEntry {
+  id: string
+  user_id: string
+  item_type: 'gear' | 'certificate'
+  item_id: string
+  changed_at: string
+  changes: Array<{ field: string; from: string | null; to: string | null }>
 }
 
 // ─── Certificate (matches DB schema) ──────────────────────────────────────────
