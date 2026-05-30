@@ -8,8 +8,7 @@ const Section = ({ title, children }: { title: string; children: React.ReactNode
   </AdminCard>
 )
 
-const Row = ({ label, badge, badgeKind = 'muted', access, trigger, notes }: {
-  label: string
+const Row = ({ badge, badgeKind = 'muted', access, trigger, notes }: {
   badge: string
   badgeKind?: BadgeKind
   access: string
@@ -61,7 +60,6 @@ export default function AdminReferencePage() {
           <Divider label="Active subscribers" />
 
           <Row
-            label="active"
             badge="ACTIVE"
             badgeKind="ok"
             access="Full access to all features."
@@ -69,7 +67,6 @@ export default function AdminReferencePage() {
             notes="Renewed automatically each billing cycle."
           />
           <Row
-            label="overdue"
             badge="OVERDUE"
             badgeKind="warn"
             access="Access blocked. App shows payment-failed paywall."
@@ -80,7 +77,6 @@ export default function AdminReferencePage() {
           <Divider label="Cancelled" />
 
           <Row
-            label="cancelled (in grace)"
             badge="CANCELLED"
             badgeKind="muted"
             access="Full access until renews_at date passes (grace period)."
@@ -88,7 +84,6 @@ export default function AdminReferencePage() {
             notes="renews_at is still in the future — user cancelled but period isn't over yet."
           />
           <Row
-            label="cancelled (expired)"
             badge="CANCELLED"
             badgeKind="muted"
             access="Access blocked. App shows paywall."
@@ -99,7 +94,6 @@ export default function AdminReferencePage() {
           <Divider label="Special" />
 
           <Row
-            label="refunded"
             badge="REFUNDED"
             badgeKind="danger"
             access="Access blocked unless a newer active subscription exists."
@@ -113,7 +107,6 @@ export default function AdminReferencePage() {
           <ColHeader />
 
           <Row
-            label="free trial"
             badge="TRIAL"
             badgeKind="sky"
             access="Full access. No card required."
@@ -121,7 +114,6 @@ export default function AdminReferencePage() {
             notes="Trial window = created_at + 14 days. Can be extended by admin (stored in user_metadata.trial_ends_at)."
           />
           <Row
-            label="trial expired"
             badge="EXPIRED"
             badgeKind="warn"
             access="Access blocked. App shows paywall prompting subscription."
@@ -155,28 +147,24 @@ export default function AdminReferencePage() {
         <Section title="Stripe webhook → DB status mapping">
           <ColHeader />
           <Row
-            label=""
             badge="invoice.payment_succeeded"
             badgeKind="ok"
             access="Sets status → active"
             trigger="web/app/api/webhooks/stripe/route.ts"
           />
           <Row
-            label=""
             badge="invoice.payment_failed"
             badgeKind="warn"
             access="Sets status → overdue"
             trigger="web/app/api/webhooks/stripe/route.ts"
           />
           <Row
-            label=""
             badge="subscription.deleted"
             badgeKind="muted"
             access="Sets status → cancelled"
             trigger="web/app/api/webhooks/stripe/route.ts"
           />
           <Row
-            label=""
             badge="subscription.updated"
             badgeKind="sky"
             access="Mirrors Stripe status into DB"
