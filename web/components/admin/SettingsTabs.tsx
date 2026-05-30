@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Plus, MoreHorizontal, X, ChevronDown } from 'lucide-react'
 import { Avatar } from '@/components/admin/ui'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 type AdminRow = {
   id: string
@@ -331,8 +332,12 @@ export default function SettingsTabs({ admins: initialAdmins, auditEntries }: Pr
                   <div key={a.id}
                     className="grid px-4 py-3 gap-3 items-center border-b border-border last:border-0 hover:bg-surface-2 transition-colors"
                     style={{ gridTemplateColumns: '40px 1fr 1.5fr 110px 160px 80px 32px' }}>
-                    <Avatar initials={initials(a.name)} size={32} />
-                    <span className="text-xs font-medium text-fg">{a.name}</span>
+                    <Link href={`/admin/settings/admins/${a.id}`}>
+                      <Avatar initials={initials(a.name)} size={32} />
+                    </Link>
+                    <Link href={`/admin/settings/admins/${a.id}`} className="text-xs font-medium text-fg hover:text-sky transition-colors">
+                      {a.name}
+                    </Link>
                     <span className="font-mono text-xs text-fg-2">{a.email}</span>
                     <span className={`font-mono text-[10px] px-1.5 py-0.5 rounded-[4px] border w-fit ${ROLE_BADGE[a.role] ?? 'text-fg-3 bg-surface-2 border-border'}`}>
                       {a.role.toUpperCase()}

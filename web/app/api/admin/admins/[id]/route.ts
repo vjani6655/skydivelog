@@ -6,6 +6,33 @@ import { createClient } from '@/lib/supabase/server'
 
 const VALID_ROLES = ['super-admin', 'admin', 'support', 'finance', 'read-only']
 
+export async function GET(
+  _request: Request,
+  { params }: { params: { id: string } }
+) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return new Response('Unauthorized', { status: 401 })
+
+  const db = createAdminClient()
+  const { data: callerAdmin } = await db
+    .from('admins')
+    .select('id, role')
+    .eq('email', user.email!)
+    .eq('active', true)
+    .maybeSingle()
+  if (!callerAdmin) return new Response('Forbidden', { status: 403 })
+
+  const { data: admin, error } = await db
+    .from('admins')
+    .select('id, name, email, role, last_sign_in_at, active')
+    .eq('id', params.id)
+    .maybeSingle()
+  if (error || !admin) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  return NextResponse.json(admin)
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: { id: string } }
