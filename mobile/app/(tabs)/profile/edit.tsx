@@ -11,6 +11,7 @@ import { spacing, radii } from '@/constants/tokens';
 import type { ColorSet } from '@/constants/tokens';
 import { useColors } from '@/lib/theme';
 import { COUNTRIES } from '@/constants/countries';
+import { DIAL_CODES } from '@/constants/dialCodes';
 
 function FieldLabel({ text }: { text: string }) {
   const colors = useColors();
@@ -45,6 +46,7 @@ export default function EditProfileScreen() {
   const [dob, setDob] = useState<Date | null>(null);
   const [dobOpen, setDobOpen] = useState(false);
   const [dobDraft, setDobDraft] = useState<Date>(new Date());
+  const [phone, setPhone] = useState('');
   const [homeDZ, setHomeDZ] = useState('');
   const [emergencyName, setEmergencyName] = useState('');
   const [emergencyRel, setEmergencyRel] = useState('');
@@ -57,13 +59,14 @@ export default function EditProfileScreen() {
       const user = session?.user;
       if (!user) return;
       setEmail(user.email ?? '');
-      const { data } = await supabase.from('users').select('full_name, licence_number, licence_rating, country, date_of_birth, home_dropzone_id, emergency_contact_name, emergency_contact_relationship, emergency_contact_phone, dropzones:home_dropzone_id(name)').eq('id', user.id).single();
+      const { data } = await supabase.from('users').select('full_name, licence_number, licence_rating, country, date_of_birth, phone, home_dropzone_id, emergency_contact_name, emergency_contact_relationship, emergency_contact_phone, dropzones:home_dropzone_id(name)').eq('id', user.id).single();
       if (data) {
         setFullName(data.full_name ?? '');
         setLicenceNumber(data.licence_number ?? '');
         setLicenceRating((data as any).licence_rating ?? '');
         setCountry((data as any).country ?? '');
         if (data.date_of_birth) setDob(new Date(data.date_of_birth));
+        setPhone((data as any).phone ?? '');
         const dzName = (data as any).dropzones?.name ?? '';
         setHomeDZ(dzName);
         setEmergencyName(data.emergency_contact_name ?? '');
@@ -96,6 +99,7 @@ export default function EditProfileScreen() {
         licence_rating: licenceRating.trim() || null,
         country: country.trim() || null,
         date_of_birth: dob ? dob.toISOString().split('T')[0] : null,
+        phone: phone.trim() || null,
         home_dropzone_id: homeDzId,
         emergency_contact_name: emergencyName.trim() || null,
         emergency_contact_relationship: emergencyRel.trim() || null,
@@ -246,6 +250,27 @@ export default function EditProfileScreen() {
             </View>
             </KeyboardAvoidingView>
           </Modal>
+
+          <FieldLabel text="PHONE" />
+          {(() => {
+            const dialCode = DIAL_CODES[country] ?? null;
+            return (
+              <View style={{ flexDirection: 'row', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, marginBottom: spacing[4], alignItems: 'center' }}>
+                <Ionicons name="call-outline" size={16} color={colors.fg3} style={{ marginLeft: spacing[3] }} />
+                {dialCode ? (
+                  <Text style={{ fontFamily: 'InterTight-Regular', fontSize: 15, color: colors.fg2, paddingLeft: spacing[2], paddingRight: spacing[1] }}>{dialCode}</Text>
+                ) : null}
+                <TextInput
+                  style={{ flex: 1, paddingLeft: dialCode ? spacing[1] : spacing[2], paddingRight: spacing[3], paddingVertical: spacing[3], fontFamily: 'InterTight-Regular', fontSize: 15, color: colors.fg }}
+                  value={phone}
+                  onChangeText={setPhone}
+                  placeholder={dialCode ? '400 000 000' : '+61 400 000 000'}
+                  placeholderTextColor={colors.fg3}
+                  keyboardType="phone-pad"
+                />
+              </View>
+            );
+          })()}
 
           <FieldLabel text="HOME DROPZONE" />
           <TextInput style={[styles.input, { marginBottom: spacing[6] }]} value={homeDZ} onChangeText={setHomeDZ} placeholder="Skydive somewhere" placeholderTextColor={colors.fg3} autoCapitalize="words" />

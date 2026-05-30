@@ -13,7 +13,7 @@ export default async function AdminAnnouncementsPage() {
     { data: adminRows },
   ] = await Promise.all([
     db.from('announcements')
-      .select('id, title, sent_at, segments(name)')
+      .select('id, title, sent_at, segment_key, segments(name)')
       .eq('status', 'sent')
       .order('sent_at', { ascending: false })
       .limit(8),

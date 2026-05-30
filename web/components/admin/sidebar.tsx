@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, ShieldAlert, CreditCard, Repeat, Tag, Percent,
-  BarChart2, Download, Mail, Bell, Settings, ChevronRight, Image, LogOut,
+  BarChart2, Download, Mail, Bell, Settings, ChevronRight, Image, LogOut, BookOpen,
 } from 'lucide-react'
 import AdminThemeToggle from './AdminThemeToggle'
 import { createClient } from '@/lib/supabase/client'
@@ -48,7 +48,8 @@ const NAV_GROUPS = [
   {
     label: 'Settings',
     items: [
-      { key: 'settings', label: 'Admin settings', href: '/admin/settings', Icon: Settings },
+      { key: 'settings',  label: 'Admin settings', href: '/admin/settings',  Icon: Settings },
+      { key: 'reference', label: 'Reference',       href: '/admin/reference', Icon: BookOpen },
     ],
   },
 ]

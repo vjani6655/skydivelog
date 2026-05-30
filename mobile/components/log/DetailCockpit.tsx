@@ -5,6 +5,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { spacing, radii, shadows } from '@/constants/tokens';
 import type { ColorSet } from '@/constants/tokens';
 import { useColors } from '@/lib/theme';
 import typography from '@/constants/typography';
@@ -40,9 +41,9 @@ function fmtSignerShort(name: string): string {
 function TelCell({ label, value, unit }: { label: string; value: string; unit?: string }) {
   const colors = useColors();
   return (
-    <View style={{ flex: 1, padding: 14 }}>
+    <View style={{ flex: 1, padding: spacing[3.5] }}>
       <Text style={[typography.overline, { color: colors.fg3 }]}>{label}</Text>
-      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 3, marginTop: 3 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: spacing[0.5], marginTop: spacing[0.5] }}>
         <Text style={[typography.num, { color: colors.fg }]}>{value}</Text>
         {unit && (
           <Text style={[typography.caption, { color: colors.fg3, marginBottom: 3 }]}>
@@ -322,17 +323,18 @@ export default function DetailCockpit({ jump, signatures, tags, edits }: JumpDet
 function makeStyles(colors: ColorSet) {
   return StyleSheet.create({
   scroll:  { flex: 1 },
-  content: { padding: 16, gap: 8 },
+  content: { padding: spacing[4], gap: spacing[2] },
 
   // Badge row
-  badgeRow: { flexDirection: 'row', gap: 6, marginBottom: 6 },
+  badgeRow: { flexDirection: 'row', gap: spacing[1.5], marginBottom: spacing[1.5] },
 
   card: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 10,
-    padding: 16,
+    borderRadius: radii.md,
+    padding: spacing[4],
+    ...shadows.card,
   },
 
   // Telemetry
@@ -340,15 +342,16 @@ function makeStyles(colors: ColorSet) {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 10,
+    borderRadius: radii.md,
     overflow: 'hidden',
+    ...shadows.card,
   },
   telHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 12,
-    paddingHorizontal: 16,
+    padding: spacing[3],
+    paddingHorizontal: spacing[4],
   },
   telHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   verifiedDot: {
@@ -365,25 +368,25 @@ function makeStyles(colors: ColorSet) {
   dzDivider: { width: 1, backgroundColor: colors.border, alignSelf: 'stretch' },
 
   // Tags
-  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[1.5] },
 
   // Landing accuracy full-width row
   landingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
   },
 
   // Signed
   signedRow: { flexDirection: 'row', alignItems: 'center' },
   signedHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   sigCanvas: {
-    marginTop: 10,
+    marginTop: spacing[2.5],
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
+    borderRadius: radii.base,
     overflow: 'hidden',
     backgroundColor: colors.surface,
     height: 90,
@@ -394,11 +397,11 @@ function makeStyles(colors: ColorSet) {
   detailRow: { flexDirection: 'row', alignItems: 'flex-start' },
 
   // Edit history
-  historySection: { marginTop: 8, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.border },
-  historySectionLabel: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, letterSpacing: 0.8, color: colors.fg3, marginBottom: 10 },
-  historyCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 12, marginBottom: 8 },
-  historyDate: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.6, color: colors.sky, marginBottom: 8 },
-  historyRow: { marginBottom: 6 },
+  historySection: { marginTop: spacing[2], paddingTop: spacing[4], borderTopWidth: 1, borderTopColor: colors.border },
+  historySectionLabel: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, letterSpacing: 0.8, color: colors.fg3, marginBottom: spacing[2.5] },
+  historyCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.base, padding: spacing[3], marginBottom: spacing[2] },
+  historyDate: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.6, color: colors.sky, marginBottom: spacing[2] },
+  historyRow: { marginBottom: spacing[1.5] },
   historyField: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, letterSpacing: 0.8, color: colors.fg3, marginBottom: 2 },
   historyValues: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
   historyFrom: { fontFamily: 'InterTight-Regular', fontSize: 13, color: colors.fg2, textDecorationLine: 'line-through' },
@@ -406,7 +409,7 @@ function makeStyles(colors: ColorSet) {
   historyTo: { fontFamily: 'InterTight-SemiBold', fontSize: 13, color: colors.fg },
 
   // Timestamps
-  timestamps: { marginTop: 8, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.border, gap: 4 },
+  timestamps: { marginTop: spacing[2], paddingTop: spacing[4], borderTopWidth: 1, borderTopColor: colors.border, gap: spacing[1] },
   tsText: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.6, color: colors.fg3 },
 });
 }

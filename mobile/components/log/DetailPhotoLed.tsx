@@ -1,23 +1,25 @@
 /**
  * 09C · Photo-led layout
- * Full-width photo hero → compact telemetry row → DZ/Aircraft → tags → notes.
+ * Full-bleed photo hero → 3 telemetry pills → info card (DZ/Aircraft/Tags) → detail card → notes → signature.
  */
 import React, { useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, ImageBackground, Dimensions,
 } from 'react-native';
+import { spacing, radii, shadows } from '@/constants/tokens';
 import type { ColorSet } from '@/constants/tokens';
 import { useColors } from '@/lib/theme';
 import typography from '@/constants/typography';
-import { Tag } from '@/components/ui';
-import { Badge } from '@/components/ui';
-import Svg, { Path } from 'react-native-svg';
+import { Tag, Badge } from '@/components/ui';
+import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect, Path } from 'react-native-svg';
 import type { JumpDetailProps } from '@/app/(tabs)/log/[id]';
 import type { JumpEditChange } from '@/lib/types';
-import { usePrefs, fmtAltMini, fmtDetailDate, fmtDate } from '@/lib/prefsContext';
+import { usePrefs, fmtAltMini, altNumStr, fmtDetailDate, fmtDate } from '@/lib/prefsContext';
+import { useAppMedia } from '@/lib/useAppMedia';
 
-const { width: SCREEN_W } = Dimensions.get('window');
-const PHOTO_HEIGHT = Math.round(SCREEN_W * 0.625); // ~5:8 ratio
+const { height: SCREEN_H } = Dimensions.get('window');
+const PHOTO_HEIGHT = Math.round(SCREEN_H * 0.48);
+const STRIPES = Array.from({ length: 20 });
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -28,14 +30,23 @@ function fmtTime(s: number | null): string {
   return `${m}:${String(sec).padStart(2, '0')}`;
 }
 
-// ─── Compact telemetry cell ───────────────────────────────────────────────────
+// ─── Telemetry pill ───────────────────────────────────────────────────────────
 
-function MiniTel({ label, value }: { label: string; value: string }) {
+function TelPill({ label, value }: { label: string; value: string }) {
   const colors = useColors();
   return (
-    <View style={{ flex: 1, paddingVertical: 14, paddingHorizontal: 16 }}>
+    <View style={{
+      flex: 1,
+      backgroundColor: colors.surface,
+      borderRadius: radii.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingVertical: spacing[3],
+      paddingHorizontal: spacing[3],
+      ...shadows.card,
+    }}>
       <Text style={[typography.overline, { color: colors.fg3 }]}>{label}</Text>
-      <Text style={[typography.numSm, { color: colors.fg, marginTop: 2 }]}>{value}</Text>
+      <Text style={[typography.numSm, { color: colors.fg, marginTop: spacing[1] }]}>{value}</Text>
     </View>
   );
 }
@@ -46,10 +57,21 @@ export default function DetailPhotoLed({ jump, signatures, tags, edits }: JumpDe
   const { prefs } = usePrefs();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const signed   = signatures.length > 0;
-  const sig      = signatures[0];
-  const dzName   = jump.dropzones?.name ?? null;
-  const aircraft = [jump.aircraft_type, jump.aircraft_rego].filter(Boolean).join(' · ') || null;
+  const signed = signatures.length > 0;
+  const sig    = signatures[0];
+  const dzName = jump.dropzones?.name ?? null;
+  const aircraft = [jump.aircraft_rego, jump.aircraft_type].filter(Boolean).join(' · ') || null;
+  const appHeroUrl = useAppMedia('detail_photo_hero');
+  const heroPhotoUrl = jump.photo_url ?? appHeroUrl;
+
+  const hasExtraDetails = !!(
+    (jump as any).canopy_type ||
+    jump.jumper_type ||
+    jump.jump_stage ||
+    jump.deploy_altitude_ft != null ||
+    jump.landing_accuracy_value ||
+    (jump as any).people_on_jump != null
+  );
 
   const heroTitle = [
     jump.jump_type ?? null,
@@ -60,50 +82,51 @@ export default function DetailPhotoLed({ jump, signatures, tags, edits }: JumpDe
 
   return (
     <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-      {/* ── Photo hero ────────────────────────────────────────── */}
-      <View style={[styles.photo, { height: PHOTO_HEIGHT }]}>
-        {jump.photo_url ? (
-          <ImageBackground
-            source={{ uri: jump.photo_url }}
+
+      {/* ── Photo / striped hero ─────────────────────────────── */}
+      {heroPhotoUrl ? (
+        <ImageBackground
+          source={{ uri: heroPhotoUrl }}
+          style={[styles.hero, { height: PHOTO_HEIGHT }]}
+          resizeMode="cover"
+        >
+          <Svg
             style={StyleSheet.absoluteFill}
-            resizeMode="cover"
-          />
-        ) : (
-          /* Striped placeholder */
-          <View style={[StyleSheet.absoluteFill, styles.stripes]} />
-        )}
-
-        {/* Bottom gradient overlay */}
-        <View style={styles.overlayTop}    pointerEvents="none" />
-        <View style={styles.overlayBottom} pointerEvents="none" />
-
-        {/* Placeholder label */}
-        {!jump.photo_url && (
-          <Text style={[typography.overline, styles.photoLabel]}>
-            CANOPY PHOTO · 1024×768
-          </Text>
-        )}
-
-        {/* Jump info overlay — bottom of photo */}
-        <View style={styles.heroOverlay}>
-          <Text style={[typography.overline, { color: colors.fg3, letterSpacing: 0.5 }]}>
-            {dateLabel}
-          </Text>
-          <Text style={[typography.h2, { color: colors.fg, marginTop: 4 }]}>
-            {heroTitle}
-          </Text>
+            viewBox="0 0 1 1"
+            preserveAspectRatio="none"
+            pointerEvents="none"
+          >
+            <Defs>
+              <SvgLinearGradient id="heroGrad" x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0.25" stopColor="rgb(10,18,32)" stopOpacity="0" />
+                <Stop offset="0.65" stopColor="rgb(10,18,32)" stopOpacity="0.55" />
+                <Stop offset="1"    stopColor="rgb(10,18,32)" stopOpacity="0.88" />
+              </SvgLinearGradient>
+            </Defs>
+            <Rect x="0" y="0" width="1" height="1" fill="url(#heroGrad)" />
+          </Svg>
+          <View style={styles.heroOverlay}>
+            <Text style={[typography.overline, { color: 'rgba(255,255,255,0.55)', letterSpacing: 0.6 }]}>{dateLabel}</Text>
+            <Text style={[typography.h2, { color: '#fff', marginTop: spacing[1] }]}>{heroTitle}</Text>
+          </View>
+        </ImageBackground>
+      ) : (
+        <View style={[styles.stripesHero, { height: PHOTO_HEIGHT }]}>
+          {STRIPES.map((_, i) => (
+            <View
+              key={i}
+              style={{ flex: 1, backgroundColor: i % 2 === 0 ? colors.surface : colors.surface3 }}
+            />
+          ))}
+          <Text style={[typography.overline, styles.photoLabel]}>CANOPY PHOTO · 1024×768</Text>
+          <View style={styles.heroOverlay}>
+            <Text style={[typography.overline, { color: colors.fg3, letterSpacing: 0.6 }]}>{dateLabel}</Text>
+            <Text style={[typography.h2, { color: colors.fg, marginTop: spacing[1] }]}>{heroTitle}</Text>
+          </View>
         </View>
-      </View>
+      )}
 
-      {/* ── Compact telemetry row ─────────────────────────────── */}
-      <View style={styles.miniRow}>
-        <MiniTel label="EXIT"   value={fmtAltMini(jump.exit_altitude_ft, prefs.altUnit)} />
-        <View style={styles.miniDivider} />        <MiniTel label="PULL"   value={fmtAltMini(jump.pull_altitude_ft, prefs.altUnit)} />
-        <View style={styles.miniDivider} />        <MiniTel label="FF"     value={fmtTime(jump.freefall_seconds)} />
-        <View style={styles.miniDivider} />
-        <MiniTel label="CANOPY" value={fmtTime(jump.canopy_seconds)} />
-      </View>
-      {/* ── Badge row ──────────────────────────────────────── */}
+      {/* ── Badges ────────────────────────────────────────────── */}
       <View style={styles.badgeRow}>
         {jump.jump_type && <Badge kind="sky">{jump.jump_type.toUpperCase()}</Badge>}
         {signed ? (
@@ -116,145 +139,151 @@ export default function DetailPhotoLed({ jump, signatures, tags, edits }: JumpDe
         {sig?.outcome === 'pass'   && <Badge kind="ok" icon="check">PASS</Badge>}
         {sig?.outcome === 'repeat' && <Badge kind="warn">REPEAT</Badge>}
       </View>
-      {/* ── DZ + Aircraft ─────────────────────────────────────── */}
-      <View style={styles.dzRow}>
-        <View style={{ flex: 1 }}>
-          <Text style={[typography.overline, { color: colors.fg3 }]}>DROPZONE</Text>
-          <Text style={[typography.base, { color: colors.fg, marginTop: 4, fontWeight: '600' }]}>
-            {dzName ?? '—'}
-          </Text>
-          {jump.dropzones?.region ? (
-            <Text style={[typography.caption, { color: colors.fg3, marginTop: 1 }]}>
-              {jump.dropzones.region}
-            </Text>
-          ) : null}
-        </View>
-        <View style={styles.dzDivider} />
-        <View style={{ flex: 1, paddingLeft: 16 }}>
-          <Text style={[typography.overline, { color: colors.fg3 }]}>AIRCRAFT</Text>
-          <Text style={[typography.sm, { color: colors.fg2, marginTop: 4 }]}>
-            {aircraft ?? '—'}
-          </Text>
-        </View>
+
+      {/* ── 2×2 telemetry pills ──────────────────────────────── */}
+      <View style={styles.pillRow}>
+        <TelPill label="EXIT"   value={fmtAltMini(jump.exit_altitude_ft, prefs.altUnit)} />
+        <TelPill label="FF"     value={fmtTime(jump.freefall_seconds)} />
+      </View>
+      <View style={styles.pillRow}>
+        <TelPill label="CANOPY" value={fmtTime(jump.canopy_seconds)} />
+        <TelPill label="PULL"   value={fmtAltMini(jump.pull_altitude_ft, prefs.altUnit)} />
       </View>
 
-      {/* ── Canopy type ───────────────────────────────────────────── */}
-      {(jump as any).canopy_type ? (
-        <View style={styles.dzRow}>
+      {/* ── Info card: DZ + Aircraft + Date + Tags ─────────────── */}
+      <View style={styles.card}>
+        {/* DZ / Aircraft row */}
+        <View style={{ flexDirection: 'row' }}>
           <View style={{ flex: 1 }}>
-            <Text style={[typography.overline, { color: colors.fg3 }]}>CANOPY TYPE</Text>
-            <Text style={[typography.base, { color: colors.fg, marginTop: 4, fontWeight: '600' }]}>
-              {(jump as any).canopy_type}
+            <Text style={[typography.overline, { color: colors.fg3 }]}>DROPZONE</Text>
+            <Text style={[typography.base, { color: colors.fg, fontWeight: '600', marginTop: spacing[1] }]}>
+              {dzName ?? '—'}
             </Text>
+            {jump.dropzones?.region ? (
+              <Text style={[typography.caption, { color: colors.fg3, marginTop: 2 }]}>
+                {jump.dropzones.region}
+              </Text>
+            ) : null}
           </View>
-        </View>
-      ) : null}
-
-      {/* ── Jumper info ───────────────────────────────────────────── */}
-      {(jump.jumper_type || jump.jump_stage || jump.deploy_altitude_ft != null) && (
-        <View style={styles.dzRow}>
-          {jump.jumper_type ? (
-            <View style={{ flex: 1 }}>
-              <Text style={[typography.overline, { color: colors.fg3 }]}>JUMPER TYPE</Text>
-              <Text style={[typography.sm, { color: colors.fg, marginTop: 4, fontWeight: '600' }]}>
-                {jump.jumper_type.charAt(0).toUpperCase() + jump.jumper_type.slice(1)}
-              </Text>
-              {jump.jump_stage ? (
-                <Text style={[typography.caption, { color: colors.fg3, marginTop: 1 }]}>
-                  {jump.jump_stage}
-                </Text>
-              ) : null}
-            </View>
-          ) : null}
-          {jump.jumper_type && jump.deploy_altitude_ft != null && <View style={styles.dzDivider} />}
-          {jump.deploy_altitude_ft != null ? (
-            <View style={[{ flex: 1 }, jump.jumper_type ? { paddingLeft: 16 } : {}]}>
-              <Text style={[typography.overline, { color: colors.fg3 }]}>DEPLOY ALT</Text>
-              <Text style={[typography.sm, { color: colors.fg, marginTop: 4, fontWeight: '600' }]}>
-                {prefs.altUnit === 'm'
-                  ? `${Math.round(jump.deploy_altitude_ft * 0.3048).toLocaleString()} m-Δ`
-                  : `${jump.deploy_altitude_ft.toLocaleString()} ft-Δ`
-                }
+          {aircraft ? (
+            <View style={{ flex: 1, paddingLeft: spacing[4] }}>
+              <Text style={[typography.overline, { color: colors.fg3 }]}>AIRCRAFT</Text>
+              <Text style={[typography.sm, { color: colors.fg2, marginTop: spacing[1] }]}>
+                {aircraft}
               </Text>
             </View>
           ) : null}
         </View>
-      )}
-
-      {/* ── Tags ──────────────────────────────────────────────── */}
-      {tags.length > 0 && (
-        <View style={styles.section}>
+        {/* Date row */}
+        <View style={{ marginTop: spacing[3] }}>
+          <Text style={[typography.overline, { color: colors.fg3 }]}>DATE</Text>
+          <Text style={[typography.sm, { color: colors.fg2, marginTop: spacing[1] }]}>
+            {fmtDetailDate(jump.created_at, prefs.dateFormat)}
+          </Text>
+        </View>
+        {/* Tags */}
+        {tags.length > 0 && (
           <View style={styles.tagRow}>
             {tags.map(t => (
               <Tag key={t.id} color={t.color} size="sm">{t.name}</Tag>
             ))}
           </View>
+        )}
+      </View>
+
+      {/* ── Extra details card ────────────────────────────────── */}
+      {hasExtraDetails && (
+        <View style={styles.card}>
+          {(jump as any).canopy_type ? (
+            <View style={styles.detailItem}>
+              <Text style={[typography.overline, { color: colors.fg3 }]}>CANOPY TYPE</Text>
+              <Text style={[typography.base, { color: colors.fg, fontWeight: '600', marginTop: spacing[1] }]}>
+                {(jump as any).canopy_type}
+              </Text>
+            </View>
+          ) : null}
+          {jump.jumper_type ? (
+            <View style={styles.detailItem}>
+              <Text style={[typography.overline, { color: colors.fg3 }]}>JUMPER TYPE</Text>
+              <Text style={[typography.sm, { color: colors.fg, fontWeight: '600', marginTop: spacing[1] }]}>
+                {jump.jumper_type.charAt(0).toUpperCase() + jump.jumper_type.slice(1)}
+                {jump.jump_stage ? ` · ${jump.jump_stage}` : ''}
+              </Text>
+            </View>
+          ) : null}
+          {jump.deploy_altitude_ft != null ? (
+            <View style={styles.detailItem}>
+              <Text style={[typography.overline, { color: colors.fg3 }]}>DEPLOY ALT</Text>
+              <Text style={[typography.sm, { color: colors.fg, fontWeight: '600', marginTop: spacing[1] }]}>
+                {prefs.altUnit === 'm'
+                  ? `${Math.round(jump.deploy_altitude_ft * 0.3048).toLocaleString()} m-Δ`
+                  : `${jump.deploy_altitude_ft.toLocaleString()} ft-Δ`}
+              </Text>
+            </View>
+          ) : null}
+          {jump.landing_accuracy_value ? (
+            <View style={styles.detailItem}>
+              <Text style={[typography.overline, { color: colors.fg3 }]}>LANDING ACCURACY</Text>
+              <Text style={[typography.base, { color: colors.fg, fontWeight: '600', marginTop: spacing[1] }]}>
+                {`${jump.landing_accuracy_value}${jump.landing_accuracy_unit ? ' ' + jump.landing_accuracy_unit : ''}`}
+              </Text>
+            </View>
+          ) : null}
+          {(jump as any).people_on_jump != null ? (
+            <View style={styles.detailItem}>
+              <Text style={[typography.overline, { color: colors.fg3 }]}>PEOPLE ON JUMP</Text>
+              <Text style={[typography.base, { color: colors.fg, fontWeight: '600', marginTop: spacing[1] }]}>
+                {String((jump as any).people_on_jump)}
+              </Text>
+            </View>
+          ) : null}
         </View>
       )}
 
-      {/* ── Notes ─────────────────────────────────────────────── */}
-      {jump.landing_accuracy_value ? (
-        <View style={styles.section}>
-          <Text style={[typography.overline, { color: colors.fg3 }]}>LANDING ACCURACY</Text>
-          <Text style={[typography.base, { color: colors.fg, marginTop: 4, fontWeight: '600' }]}>
-            {`${jump.landing_accuracy_value}${jump.landing_accuracy_unit ? ' ' + jump.landing_accuracy_unit : ''}`}
-          </Text>
-        </View>
-      ) : null}
-      {(jump as any).people_on_jump != null ? (
-        <View style={styles.section}>
-          <Text style={[typography.overline, { color: colors.fg3 }]}>PEOPLE ON JUMP</Text>
-          <Text style={[typography.base, { color: colors.fg, marginTop: 4, fontWeight: '600' }]}>
-            {String((jump as any).people_on_jump)}
-          </Text>
-        </View>
-      ) : null}
-
+      {/* ── Notes card ────────────────────────────────────────── */}
       {jump.notes ? (
-        <View style={styles.section}>
-          <Text style={[typography.overline, { color: colors.fg3, marginBottom: 8 }]}>
-            JUMP DESCRIPTION
-          </Text>
+        <View style={styles.card}>
+          <Text style={[typography.overline, { color: colors.fg3, marginBottom: spacing[2] }]}>JUMP DESCRIPTION</Text>
           <Text style={[typography.body, { color: colors.fg2, lineHeight: 22 }]}>
             {jump.notes}
           </Text>
         </View>
       ) : null}
 
-      {/* ── Signature ─────────────────────────────────────────── */}
+      {/* ── Signature card ────────────────────────────────────── */}
       {sig ? (
-        <View style={styles.section}>
+        <View style={styles.card}>
           <View style={styles.signedHeader}>
             <Text style={[typography.overline, { color: colors.fg3 }]}>SIGNED BY</Text>
             {sig.outcome === 'pass'   && <Badge kind="ok" icon="check">PASS</Badge>}
             {sig.outcome === 'repeat' && <Badge kind="warn">REPEAT</Badge>}
           </View>
-          <Text style={[typography.base, { color: colors.fg, fontWeight: '600', marginTop: 6 }]}>
+          <Text style={[typography.base, { color: colors.fg, fontWeight: '600', marginTop: spacing[1.5] }]}>
             {sig.signer_name}
           </Text>
           <Text style={[typography.sm, { color: colors.fg3, marginTop: 2 }]}>
             {sig.signer_licence_number}
             {sig.signer_licence_rating ? ` · ${sig.signer_licence_rating}` : ''}
           </Text>
+          {sig.signed_at ? (
+            <Text style={[typography.caption, { color: colors.fg3, marginTop: spacing[1] }]}>
+              Signed {fmtDetailDate(sig.signed_at, prefs.dateFormat)}
+            </Text>
+          ) : null}
           {sig.signature_data ? (
             <View style={styles.sigCanvas}>
-              <Svg viewBox="0 0 320 200" width="100%" height={90} preserveAspectRatio="xMidYMid meet">
+              <Svg viewBox="0 0 320 200" width="100%" height={100} preserveAspectRatio="xMidYMid meet">
                 <Path d={sig.signature_data} stroke={colors.sky} strokeWidth={2.5} fill="none" strokeLinecap="round" strokeLinejoin="round" />
               </Svg>
             </View>
           ) : null}
           {sig.notes ? (
-            <Text style={[typography.sm, { color: colors.fg2, marginTop: 8 }]}>{sig.notes}</Text>
-          ) : null}
-          {sig.signed_at ? (
-            <Text style={[typography.caption, { color: colors.fg3, marginTop: 6 }]}>
-              Signed {fmtDetailDate(sig.signed_at, prefs.dateFormat)}
-            </Text>
+            <Text style={[typography.sm, { color: colors.fg2, marginTop: spacing[2] }]}>{sig.notes}</Text>
           ) : null}
         </View>
       ) : null}
 
-      {/* ── Edit history ────────────────────────────────────────── */}
+      {/* ── Edit history ─────────────────────────────────────── */}
       {edits.length > 0 && (
         <View style={styles.historySection}>
           <Text style={styles.historySectionLabel}>EDIT HISTORY</Text>
@@ -276,7 +305,7 @@ export default function DetailPhotoLed({ jump, signatures, tags, edits }: JumpDe
         </View>
       )}
 
-      {/* ── Timestamps ─────────────────────────────────────────── */}
+      {/* ── Timestamps ───────────────────────────────────────── */}
       <View style={styles.timestamps}>
         <Text style={styles.tsText}>Logged {fmtDetailDate(jump.created_at, prefs.dateFormat)}</Text>
         {jump.updated_at && jump.updated_at !== jump.created_at ? (
@@ -284,7 +313,7 @@ export default function DetailPhotoLed({ jump, signatures, tags, edits }: JumpDe
         ) : null}
       </View>
 
-      <View style={{ height: 32 }} />
+      <View style={{ height: spacing[10] }} />
     </ScrollView>
   );
 }
@@ -293,120 +322,125 @@ export default function DetailPhotoLed({ jump, signatures, tags, edits }: JumpDe
 
 function makeStyles(colors: ColorSet) {
   return StyleSheet.create({
-  // Photo hero
-  photo: {
+  // Photo hero — ImageBackground IS the container
+  hero: {
     width: '100%',
-    backgroundColor: colors.surface2,
     overflow: 'hidden',
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
+  },
+  // Stripes hero — flexDirection column with explicit height so flex:1 children work
+  stripesHero: {
+    width: '100%',
+    overflow: 'hidden',
+    flexDirection: 'column' as const,
+  },
+  infoRow: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  stripes: {
-    backgroundColor: colors.surface,
-    opacity: 0.9,
-  },
-  overlayTop: {
-    position: 'absolute' as const,
-    top: 0,
-    left: 0,
-    right: 0,
-    height: Math.round(PHOTO_HEIGHT * 0.4),
-    backgroundColor: 'rgba(10,18,32,0.18)',
-  },
-  overlayBottom: {
-    position: 'absolute' as const,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: Math.round(PHOTO_HEIGHT * 0.55),
-    backgroundColor: 'rgba(10,18,32,0.82)',
-  },
+
   photoLabel: {
     position: 'absolute',
-    color: colors.fg4,
-    top: '38%',
+    color: colors.fg3,
+    top: '40%',
   },
   heroOverlay: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 20,
-    paddingBottom: 18,
+    bottom: 0, left: 0, right: 0,
+    paddingHorizontal: spacing[5],
+    paddingBottom: spacing[5],
   },
 
-  // Compact telemetry
-  miniRow: {
-    flexDirection: 'row',
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  miniCell: {
-    flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-  },
-  miniDivider: { width: 1, backgroundColor: colors.border },
-
-  // DZ / Aircraft
-  dzRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  dzDivider: { width: 1, backgroundColor: colors.border, alignSelf: 'stretch' },
-
-  // Sections
-  section: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
   badgeRow: {
     flexDirection: 'row',
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    flexWrap: 'wrap',
+    gap: spacing[1.5],
+    paddingHorizontal: spacing[4],
+    paddingTop: spacing[3],
+    paddingBottom: spacing[1],
   },
-  signedHeader: {
+
+  pillRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 2,
+    gap: spacing[2],
+    paddingHorizontal: spacing[4],
+    paddingTop: spacing[2],
+    paddingBottom: spacing[1],
   },
-  sigCanvas: {
-    marginTop: 10,
+
+  card: {
+    marginHorizontal: spacing[4],
+    marginTop: spacing[2],
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: colors.surface,
-    height: 90,
-    justifyContent: 'center' as const,
+    padding: spacing[4],
+    ...shadows.card,
   },
-  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
 
-  // Edit history
-  historySection: { marginHorizontal: 16, marginTop: 8, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.border },
-  historySectionLabel: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, letterSpacing: 0.8, color: colors.fg3, marginBottom: 10 },
-  historyCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 12, marginBottom: 8 },
-  historyDate: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.6, color: colors.sky, marginBottom: 8 },
-  historyRow: { marginBottom: 6 },
-  historyField: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, letterSpacing: 0.8, color: colors.fg3, marginBottom: 2 },
+  tagRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing[1.5],
+    marginTop: spacing[3],
+  },
+
+  detailItem: {
+    paddingVertical: spacing[1.5],
+  },
+
+  signedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  sigCanvas: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    marginTop: spacing[2.5],
+    paddingTop: spacing[2],
+  },
+
+  historySection: {
+    marginHorizontal: spacing[4],
+    marginTop: spacing[4],
+    paddingTop: spacing[4],
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  historySectionLabel: {
+    fontFamily: 'JetBrainsMono-Regular',
+    fontSize: 9,
+    letterSpacing: 0.8,
+    color: colors.fg3,
+    marginBottom: spacing[2.5],
+  },
+  historyCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.base,
+    padding: spacing[3],
+    marginBottom: spacing[2],
+  },
+  historyDate:   { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.6, color: colors.sky, marginBottom: spacing[2] },
+  historyRow:    { marginBottom: spacing[1.5] },
+  historyField:  { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, letterSpacing: 0.8, color: colors.fg3, marginBottom: 2 },
   historyValues: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
-  historyFrom: { fontFamily: 'InterTight-Regular', fontSize: 13, color: colors.fg2, textDecorationLine: 'line-through' },
-  historyArrow: { fontFamily: 'InterTight-Regular', fontSize: 13, color: colors.fg3 },
-  historyTo: { fontFamily: 'InterTight-SemiBold', fontSize: 13, color: colors.fg },
+  historyFrom:   { fontFamily: 'InterTight-Regular', fontSize: 13, color: colors.fg2, textDecorationLine: 'line-through' },
+  historyArrow:  { fontFamily: 'InterTight-Regular', fontSize: 13, color: colors.fg3 },
+  historyTo:     { fontFamily: 'InterTight-SemiBold', fontSize: 13, color: colors.fg },
 
-  // Timestamps
-  timestamps: { marginHorizontal: 16, marginTop: 8, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.border, gap: 4 },
+  timestamps: {
+    marginHorizontal: spacing[4],
+    marginTop: spacing[4],
+    paddingTop: spacing[4],
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    gap: spacing[1],
+  },
   tsText: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.6, color: colors.fg3 },
 });
 }

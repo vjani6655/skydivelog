@@ -53,6 +53,11 @@ export default function SignInScreen() {
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }));
   };
 
+  const [mfaRequired, setMfaRequired] = useState(false);
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaError, setMfaError] = useState('');
+  const [mfaLoading, setMfaLoading] = useState(false);
+
   const handleSignIn = async () => {
     const e = validate(email, password);
     setErrors(e);
@@ -63,8 +68,32 @@ export default function SignInScreen() {
     setLoading(false);
     if (error) {
       setSubmitError(error.message);
+      return;
+    }
+    // Check if MFA is required (user has verified TOTP factor)
+    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aal?.nextLevel === 'aal2' && aal.nextLevel !== aal.currentLevel) {
+      setMfaRequired(true);
     } else {
       router.replace('/(tabs)/log');
+    }
+  };
+
+  const handleMfaVerify = async () => {
+    if (mfaCode.length !== 6) return;
+    setMfaError('');
+    setMfaLoading(true);
+    try {
+      const { data: factors } = await supabase.auth.mfa.listFactors();
+      const totp = factors?.totp?.find(f => f.status === 'verified');
+      if (!totp) { setMfaError('No authenticator found.'); return; }
+      const { data: ch, error: chErr } = await supabase.auth.mfa.challenge({ factorId: totp.id });
+      if (chErr || !ch) { setMfaError(chErr?.message ?? 'Challenge failed'); return; }
+      const { error: verErr } = await supabase.auth.mfa.verify({ factorId: totp.id, challengeId: ch.id, code: mfaCode });
+      if (verErr) { setMfaError('Invalid code. Try again.'); return; }
+      router.replace('/(tabs)/log');
+    } finally {
+      setMfaLoading(false);
     }
   };
 
@@ -74,6 +103,45 @@ export default function SignInScreen() {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
+        {mfaRequired ? (
+          <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+            <View style={styles.header}>
+              <Text style={styles.title}>Two-Factor Auth</Text>
+              <Text style={styles.subtitle}>Enter the 6-digit code from your authenticator app.</Text>
+            </View>
+            <View style={styles.form}>
+              <TextInput
+                style={[styles.inputRow, { textAlign: 'center', fontSize: 28, fontFamily: 'JetBrainsMono-Regular', letterSpacing: 8, height: 64, paddingHorizontal: 16, color: colors.fg }]}
+                value={mfaCode}
+                onChangeText={t => { setMfaCode(t.replace(/\D/g, '').slice(0, 6)); setMfaError(''); }}
+                keyboardType="number-pad"
+                maxLength={6}
+                placeholder="000000"
+                placeholderTextColor={colors.fg4}
+                autoFocus
+              />
+              {!!mfaError && (
+                <View style={styles.submitErrorBox}>
+                  <Ionicons name="alert-circle-outline" size={15} color={colors.danger} />
+                  <Text style={styles.submitErrorText}>{mfaError}</Text>
+                </View>
+              )}
+            </View>
+            <TouchableOpacity
+              style={[styles.primaryButton, (mfaCode.length !== 6 || mfaLoading) && styles.buttonDisabled]}
+              onPress={handleMfaVerify}
+              disabled={mfaCode.length !== 6 || mfaLoading}
+              activeOpacity={0.8}
+            >
+              {mfaLoading
+                ? <ActivityIndicator color={colors.onSky} size="small" />
+                : <Text style={styles.primaryButtonText}>Verify</Text>}
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => { supabase.auth.signOut(); setMfaRequired(false); }} activeOpacity={0.7} style={styles.footerLink}>
+              <Text style={styles.footerLinkText}>Back to sign in</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        ) : (
         <ScrollView
           contentContainerStyle={styles.container}
           keyboardShouldPersistTaps="handled"
@@ -175,6 +243,7 @@ export default function SignInScreen() {
             </Text>
           </TouchableOpacity>
         </ScrollView>
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

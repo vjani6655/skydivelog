@@ -482,6 +482,7 @@ create table public.announcements (
   channels             text[] not null default '{}',
   deep_link            text,
   segment_id           uuid references public.segments (id) on delete set null,
+  segment_key          text,
   schedule_mode        public.announcement_schedule_enum not null,
   scheduled_at         timestamptz,
   sent_at              timestamptz,

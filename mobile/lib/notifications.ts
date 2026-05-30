@@ -95,6 +95,14 @@ export async function registerPushToken(
 
     await AsyncStorage.setItem(PUSH_TOKEN_KEY, token).catch(() => null);
 
+    // Clear this token from any other user who previously held it (e.g. after
+    // signing into a different account on the same device), then claim it.
+    await supabase
+      .from('notification_preferences')
+      .update({ push_token: null })
+      .eq('push_token', token)
+      .neq('user_id', userId);
+
     await supabase
       .from('notification_preferences')
       .upsert({ user_id: userId, push_token: token }, { onConflict: 'user_id' });

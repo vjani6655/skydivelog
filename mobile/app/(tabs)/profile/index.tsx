@@ -46,6 +46,7 @@ export default function ProfileScreen() {
     licence_rating: string | null;
     country: string | null;
     date_of_birth: string | null;
+    phone: string | null;
     home_dropzone_id: string | null;
     emergency_contact_name: string | null;
     emergency_contact_relationship: string | null;
@@ -66,7 +67,7 @@ export default function ProfileScreen() {
     setEmail(user.email ?? null);
 
     const [profileRes, jumpsRes, subRes, unreadCount] = await Promise.all([
-      supabase.from('users').select('full_name, licence_number, licence_rating, country, date_of_birth, home_dropzone_id, emergency_contact_name, emergency_contact_relationship, emergency_contact_phone').eq('id', user.id).single(),
+      supabase.from('users').select('full_name, licence_number, licence_rating, country, date_of_birth, phone, home_dropzone_id, emergency_contact_name, emergency_contact_relationship, emergency_contact_phone').eq('id', user.id).single(),
       supabase.from('jumps').select('freefall_seconds, dropzone_id, jump_number').eq('user_id', user.id).is('deleted_at', null),
       supabase.from('subscriptions').select('status, renews_at').eq('user_id', user.id).order('started_at', { ascending: false }).limit(1).maybeSingle(),
       getUnreadCount(supabase, user.id).catch(() => 0),
@@ -123,6 +124,7 @@ export default function ProfileScreen() {
     profile.licence_rating,
     profile.country,
     profile.date_of_birth,
+    profile.phone,
     profile.home_dropzone_id,
     profile.emergency_contact_name,
     profile.emergency_contact_relationship,

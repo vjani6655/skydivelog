@@ -42,7 +42,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
     { data: authUserData },
     { data: subEvents },
   ] = await Promise.all([
-    db.from('users').select('*, home_dropzone_id').eq('id', id).single(),
+    db.from('users').select('*, dropzones!home_dropzone_id(name)').eq('id', id).single(),
     db.from('subscriptions').select('*').eq('user_id', id).order('started_at', { ascending: false }).limit(1).maybeSingle(),
     db.from('subscriptions').select('id, status, plan, price_at_signup, started_at, renews_at, refunded_at, refunded_amount, cancelled_at').eq('user_id', id).order('started_at', { ascending: false }),
     db.from('jumps').select(`
@@ -200,12 +200,12 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
                 ['FULL NAME',       user.full_name || '—',                         false],
                 ['DATE OF BIRTH',   user.date_of_birth ?? '—',                     true],
                 ['PHONE',           user.phone ?? '—',                             true],
-                ['HOME DZ',         '—',                                           false],
+                ['HOME DZ',         (user.dropzones as unknown as { name: string } | null)?.name ?? '—', false],
                 ['COUNTRY',         user.country ? `${user.country}` : '—',        false],
                 ['ACCOUNT CREATED', fmtDate(user.created_at),                      true],
                 ['LAST SIGN-IN',    fmtDate(user.last_sign_in_at),                 true],
                 ['IP (LAST SEEN)',  user.last_ip ?? '—',                           true],
-                ['2FA',             user.two_factor_enabled ? 'Enabled · TOTP' : 'Disabled', false],
+                ['2FA',             (authUserData?.user?.factors ?? []).some((f: { factor_type: string; status: string }) => f.factor_type === 'totp' && f.status === 'verified') ? 'Enabled · TOTP' : 'Disabled', false],
               ].map(([k, v, mono]) => (
                 <div key={k as string}>
                   <div className="font-mono text-[10px] text-fg-3 tracking-widest uppercase">{k as string}</div>
@@ -266,26 +266,32 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
           customTrialEndsAt={customTrialEnd ?? null}
         />
 
-        {/* Subscription history — shown when user has multiple subs (e.g. re-subscribed after refund) */}
-        {(allSubs?.length ?? 0) > 1 && (
+        {/* Subscription history */}
+        {(allSubs?.length ?? 0) > 0 && (
           <AdminCard title="Subscription history">
             <div className="space-y-2">
-              {allSubs!.map((s, i) => (
+              {[...(allSubs ?? [])].sort((a, b) => {
+                // Most recent first; when started_at ties, active beats cancelled
+                const dateDiff = new Date(b.started_at).getTime() - new Date(a.started_at).getTime()
+                if (dateDiff !== 0) return dateDiff
+                const p: Record<string, number> = { active: 0, overdue: 1, cancelled: 2 }
+                return (p[a.status] ?? 3) - (p[b.status] ?? 3)
+              }).map((s, i) => (
                 <div key={s.id} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
                   <div>
                     <div className="text-xs font-medium text-fg">{s.plan ?? 'Pro'} · ${Number(s.price_at_signup).toFixed(2)}</div>
                     <div className="font-mono text-[10px] text-fg-3 mt-0.5">
-                      {fmtDateShort(s.started_at)}{s.renews_at ? ` → ${fmtDateShort(s.renews_at)}` : ''}
+                      {fmtDate(s.started_at)}{s.renews_at ? ` → ${fmtDateShort(s.renews_at)}` : ''}
                     </div>
                     {s.refunded_at && (
                       <div className="font-mono text-[10px] text-warn mt-0.5">
-                        Refunded ${Number(s.refunded_amount ?? s.price_at_signup).toFixed(2)} · {fmtDateShort(s.refunded_at)}
+                        Refunded ${Number(s.refunded_amount ?? s.price_at_signup).toFixed(2)} · {fmtDate(s.refunded_at)}
                       </div>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
                     {i === 0 && <span className="font-mono text-[9px] text-fg-4 uppercase">latest</span>}
-                    <Badge kind={statusKind[s.status] ?? 'muted'}>{s.status.toUpperCase()}</Badge>
+                    <Badge kind={s.refunded_at ? 'danger' : (statusKind[s.status] ?? 'muted')}>{s.refunded_at ? 'REFUNDED' : s.status.toUpperCase()}</Badge>
                   </div>
                 </div>
               ))}

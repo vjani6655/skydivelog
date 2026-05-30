@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { TouchableOpacity, View, StyleSheet } from 'react-native';
+import { TouchableOpacity, View, StyleSheet, ViewStyle } from 'react-native';
 import { shadows } from '@/constants/tokens';
 import { useColors } from '@/lib/theme';
 import Icon from './Icon';
@@ -10,6 +10,9 @@ interface IconButtonProps {
   badge?: boolean;
   disabled?: boolean;
   color?: string;
+  /** @deprecated use iconColor */
+  iconColor?: string;
+  style?: ViewStyle;
 }
 
 export default function IconButton({
@@ -18,9 +21,11 @@ export default function IconButton({
   badge = false,
   disabled = false,
   color,
+  iconColor,
+  style,
 }: IconButtonProps) {
   const colors = useColors();
-  const resolvedColor = color ?? colors.fg;
+  const resolvedColor = iconColor ?? color ?? colors.fg;
   const styles = useMemo(() => StyleSheet.create({
     base: {
       width: 36,
@@ -50,7 +55,7 @@ export default function IconButton({
       onPress={onPress}
       disabled={disabled}
       activeOpacity={0.7}
-      style={[styles.base, disabled && styles.disabled]}
+      style={[styles.base, style, disabled && styles.disabled]}
     >
       <Icon name={name} size={18} color={resolvedColor} />
       {badge && <View style={styles.badge} />}

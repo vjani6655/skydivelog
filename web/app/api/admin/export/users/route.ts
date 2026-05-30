@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   if (!user) return new Response('Unauthorized', { status: 401 })
 
   const db = createAdminClient()
-  const { data: adminRow } = await db.from('admins').select('user_id').eq('user_id', user.id).maybeSingle()
+  const { data: adminRow } = await db.from('admins').select('id').eq('email', user.email!).eq('active', true).maybeSingle()
   if (!adminRow) return new Response('Forbidden', { status: 403 })
 
   // Parse query params from the request URL

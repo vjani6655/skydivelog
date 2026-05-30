@@ -9,6 +9,7 @@ type RecentSend = {
   id: string
   title: string
   sent_at: string | null
+  segment_key: string | null
   segments: { name: string } | null
 }
 
@@ -43,6 +44,7 @@ export default function AnnouncementsCompose({ recentSends, segments, recipientC
   const [sending,        setSending]        = useState(false)
   const [sent,           setSent]           = useState(false)
   const [sentCount,      setSentCount]      = useState(0)
+  const [sentHasPush,    setSentHasPush]    = useState(true)
   const [sends,          setSends]          = useState<RecentSend[]>(recentSends)
 
   // Specific user picker state
@@ -133,12 +135,13 @@ export default function AnnouncementsCompose({ recentSends, segments, recipientC
 
       const result = await res.json()
       setSentCount(result.sent ?? 0)
+      setSentHasPush(result.hasPush !== false)
 
       // Refresh recent sends list
       const sb = createClient()
       const { data } = await sb
         .from('announcements')
-        .select('id, title, sent_at, segments(name)')
+        .select('id, title, sent_at, segment_key, segments(name)')
         .eq('status', 'sent')
         .order('sent_at', { ascending: false })
         .limit(8)
@@ -333,7 +336,9 @@ export default function AnnouncementsCompose({ recentSends, segments, recipientC
             <div className="px-4 py-3 bg-ok/10 border border-ok/20 rounded-md text-xs text-ok font-medium text-center">
               {sentCount > 0
                 ? `Push sent to ${sentCount.toLocaleString()} device${sentCount === 1 ? '' : 's'}.`
-                : 'Announcement saved. No push tokens matched the selected segment.'}
+                : sentHasPush
+                  ? 'Announcement saved. No push tokens matched the selected segment.'
+                  : 'Announcement saved.'}
             </div>
           ) : (
             <div className="flex gap-2.5">
@@ -356,59 +361,130 @@ export default function AnnouncementsCompose({ recentSends, segments, recipientC
 
         {/* Right: preview + recent sends */}
         <div className="flex flex-col gap-3.5">
-          {/* iOS push preview */}
+          {/* iOS preview — switches between push (lock screen) and in-app banner */}
           <div className="bg-surface border border-border rounded-md p-4">
-            <div className="font-mono text-[10px] text-fg-3 uppercase tracking-widest mb-4">PREVIEW · IOS PUSH</div>
+            <div className="font-mono text-[10px] text-fg-3 uppercase tracking-widest mb-4">
+              PREVIEW · {channels.includes('In-app banner') && !channels.includes('Push') ? 'IN-APP BANNER' : channels.includes('Push') && channels.includes('In-app banner') ? 'IOS PUSH + BANNER' : 'IOS PUSH'}
+            </div>
 
-            {/* Phone shell */}
-            <div className="mx-auto w-[220px]">
+            {/* iPhone 15 Pro proportions: 393×852pt → display at 270×585 */}
+            <div className="mx-auto" style={{ width: 270 }}>
               {/* Outer frame */}
-              <div className="relative bg-[#111] rounded-[44px] p-[3px] shadow-[0_0_0_1px_#2a2a2a,0_8px_32px_rgba(0,0,0,0.6)]">
+              <div className="relative bg-[#1a1a1a] rounded-[52px] p-[3.5px] shadow-[0_0_0_1px_#333,0_16px_48px_rgba(0,0,0,0.7)]" style={{ height: 585 }}>
                 {/* Side buttons */}
-                <div className="absolute -left-[3px] top-[80px] w-[3px] h-7 bg-[#2a2a2a] rounded-l-sm" />
-                <div className="absolute -left-[3px] top-[116px] w-[3px] h-10 bg-[#2a2a2a] rounded-l-sm" />
-                <div className="absolute -left-[3px] top-[162px] w-[3px] h-10 bg-[#2a2a2a] rounded-l-sm" />
-                <div className="absolute -right-[3px] top-[110px] w-[3px] h-14 bg-[#2a2a2a] rounded-r-sm" />
+                <div className="absolute -left-[4px] top-[90px] w-[4px] h-8 bg-[#333] rounded-l-sm" />
+                <div className="absolute -left-[4px] top-[134px] w-[4px] h-12 bg-[#333] rounded-l-sm" />
+                <div className="absolute -left-[4px] top-[186px] w-[4px] h-12 bg-[#333] rounded-l-sm" />
+                <div className="absolute -right-[4px] top-[130px] w-[4px] h-16 bg-[#333] rounded-r-sm" />
 
                 {/* Screen */}
-                <div className="bg-[#000] rounded-[42px] overflow-hidden">
-                  {/* Dynamic island */}
-                  <div className="flex justify-center pt-3 pb-1">
-                    <div className="w-24 h-7 bg-[#111] rounded-full" />
-                  </div>
+                <div className="bg-[#000] rounded-[49px] overflow-hidden h-full flex flex-col">
 
-                  {/* Lock screen wallpaper area */}
-                  <div className="bg-gradient-to-b from-[#0f1b2d] to-[#1a2740] px-4 pb-5 min-h-[340px]">
-                    {/* Time */}
-                    <div className="text-center pt-3 pb-4">
-                      <div className="text-[42px] font-thin text-white leading-none tracking-tight">9:41</div>
-                      <div className="text-[13px] text-white/60 mt-1">Friday, 29 May</div>
+                  {/* ── PUSH / LOCK SCREEN ── */}
+                  {channels.includes('Push') && (
+                    <div className="flex-1 bg-gradient-to-b from-[#0d1b35] via-[#0a1220] to-[#081530] flex flex-col relative overflow-hidden">
+                      {/* Dynamic island */}
+                      <div className="flex justify-center pt-3">
+                        <div className="w-[100px] h-7 bg-black rounded-full" />
+                      </div>
+                      {/* Status bar */}
+                      <div className="flex justify-between items-center px-6 pt-1 pb-0">
+                        <span className="text-white text-[11px] font-semibold">9:41</span>
+                        <div className="flex gap-1.5 items-center">
+                          <svg width="14" height="9" viewBox="0 0 19 12" fill="white"><rect x="0" y="7.5" width="3.2" height="4.5" rx="0.7"/><rect x="4.8" y="5" width="3.2" height="7" rx="0.7"/><rect x="9.6" y="2.5" width="3.2" height="9.5" rx="0.7"/><rect x="14.4" y="0" width="3.2" height="12" rx="0.7"/></svg>
+                          <svg width="13" height="9" viewBox="0 0 17 12" fill="white"><path d="M8.5 3.2C10.8 3.2 12.9 4.1 14.4 5.6L15.5 4.5C13.7 2.7 11.2 1.5 8.5 1.5C5.8 1.5 3.3 2.7 1.5 4.5L2.6 5.6C4.1 4.1 6.2 3.2 8.5 3.2Z"/><path d="M8.5 6.8C9.9 6.8 11.1 7.3 12 8.2L13.1 7.1C11.8 5.9 10.2 5.1 8.5 5.1C6.8 5.1 5.2 5.9 3.9 7.1L5 8.2C5.9 7.3 7.1 6.8 8.5 6.8Z"/><circle cx="8.5" cy="10.5" r="1.5"/></svg>
+                          <svg width="20" height="10" viewBox="0 0 27 13" fill="none"><rect x="0.5" y="0.5" width="23" height="12" rx="3.5" stroke="white" strokeOpacity="0.4"/><rect x="2" y="2" width="20" height="9" rx="2" fill="white"/></svg>
+                        </div>
+                      </div>
+                      {/* Lock time */}
+                      <div className="text-center pt-5 pb-4">
+                        <div className="text-[54px] font-thin text-white leading-none tracking-tight">9:41</div>
+                        <div className="text-[13px] text-white/60 mt-1.5">Friday, 29 May</div>
+                      </div>
+                      {/* Push notification */}
+                      <div className="px-3">
+                        <div className="bg-white/10 backdrop-blur-md rounded-2xl px-3 py-2.5 flex gap-2.5 items-start border border-white/10">
+                          <div className="w-8 h-8 rounded-[9px] bg-sky flex items-center justify-center shrink-0 mt-0.5">
+                            <Bell size={13} className="text-white" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-0.5">
+                              <span className="text-[10px] font-semibold text-white/50 uppercase tracking-wide">Jump Logs</span>
+                              <span className="text-[10px] text-white/35">now</span>
+                            </div>
+                            <div className="text-[12px] font-semibold text-white leading-snug mb-0.5 truncate">{title || 'Notification title'}</div>
+                            <div className="text-[11px] text-white/65 leading-snug line-clamp-2">{body || 'Notification body text appears here…'}</div>
+                          </div>
+                        </div>
+                      </div>
+                      {/* Home indicator */}
+                      <div className="absolute bottom-2 left-0 right-0 flex justify-center">
+                        <div className="w-24 h-1 bg-white/40 rounded-full" />
+                      </div>
                     </div>
+                  )}
 
-                    {/* Notification card */}
-                    <div className="bg-white/10 backdrop-blur-md rounded-2xl px-3 py-2.5 flex gap-2.5 items-start border border-white/10">
-                      <div className="w-8 h-8 rounded-[10px] bg-sky flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
-                        <Bell size={14} className="text-white" />
+                  {/* ── IN-APP BANNER (shown below push if both selected, or alone) ── */}
+                  {channels.includes('In-app banner') && !channels.includes('Push') && (
+                    <div className="flex-1 bg-[#0A1220] flex flex-col relative overflow-hidden">
+                      {/* Dynamic island */}
+                      <div className="flex justify-center pt-3">
+                        <div className="w-[100px] h-7 bg-black rounded-full" />
+                      </div>
+                      {/* Status bar */}
+                      <div className="flex justify-between items-center px-5 pt-1">
+                        <span className="text-fg text-[11px] font-semibold">9:41</span>
+                        <div className="flex gap-1.5 items-center opacity-70">
+                          <svg width="14" height="9" viewBox="0 0 19 12" fill="#8B9BB5"><rect x="0" y="7.5" width="3.2" height="4.5" rx="0.7"/><rect x="4.8" y="5" width="3.2" height="7" rx="0.7"/><rect x="9.6" y="2.5" width="3.2" height="9.5" rx="0.7"/><rect x="14.4" y="0" width="3.2" height="12" rx="0.7"/></svg>
+                        </div>
+                      </div>
+                      {/* App topbar */}
+                      <div className="px-4 pt-2 pb-2 border-b border-white/5">
+                        <div className="text-[18px] font-bold text-white">Jump Log</div>
+                      </div>
+                      {/* Dimmed content */}
+                      <div className="flex-1 px-3 pt-3 opacity-40 overflow-hidden">
+                        {[847, 846, 845, 844].map(n => (
+                          <div key={n} className="bg-[#121C2E] rounded-xl mb-2 px-3 py-2.5">
+                            <div className="text-[9px] text-[#5A6B85] font-mono mb-0.5">JUMP #{n}</div>
+                            <div className="text-[12px] font-semibold text-white">Skydive Yarra Valley</div>
+                          </div>
+                        ))}
+                      </div>
+                      {/* In-app banner */}
+                      <div className="absolute top-[72px] left-2 right-2 z-10">
+                        <div className="bg-[#1A2740] border border-sky/30 rounded-2xl flex items-start gap-2.5 p-2.5 shadow-lg">
+                          <div className="w-7 h-7 rounded-full bg-sky/15 flex items-center justify-center shrink-0">
+                            <Bell size={12} className="text-sky-400" style={{ color: '#4A9EFF' }} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[11px] font-semibold text-white leading-snug mb-0.5 truncate">{title || 'Announcement title'}</div>
+                            <div className="text-[10px] text-[#8B9BB5] leading-snug line-clamp-2">{body || 'Announcement body text appears here…'}</div>
+                          </div>
+                          <div className="text-[#5A6B85] pt-0.5">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+                          </div>
+                        </div>
+                      </div>
+                      {/* Home indicator */}
+                      <div className="absolute bottom-2 left-0 right-0 flex justify-center">
+                        <div className="w-24 h-1 bg-white/20 rounded-full" />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Both selected — split view */}
+                  {channels.includes('Push') && channels.includes('In-app banner') && (
+                    <div className="bg-[#121C2E] px-3 py-2 border-t border-white/5 flex items-start gap-2">
+                      <div className="w-6 h-6 rounded-lg bg-sky/15 flex items-center justify-center shrink-0">
+                        <Bell size={10} className="text-sky-400" style={{ color: '#4A9EFF' }} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-0.5">
-                          <span className="text-[10px] font-medium text-white/50 uppercase tracking-wide">Jump Logs</span>
-                          <span className="text-[10px] text-white/40">now</span>
-                        </div>
-                        <div className="text-[12px] font-semibold text-white leading-snug mb-0.5">
-                          {title || 'Notification title'}
-                        </div>
-                        <div className="text-[11px] text-white/70 leading-snug line-clamp-2">
-                          {body || 'Notification body text appears here…'}
-                        </div>
+                        <div className="text-[10px] font-semibold text-white/70 mb-0.5">In-app banner</div>
+                        <div className="text-[10px] text-white/40 truncate">{title || 'Announcement title'}</div>
                       </div>
                     </div>
-                  </div>
-
-                  {/* Home indicator */}
-                  <div className="bg-[#000] flex justify-center py-2">
-                    <div className="w-28 h-1 bg-white/30 rounded-full" />
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -432,7 +508,13 @@ export default function AnnouncementsCompose({ recentSends, segments, recipientC
                   </span>
                 </div>
                 <div className="font-mono text-[10px] text-fg-3">
-                  {s.segments?.name ?? 'All users'}
+                  {s.segments?.name ?? (
+                    s.segment_key === 'active'   ? 'Active subs' :
+                    s.segment_key === 'trial'    ? 'Trial users' :
+                    s.segment_key === 'overdue'  ? 'Overdue' :
+                    s.segment_key === 'specific' ? 'Specific users' :
+                    'All users'
+                  )}
                 </div>
               </div>
             ))}

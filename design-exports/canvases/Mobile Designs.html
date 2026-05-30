@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>SkydiveLog — Mobile Designs</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="lib/tokens.css">
+<link rel="stylesheet" href="../lib/tokens.css">
 <style>
   html, body { margin: 0; padding: 0; background: #f0eee9; }
   body { font-family: var(--font-ui); }
@@ -21,12 +21,12 @@
 <body>
 <div id="root"></div>
 
-<script type="text/babel" src="lib/design-canvas.jsx"></script>
-<script type="text/babel" src="lib/skydive-ui.jsx"></script>
-<script type="text/babel" src="screens/onboarding.jsx"></script>
-<script type="text/babel" src="screens/log.jsx"></script>
-<script type="text/babel" src="screens/stats.jsx"></script>
-<script type="text/babel" src="screens/rest.jsx"></script>
+<script type="text/babel" src="../lib/design-canvas.jsx"></script>
+<script type="text/babel" src="../lib/skydive-ui.jsx"></script>
+<script type="text/babel" src="../screens/onboarding.jsx"></script>
+<script type="text/babel" src="../screens/log.jsx"></script>
+<script type="text/babel" src="../screens/stats.jsx"></script>
+<script type="text/babel" src="../screens/rest.jsx"></script>
 
 <script type="text/babel">
 const W = 390, H = 844;
@@ -101,6 +101,11 @@ function App() {
         <DCArtboard {...ABP} id="export"      label="33 · Export logbook"><ScreenExport /></DCArtboard>
         <DCArtboard {...ABP} id="manage-tags" label="34 · Manage tags"><ScreenManageTags /></DCArtboard>
         <DCArtboard {...ABP} id="notif"       label="35 · Notification settings"><ScreenNotif /></DCArtboard>
+      </DCSection>
+
+      <DCSection id="notifications" title="Notifications" subtitle="Push · lock screen &amp; in-app banner">
+        <DCArtboard {...ABP} id="push-notif"    label="36 · Push · lock screen"><ScreenPushNotification /></DCArtboard>
+        <DCArtboard {...ABP} id="in-app-banner" label="37 · In-app banner"><ScreenInAppBanner /></DCArtboard>
       </DCSection>
 
       <DCPostIt top={60} left={60} rotate={-3} width={220}>

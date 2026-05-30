@@ -1,8 +1,10 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import type { ColorValue } from 'react-native';
+import { View, type ColorValue } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 import { useColors } from '@/lib/theme';
+import AnnouncementBanner from '@/components/ui/AnnouncementBanner';
+import { useAnnouncementBanner } from '@/lib/useAnnouncementBanner';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -37,8 +39,11 @@ function CanopyIcon({ color, size }: { color: string; size: number }) {
 
 export default function TabLayout() {
   const colors = useColors();
+  const { announcement, dismiss } = useAnnouncementBanner();
+
   return (
-    <Tabs
+    <View style={{ flex: 1 }}>
+      <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.sky,
@@ -80,5 +85,9 @@ export default function TabLayout() {
       {/* Hide any auto-discovered index route from the tab bar */}
       <Tabs.Screen name="index" options={{ href: null }} />
     </Tabs>
+    {announcement && (
+      <AnnouncementBanner announcement={announcement} onDismiss={dismiss} />
+    )}
+    </View>
   );
 }

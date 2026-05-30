@@ -1,10 +1,11 @@
 import { useEffect, useState, useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, SafeAreaView, TouchableOpacity,
-  ActivityIndicator, Alert,
+  ActivityIndicator, Alert, TextInput, Modal, KeyboardAvoidingView, Platform, Clipboard,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import QRCode from 'react-native-qrcode-svg';
 import Toggle from '@/components/ui/Toggle';
 import { supabase } from '@/lib/supabase';
 import { spacing, radii } from '@/constants/tokens';
@@ -113,6 +114,17 @@ export default function SettingsScreen() {
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
+  // 2FA state
+  const [mfaEnabled, setMfaEnabled] = useState(false);
+  const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
+  const [mfaModal, setMfaModal] = useState<'enroll' | 'unenroll' | null>(null);
+  const [mfaQR, setMfaQR] = useState<string | null>(null);
+  const [mfaSecret, setMfaSecret] = useState<string | null>(null);
+  const [mfaNewFactorId, setMfaNewFactorId] = useState<string | null>(null);
+  const [mfaChallengeId, setMfaChallengeId] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaWorking, setMfaWorking] = useState(false);
+
   useEffect(() => {
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -133,6 +145,13 @@ export default function SettingsScreen() {
         if (data.cert_expiry_warning_days != null) setCertDays(data.cert_expiry_warning_days);
       }
       if (loadedPrefs) setNotifPrefs(loadedPrefs);
+
+      // Load MFA status
+      const { data: factors } = await supabase.auth.mfa.listFactors();
+      const totpFactor = factors?.totp?.find(f => f.status === 'verified');
+      setMfaEnabled(!!totpFactor);
+      setMfaFactorId(totpFactor?.id ?? null);
+
       setLoaded(true);
     })();
   }, []);
@@ -168,6 +187,65 @@ export default function SettingsScreen() {
   };
 
   if (!loaded) return <View style={[styles.center, { backgroundColor: colors.bg }]}><ActivityIndicator color={colors.sky} /></View>;
+
+  const startEnroll = async () => {
+    setMfaCode('');
+    setMfaWorking(true);
+    try {
+      // Clean up any existing unverified factors before re-enrolling
+      const { data: existing } = await supabase.auth.mfa.listFactors();
+      const unverified = existing?.totp?.filter(f => f.status === 'unverified') ?? [];
+      await Promise.all(unverified.map(f => supabase.auth.mfa.unenroll({ factorId: f.id })));
+
+      const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp', issuer: 'SkydiveLog', friendlyName: `Authenticator-${Date.now()}` });
+      if (error || !data) { Alert.alert('Error', error?.message ?? 'Failed to start 2FA setup'); return; }
+      setMfaQR(data.totp.uri);
+      setMfaSecret(data.totp.secret);
+      setMfaNewFactorId(data.id);
+      // Create challenge immediately so user can verify
+      const { data: ch, error: chErr } = await supabase.auth.mfa.challenge({ factorId: data.id });
+      if (chErr || !ch) { Alert.alert('Error', chErr?.message ?? 'Failed to create challenge'); return; }
+      setMfaChallengeId(ch.id);
+      setMfaModal('enroll');
+    } finally {
+      setMfaWorking(false);
+    }
+  };
+
+  const confirmEnroll = async () => {
+    if (!mfaNewFactorId || !mfaChallengeId || mfaCode.length !== 6) return;
+    setMfaWorking(true);
+    try {
+      const { error } = await supabase.auth.mfa.verify({ factorId: mfaNewFactorId, challengeId: mfaChallengeId, code: mfaCode });
+      if (error) { Alert.alert('Invalid code', error.message); return; }
+      setMfaEnabled(true);
+      setMfaFactorId(mfaNewFactorId);
+      setMfaModal(null);
+      setMfaCode('');
+    } finally {
+      setMfaWorking(false);
+    }
+  };
+
+  const startUnenroll = () => {
+    Alert.alert('Disable 2FA', 'This will remove two-factor authentication from your account. Are you sure?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Disable', style: 'destructive', onPress: confirmUnenroll },
+    ]);
+  };
+
+  const confirmUnenroll = async () => {
+    if (!mfaFactorId) return;
+    setMfaWorking(true);
+    try {
+      const { error } = await supabase.auth.mfa.unenroll({ factorId: mfaFactorId });
+      if (error) { Alert.alert('Error', error.message); return; }
+      setMfaEnabled(false);
+      setMfaFactorId(null);
+    } finally {
+      setMfaWorking(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -267,6 +345,85 @@ export default function SettingsScreen() {
         <View style={styles.card}>
           <ToggleRow label="Sync to cloud" value={sync} onChange={setSync} />
         </View>
+
+        <SectionTitle text="SECURITY" />
+        <View style={[styles.card, mfaEnabled && { borderColor: colors.ok + '60', backgroundColor: colors.okBg }]}>
+          <View style={styles.toggleRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.toggleLabel}>Two-Factor Authentication</Text>
+              <Text style={styles.subLabel}>
+                {mfaEnabled ? 'Enabled · Authenticator app' : 'Add extra security to your account'}
+              </Text>
+            </View>
+            {mfaWorking
+              ? <ActivityIndicator size="small" color={colors.sky} />
+              : mfaEnabled
+                ? <TouchableOpacity onPress={startUnenroll} style={styles.mfaDisableBtn} activeOpacity={0.7}>
+                    <Text style={styles.mfaDisableBtnText}>Disable</Text>
+                  </TouchableOpacity>
+                : <TouchableOpacity onPress={startEnroll} style={styles.mfaEnableBtn} activeOpacity={0.7}>
+                    <Text style={styles.mfaEnableBtnText}>Enable</Text>
+                  </TouchableOpacity>
+            }
+          </View>
+        </View>
+
+        {/* 2FA enroll modal */}
+        <Modal visible={mfaModal === 'enroll'} animationType="slide" transparent onRequestClose={() => setMfaModal(null)}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
+            <View style={styles.modalSheet}>
+              <View style={styles.modalHeader}>
+                <TouchableOpacity onPress={() => setMfaModal(null)} style={styles.modalCancelBtn}>
+                  <Text style={styles.modalCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <Text style={styles.modalTitle}>Set up 2FA</Text>
+                <View style={{ width: 60 }} />
+              </View>
+              <ScrollView contentContainerStyle={styles.modalBody} keyboardShouldPersistTaps="handled">
+                <Text style={styles.modalStep}>1. Scan this QR code with your authenticator app</Text>
+                {mfaQR ? (
+                  <View style={styles.qrWrapper}>
+                    <QRCode value={mfaQR} size={200} backgroundColor="white" color="black" ecLevel="L" />
+                  </View>
+                ) : null}
+                <Text style={styles.modalStep}>Or enter this key manually:</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    Clipboard.setString(mfaSecret ?? '');
+                    Alert.alert('Copied', 'Secret key copied to clipboard.');
+                  }}
+                  activeOpacity={0.7}
+                  style={styles.mfaSecretRow}
+                >
+                  <Text style={styles.mfaSecret} selectable>{mfaSecret ?? ''}</Text>
+                  <Ionicons name="copy-outline" size={16} color={colors.sky} style={{ marginLeft: spacing[2] }} />
+                </TouchableOpacity>
+                <Text style={[styles.modalStep, { marginTop: spacing[5] }]}>2. Enter the 6-digit code from the app</Text>
+                <TextInput
+                  style={styles.codeInput}
+                  value={mfaCode}
+                  onChangeText={t => setMfaCode(t.replace(/\D/g, '').slice(0, 6))}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  placeholder="000000"
+                  placeholderTextColor={colors.fg3}
+                  textAlign="center"
+                />
+                <TouchableOpacity
+                  style={[styles.confirmBtn, (mfaCode.length !== 6 || mfaWorking) && styles.confirmBtnDisabled]}
+                  onPress={confirmEnroll}
+                  disabled={mfaCode.length !== 6 || mfaWorking}
+                  activeOpacity={0.8}
+                >
+                  {mfaWorking
+                    ? <ActivityIndicator color="white" />
+                    : <Text style={styles.confirmBtnText}>Verify &amp; Enable</Text>
+                  }
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
       </ScrollView>
     </SafeAreaView>
   );
@@ -296,5 +453,24 @@ function makeStyles(c: ColorSet) {
   threshRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing[4], paddingBottom: spacing[3] },
   threshLabel: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, letterSpacing: 0.5, color: c.fg3 },
   threshChips: { flexDirection: 'row', gap: spacing[2] },
+  mfaEnableBtn: { paddingHorizontal: spacing[3], paddingVertical: spacing[1.5], borderRadius: radii.sm, backgroundColor: c.skyBg, borderWidth: 1, borderColor: c.sky + '40' },
+  mfaEnableBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 13, color: c.sky },
+  mfaDisableBtn: { paddingHorizontal: spacing[3], paddingVertical: spacing[1.5], borderRadius: radii.sm, backgroundColor: c.surface2, borderWidth: 1, borderColor: c.border },
+  mfaDisableBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 13, color: c.fg3 },
+  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' },
+  modalSheet: { backgroundColor: c.bg, borderTopLeftRadius: radii.xl, borderTopRightRadius: radii.xl, maxHeight: '90%' },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing[4], paddingVertical: spacing[3], borderBottomWidth: 1, borderBottomColor: c.border },
+  modalCancelBtn: { minWidth: 60 },
+  modalCancelText: { fontFamily: 'InterTight-Regular', fontSize: 15, color: c.fg2 },
+  modalTitle: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: c.fg },
+  modalBody: { padding: spacing[5], paddingBottom: 40 },
+  modalStep: { fontFamily: 'InterTight-Medium', fontSize: 14, color: c.fg2, marginBottom: spacing[3] },
+  qrWrapper: { alignItems: 'center', padding: spacing[4], backgroundColor: 'white', borderRadius: radii.lg, marginBottom: spacing[4], alignSelf: 'center' },
+  mfaSecretRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: c.surface2, borderRadius: radii.md, padding: spacing[3], marginBottom: spacing[3] },
+  mfaSecret: { flex: 1, fontFamily: 'JetBrainsMono-Regular', fontSize: 13, color: c.sky, letterSpacing: 1, textAlign: 'center' },
+  codeInput: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, height: 56, fontSize: 28, fontFamily: 'JetBrainsMono-Regular', color: c.fg, letterSpacing: 8, marginBottom: spacing[5] },
+  confirmBtn: { backgroundColor: c.sky, borderRadius: radii.md, height: 50, alignItems: 'center', justifyContent: 'center' },
+  confirmBtnDisabled: { opacity: 0.4 },
+  confirmBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 16, color: 'white' },
   });
 }

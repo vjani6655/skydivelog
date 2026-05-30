@@ -28,6 +28,7 @@ interface TopBarProps {
   layout:            LayoutPref;
   title?:            string;
   isFavourite:       boolean;
+  overlay?:          boolean;
   onBack:            () => void;
   onToggleFavourite: () => void;
   onMenu:            () => void;
@@ -35,21 +36,27 @@ interface TopBarProps {
 }
 
 function TopBar({
-  layout, title, isFavourite,
+  layout, title, isFavourite, overlay = false,
   onBack, onToggleFavourite, onMenu, onShare,
 }: TopBarProps) {
   const colors = useColors();
-  const showStar  = layout !== 'Cockpit';
-  const showShare = layout === 'Photo-led';
-  const showMenu  = layout !== 'Photo-led';
+
+  // Overlay buttons use a dark semi-transparent surface so they're visible over the photo
+  const btnBg = overlay ? 'rgba(10,18,32,0.55)' : undefined;
+  const btnBorder = overlay ? 'rgba(255,255,255,0.12)' : undefined;
+  const iconColor = overlay ? '#fff' : colors.fg;
+
+  const buttonStyle = overlay
+    ? { backgroundColor: btnBg, borderColor: btnBorder }
+    : undefined;
 
   return (
     <View style={styles.topBar}>
-      <IconButton name="back" onPress={onBack} />
+      <IconButton name="back" onPress={onBack} style={buttonStyle} iconColor={iconColor} />
       <View style={styles.topBarCenter}>
         {title ? (
           <Text
-            style={[typography.md, { color: colors.fg, fontWeight: '600' }]}
+            style={[typography.md, { color: overlay ? '#fff' : colors.fg, fontWeight: '600' }]}
             numberOfLines={1}
           >
             {title}
@@ -57,15 +64,13 @@ function TopBar({
         ) : null}
       </View>
       <View style={styles.topBarRight}>
-        {showStar && (
-          <IconButton
-            name={isFavourite ? 'star-fill' : 'star'}
-            onPress={onToggleFavourite}
-            color={isFavourite ? colors.warn : colors.fg}
-          />
-        )}
-        {showShare && <IconButton name="share" onPress={onShare} />}
-        {showMenu  && <IconButton name="dots"  onPress={onMenu}  />}
+        <IconButton
+          name={isFavourite ? 'star-fill' : 'star'}
+          onPress={onToggleFavourite}
+          style={buttonStyle}
+          iconColor={isFavourite ? colors.warn : iconColor}
+        />
+        <IconButton name="dots" onPress={onMenu} style={buttonStyle} iconColor={iconColor} />
       </View>
     </View>
   );
@@ -193,21 +198,42 @@ export default function JumpDetailScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
-      <SafeAreaView edges={['top']} style={{ backgroundColor: colors.bg }}>
-        <TopBar
-          layout={layout}
-          title={topBarTitle}
-          isFavourite={jump.is_favourite}
-          onBack={() => router.back()}
-          onToggleFavourite={toggleFavourite}
-          onMenu={handleMenu}
-          onShare={() => {}}
-        />
-      </SafeAreaView>
+      {layout !== 'Photo-led' && (
+        <SafeAreaView edges={['top']} style={{ backgroundColor: colors.bg }}>
+          <TopBar
+            layout={layout}
+            title={topBarTitle}
+            isFavourite={jump.is_favourite}
+            onBack={() => router.back()}
+            onToggleFavourite={toggleFavourite}
+            onMenu={handleMenu}
+            onShare={() => {}}
+          />
+        </SafeAreaView>
+      )}
 
       {layout === 'Standard'  && <DetailStandard  {...detailProps} />}
       {layout === 'Cockpit'   && <DetailCockpit   {...detailProps} />}
       {layout === 'Photo-led' && <DetailPhotoLed  {...detailProps} />}
+
+      {layout === 'Photo-led' && (
+        <SafeAreaView
+          edges={['top']}
+          style={styles.photoNavOverlay}
+          pointerEvents="box-none"
+        >
+          <TopBar
+            layout={layout}
+            overlay
+            title={undefined}
+            isFavourite={jump.is_favourite}
+            onBack={() => router.back()}
+            onToggleFavourite={toggleFavourite}
+            onMenu={handleMenu}
+            onShare={() => {}}
+          />
+        </SafeAreaView>
+      )}
     </View>
   );
 }
@@ -230,5 +256,12 @@ const styles = StyleSheet.create({
   topBarRight: {
     flexDirection: 'row',
     gap: 4,
+  },
+  photoNavOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'transparent',
   },
 });

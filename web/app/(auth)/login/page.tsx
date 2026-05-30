@@ -20,6 +20,11 @@ export default function LoginPage() {
 
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
+  const [mfaRequired, setMfaRequired] = useState(false)
+  const [mfaCode, setMfaCode] = useState("")
+  const [mfaError, setMfaError] = useState<string | null>(null)
+  const [mfaLoading, setMfaLoading] = useState(false)
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     // Client-side validation
@@ -46,14 +51,72 @@ export default function LoginPage() {
     if (error) {
       setError(error.message)
       setLoading(false)
+      return
+    }
+
+    // Check if MFA is required
+    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+    if (aal?.nextLevel === 'aal2' && aal.nextLevel !== aal.currentLevel) {
+      setMfaRequired(true)
+      setLoading(false)
     } else {
       router.push("/dashboard")
       router.refresh()
     }
   }
 
+  const handleMfaVerify = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (mfaCode.length !== 6) return
+    setMfaError(null)
+    setMfaLoading(true)
+    try {
+      const { data: factors } = await supabase.auth.mfa.listFactors()
+      const totp = factors?.totp?.find((f: { status: string }) => f.status === 'verified')
+      if (!totp) { setMfaError('No authenticator found.'); return }
+      const { data: ch, error: chErr } = await supabase.auth.mfa.challenge({ factorId: totp.id })
+      if (chErr || !ch) { setMfaError(chErr?.message ?? 'Challenge failed'); return }
+      const { error: verErr } = await supabase.auth.mfa.verify({ factorId: totp.id, challengeId: ch.id, code: mfaCode })
+      if (verErr) { setMfaError('Invalid code. Try again.'); return }
+      router.push("/dashboard")
+      router.refresh()
+    } finally {
+      setMfaLoading(false)
+    }
+  }
+
   return (
     <div className="bg-surface border border-border rounded-xl p-8">
+      {mfaRequired ? (
+        <>
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-fg tracking-tight mb-1.5">Two-Factor Auth</h1>
+            <p className="text-sm text-fg-3">Enter the 6-digit code from your authenticator app.</p>
+          </div>
+          <form onSubmit={handleMfaVerify} className="space-y-4">
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              value={mfaCode}
+              onChange={e => { setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6)); setMfaError(null) }}
+              className="w-full bg-surface-2 border border-border rounded-sm px-4 py-3 text-center text-3xl font-mono tracking-[0.5em] text-fg focus:outline-none focus:border-sky"
+              placeholder="000000"
+              autoFocus
+            />
+            {mfaError && <p className="text-xs text-danger bg-danger-bg border border-danger/20 rounded-sm px-3 py-2">{mfaError}</p>}
+            <button type="submit" disabled={mfaCode.length !== 6 || mfaLoading}
+              className="w-full bg-sky text-on-sky font-semibold rounded-sm py-2.5 text-sm hover:bg-sky/90 disabled:opacity-50 transition-colors mt-2">
+              {mfaLoading ? "Verifying…" : "Verify"}
+            </button>
+            <button type="button" onClick={() => { supabase.auth.signOut(); setMfaRequired(false) }}
+              className="w-full text-xs text-fg-3 hover:text-fg-2 mt-2">
+              Back to sign in
+            </button>
+          </form>
+        </>
+      ) : (
+      <>
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-fg tracking-tight mb-1.5">Welcome back.</h1>
         <p className="text-sm text-fg-3">Sign in to your account.</p>
@@ -139,6 +202,8 @@ export default function LoginPage() {
           Create an account
         </Link>
       </p>
+      </>
+      )}
     </div>
   )
 }

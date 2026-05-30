@@ -22,29 +22,41 @@ export default async function AdminUsersPage({
   const trialCutoff = new Date()
   trialCutoff.setDate(trialCutoff.getDate() - 14)
 
-  // Fetch all subscription rows once — used for counts, filtering, and row display
-  const { data: allSubs } = await db.from('subscriptions').select('user_id, status')
-  const subscribedUserIds = allSubs?.map(s => s.user_id) ?? []
-  const activeIds    = allSubs?.filter(s => s.status === 'active').map(s => s.user_id) ?? []
-  const overdueIds   = allSubs?.filter(s => s.status === 'overdue').map(s => s.user_id) ?? []
-  const cancelledIds = allSubs?.filter(s => s.status === 'cancelled').map(s => s.user_id) ?? []
+  // Fetch all subscription rows with started_at — derive per-user effective status from most recent sub
+  const { data: allSubs } = await db.from('subscriptions').select('user_id, status, started_at')
+
+  // Per user: keep only the most recently started subscription.
+  // When started_at is tied, prefer active > overdue > cancelled as the effective status.
+  const statusPriority: Record<string, number> = { active: 0, overdue: 1, cancelled: 2 }
+  const bestSubStatus: Record<string, string> = {}
+  const bestSubStarted: Record<string, string> = {}
+  for (const s of allSubs ?? []) {
+    const existing = bestSubStarted[s.user_id]
+    const isSameDate = existing && s.started_at === existing
+    const isBetter = !existing
+      || new Date(s.started_at) > new Date(existing)
+      || (isSameDate && (statusPriority[s.status] ?? 99) < (statusPriority[bestSubStatus[s.user_id]] ?? 99))
+    if (isBetter) {
+      bestSubStatus[s.user_id] = s.status
+      bestSubStarted[s.user_id] = s.started_at
+    }
+  }
+  const subscribedUserIds = Object.keys(bestSubStatus)
+  const activeIds    = Object.entries(bestSubStatus).filter(([, s]) => s === 'active').map(([id]) => id)
+  const overdueIds   = Object.entries(bestSubStatus).filter(([, s]) => s === 'overdue').map(([id]) => id)
+  const cancelledIds = Object.entries(bestSubStatus).filter(([, s]) => s === 'cancelled').map(([id]) => id)
+
+  // Counts derived from per-user effective status (not raw subscription row counts)
+  const activeCount   = activeIds.length
+  const overdueCount  = overdueIds.length
+  const cancelledCount = cancelledIds.length
 
   // Trial count = users without any subscription created within the last 14 days
   let trialCountQuery = db.from('users').select('*', { count: 'exact', head: true }).gte('created_at', trialCutoff.toISOString())
   if (subscribedUserIds.length > 0) trialCountQuery = trialCountQuery.not('id', 'in', `(${subscribedUserIds.join(',')})`)
   const { count: trialCount } = await trialCountQuery
 
-  const [
-    { count: totalCount },
-    { count: activeCount },
-    { count: overdueCount },
-    { count: cancelledCount },
-  ] = await Promise.all([
-    db.from('users').select('*', { count: 'exact', head: true }),
-    db.from('subscriptions').select('*', { count: 'exact', head: true }).eq('status', 'active'),
-    db.from('subscriptions').select('*', { count: 'exact', head: true }).eq('status', 'overdue'),
-    db.from('subscriptions').select('*', { count: 'exact', head: true }).eq('status', 'cancelled'),
-  ])
+  const { count: totalCount } = await db.from('users').select('*', { count: 'exact', head: true })
 
   // Determine which user IDs to include based on the active filter tab
   let filterIds: string[] | null = null
@@ -67,7 +79,7 @@ export default async function AdminUsersPage({
     .select(`
       id, email, full_name, licence_number, licence_rating,
       created_at, last_sign_in_at,
-      subscriptions ( status, renews_at, price_at_signup )
+      subscriptions ( status, renews_at, price_at_signup, started_at )
     `)
     .order(sort === 'seen' ? 'last_sign_in_at' : 'created_at', { ascending: false })
     .limit(50)
@@ -101,9 +113,11 @@ export default async function AdminUsersPage({
   const jumpMap: Record<string, number> = {}
   jumpCounts?.forEach(j => { jumpMap[j.user_id] = (jumpMap[j.user_id] ?? 0) + 1 })
 
-  type Sub = { status: string; renews_at: string | null; price_at_signup: number }
+  type Sub = { status: string; renews_at: string | null; price_at_signup: number; started_at: string }
   const rows = (users ?? []).map((u) => {
-    const sub = Array.isArray(u.subscriptions) ? u.subscriptions[0] as Sub : u.subscriptions as Sub | null
+    // Pick the most recently started subscription to reflect current status
+    const allUserSubs: Sub[] = Array.isArray(u.subscriptions) ? u.subscriptions as Sub[] : (u.subscriptions ? [u.subscriptions as Sub] : [])
+    const sub = allUserSubs.sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())[0] ?? null
     const trialEnd = new Date(u.created_at)
     trialEnd.setDate(trialEnd.getDate() + 14)
     const inTrial = !sub && Date.now() < trialEnd.getTime()

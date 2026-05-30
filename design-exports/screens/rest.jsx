@@ -726,9 +726,173 @@ function ScreenNotif() {
   );
 }
 
+// ─── 36 Push Notification (lock screen) ───────────────────────────────
+function ScreenPushNotification() {
+  // iOS lock screen — dark wallpaper, time, push notification widget
+  return (
+    <div style={{
+      width: '100%', height: '100%',
+      background: 'linear-gradient(160deg, #0d1b35 0%, #0a1220 55%, #081530 100%)',
+      position: 'relative', overflow: 'hidden',
+      fontFamily: '-apple-system, "SF Pro", system-ui',
+      WebkitFontSmoothing: 'antialiased',
+    }}>
+      {/* Status bar */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '16px 28px 0', color: '#fff',
+      }}>
+        <span style={{ fontWeight: 600, fontSize: 17 }}>9:41</span>
+        <div style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
+          {/* signal */}
+          <svg width="19" height="12" viewBox="0 0 19 12" fill="white">
+            <rect x="0" y="7.5" width="3.2" height="4.5" rx="0.7"/>
+            <rect x="4.8" y="5" width="3.2" height="7" rx="0.7"/>
+            <rect x="9.6" y="2.5" width="3.2" height="9.5" rx="0.7"/>
+            <rect x="14.4" y="0" width="3.2" height="12" rx="0.7"/>
+          </svg>
+          {/* wifi */}
+          <svg width="17" height="12" viewBox="0 0 17 12" fill="white">
+            <path d="M8.5 3.2C10.8 3.2 12.9 4.1 14.4 5.6L15.5 4.5C13.7 2.7 11.2 1.5 8.5 1.5C5.8 1.5 3.3 2.7 1.5 4.5L2.6 5.6C4.1 4.1 6.2 3.2 8.5 3.2Z"/>
+            <path d="M8.5 6.8C9.9 6.8 11.1 7.3 12 8.2L13.1 7.1C11.8 5.9 10.2 5.1 8.5 5.1C6.8 5.1 5.2 5.9 3.9 7.1L5 8.2C5.9 7.3 7.1 6.8 8.5 6.8Z"/>
+            <circle cx="8.5" cy="10.5" r="1.5"/>
+          </svg>
+          {/* battery */}
+          <svg width="27" height="13" viewBox="0 0 27 13" fill="none">
+            <rect x="0.5" y="0.5" width="23" height="12" rx="3.5" stroke="white" strokeOpacity="0.35"/>
+            <rect x="2" y="2" width="20" height="9" rx="2" fill="white"/>
+            <path d="M25 4.5V8.5C25.8 8.2 26.5 7.2 26.5 6.5C26.5 5.8 25.8 4.8 25 4.5Z" fill="white" fillOpacity="0.4"/>
+          </svg>
+        </div>
+      </div>
+
+      {/* Dynamic island */}
+      <div style={{
+        position: 'absolute', top: 11, left: '50%', transform: 'translateX(-50%)',
+        width: 126, height: 37, borderRadius: 24, background: '#000', zIndex: 50,
+      }} />
+
+      {/* Lock screen time */}
+      <div style={{ textAlign: 'center', paddingTop: 56, color: '#fff' }}>
+        <div style={{ fontSize: 80, fontWeight: 300, lineHeight: 1, letterSpacing: -2 }}>9:41</div>
+        <div style={{ fontSize: 18, fontWeight: 400, marginTop: 6, opacity: 0.85 }}>Friday, 29 May</div>
+      </div>
+
+      {/* Push notification widget */}
+      <div style={{ padding: '32px 16px 0' }}>
+        <div style={{
+          borderRadius: 20,
+          background: 'rgba(30, 40, 60, 0.82)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
+          border: '0.5px solid rgba(255,255,255,0.12)',
+          padding: '12px 14px',
+          display: 'flex', gap: 12, alignItems: 'flex-start',
+        }}>
+          {/* App icon */}
+          <div style={{
+            width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+            background: 'linear-gradient(145deg, #2a6fb8, #4A9EFF)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6 10a6 6 0 0112 0v5l2 3H4l2-3v-5z"/><path d="M10 21h4"/>
+            </svg>
+          </div>
+          {/* Content */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 3 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.55)', letterSpacing: 0.2, textTransform: 'uppercase' }}>Jump Logs</span>
+              <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>now</span>
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: '#fff', marginBottom: 2 }}>New feature · Gear module is live</div>
+            <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', lineHeight: 1.4 }}>Track your rigs, canopies and AADs with service due dates.</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Home indicator */}
+      <div style={{
+        position: 'absolute', bottom: 8, left: 0, right: 0,
+        display: 'flex', justifyContent: 'center',
+      }}>
+        <div style={{ width: 139, height: 5, borderRadius: 100, background: 'rgba(255,255,255,0.5)' }} />
+      </div>
+    </div>
+  );
+}
+
+// ─── 37 In-App Banner ─────────────────────────────────────────────────
+function ScreenInAppBanner() {
+  // Shows the app open on the Log tab with the announcement banner sliding in from top
+  return (
+    <Screen tab="log" style={{ position: 'relative' }}>
+      {/* Dimmed screen content underneath */}
+      <TopBar title="Jump Log" trailing={
+        <div style={{ display: 'flex', gap: 8 }}>
+          <IconBtn name="search" />
+          <IconBtn name="filter" />
+        </div>
+      } />
+      <div className="sd-body" style={{ opacity: 0.45 }}>
+        {[
+          { n: 847, dz: 'Skydive Yarra Valley', date: '28 May 2026' },
+          { n: 846, dz: 'Skydive Melbourne', date: '15 May 2026' },
+          { n: 845, dz: 'Skydive Yarra Valley', date: '2 May 2026' },
+          { n: 844, dz: 'Skydive Melbourne', date: '19 Apr 2026' },
+        ].map(j => (
+          <Card key={j.n} style={{ marginBottom: 8, padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fg-3)', marginBottom: 3 }}>JUMP #{j.n}</div>
+              <div style={{ fontSize: 15, fontWeight: 600 }}>{j.dz}</div>
+              <div style={{ fontSize: 12, color: 'var(--fg-3)', marginTop: 2 }}>{j.date}</div>
+            </div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--fg-3)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+          </Card>
+        ))}
+      </div>
+
+      {/* In-app announcement banner — absolute, slides from top */}
+      <div style={{
+        position: 'absolute', top: 68, left: 12, right: 12, zIndex: 100,
+      }}>
+        <div style={{
+          background: 'var(--surface-2)',
+          border: '1px solid rgba(74,158,255,0.3)',
+          borderRadius: 16,
+          display: 'flex', alignItems: 'flex-start', gap: 12,
+          padding: '12px 12px 12px 14px',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.35)',
+        }}>
+          {/* icon pill */}
+          <div style={{
+            width: 32, height: 32, borderRadius: 999, flexShrink: 0,
+            background: 'rgba(74,158,255,0.14)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4A9EFF" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 11l7-7 4 4 7-7"/><path d="M21 5h-5v5"/>
+            </svg>
+          </div>
+          {/* text */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg)', marginBottom: 3 }}>New feature · Gear module is live</div>
+            <div style={{ fontSize: 12, color: 'var(--fg-2)', lineHeight: 1.45 }}>Track your rigs, canopies and AADs with service due dates.</div>
+          </div>
+          {/* dismiss */}
+          <div style={{ padding: '2px 0 0', flexShrink: 0, color: 'var(--fg-3)' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </div>
+        </div>
+      </div>
+    </Screen>
+  );
+}
+
 Object.assign(window, {
   ScreenGearList, ScreenGearDetail, ScreenAddGear,
   ScreenCerts, ScreenAddCert,
   ScreenProfile, ScreenEditProfile, ScreenSettings, ScreenSubMgmt,
   ScreenExport, ScreenManageTags, ScreenNotif,
+  ScreenPushNotification, ScreenInAppBanner,
 });

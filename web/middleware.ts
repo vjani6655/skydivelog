@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
@@ -27,6 +28,17 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  // Track last IP for authenticated users (fire-and-forget, only on non-API routes)
+  if (user && !request.nextUrl.pathname.startsWith('/api/')) {
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+              ?? request.headers.get('x-real-ip')
+              ?? null
+    if (ip) {
+      const { createAdminClient } = await import('@/lib/supabase/admin')
+      createAdminClient().from('users').update({ last_ip: ip }).eq('id', user.id).then(() => {})
+    }
+  }
+
   const { pathname } = request.nextUrl
 
   // Routes that require auth AND an active subscription (trial or paid)
@@ -42,6 +54,26 @@ export async function middleware(request: NextRequest) {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = "/login"
     return NextResponse.redirect(redirectUrl)
+  }
+
+  // Admin route: verify the logged-in user is in the admins table and active
+  if (user && isAdminRoute) {
+    const adminDb = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SECRET_KEY!,
+      { auth: { persistSession: false } }
+    )
+    const { data: adminRow } = await adminDb
+      .from('admins')
+      .select('id')
+      .eq('email', user.email!)
+      .eq('active', true)
+      .maybeSingle()
+    if (!adminRow) {
+      // Rewrite to the not-found page — full render pipeline, same timing and appearance
+      // as any genuinely missing URL. The browser URL stays as /admin/... so nothing is revealed.
+      return NextResponse.rewrite(new URL('/not-found', request.url))
+    }
   }
 
   // Redirect authenticated users away from auth pages

@@ -39,7 +39,7 @@ export async function POST(request: Request) {
   }
 
   const channelsNorm = (channels ?? ['push']).map((c: string) =>
-    c.toLowerCase().replace(/ /g, '_')
+    c.toLowerCase().replace(/[\s-]+/g, '_')
   )
   const status = scheduleMode === 'draft' ? 'draft' : 'sent'
 
@@ -53,6 +53,7 @@ export async function POST(request: Request) {
       deep_link:           deepLink?.trim() || null,
       // Only persist a real UUID segment_id — built-in string keys ('active' etc.) are not FK rows
       segment_id:          isUUID(segment) ? segment : null,
+      segment_key:         segment,
       schedule_mode:       status === 'draft' ? 'draft' : 'now',
       status,
       sent_at:             status === 'sent' ? new Date().toISOString() : null,
@@ -66,7 +67,7 @@ export async function POST(request: Request) {
   // 4. Skip push delivery if this is a draft or push channel not selected
   const hasPush = channelsNorm.includes('push')
   if (status === 'draft' || !hasPush) {
-    return NextResponse.json({ ok: true, sent: 0, announcementId: ann.id })
+    return NextResponse.json({ ok: true, sent: 0, hasPush, announcementId: ann.id })
   }
 
   // 5. Resolve which user_ids to target based on segment
@@ -82,17 +83,20 @@ export async function POST(request: Request) {
       .eq('status', segment)
     userIds = subs?.map((s: { user_id: string }) => s.user_id) ?? []
     if (userIds.length === 0) {
-      return NextResponse.json({ ok: true, sent: 0, announcementId: ann.id })
+      return NextResponse.json({ ok: true, sent: 0, hasPush: true, announcementId: ann.id })
     }
   }
   // 'all' → no userIds filter; custom UUID segment → send to all for now
 
   // 6. Fetch push tokens
+  // For 'specific' segment, admin has explicitly chosen recipients — bypass the
+  // announcements opt-out preference. For broadcast segments ('all', subscriptions),
+  // respect it so users who opted out are not disturbed.
   let q = db
     .from('notification_preferences')
     .select('push_token')
-    .eq('announcements', true)
     .not('push_token', 'is', null)
+  if (segment !== 'specific') q = q.eq('announcements', true)
   if (userIds) q = q.in('user_id', userIds)
 
   const { data: prefs } = await q
@@ -101,7 +105,7 @@ export async function POST(request: Request) {
     .filter((t: string) => t?.startsWith('ExponentPushToken['))
 
   if (tokens.length === 0) {
-    return NextResponse.json({ ok: true, sent: 0, announcementId: ann.id })
+    return NextResponse.json({ ok: true, sent: 0, hasPush: true, announcementId: ann.id })
   }
 
   // 7. Batch-send via send-push Supabase Edge Function (100 tokens per call)
