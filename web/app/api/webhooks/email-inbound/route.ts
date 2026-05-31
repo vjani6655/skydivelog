@@ -143,6 +143,30 @@ export async function POST(req: Request) {
   // Extract ticket ID from address: ticket+{uuid}@reply.jumplogs.com
   const ticketMatch = toAddress.match(/ticket\+([a-f0-9-]{36})@/i)
   if (!ticketMatch) {
+    // If someone replied to a noreply address, forward it to the support inbox
+    if (/noreply@/i.test(toAddress)) {
+      const { name: fromName, email: fromEmail } = parseEmail(fromRaw)
+      const rawText = emailContent.text ?? emailContent.html?.replace(/<[^>]+>/g, ' ') ?? ''
+      const messageText = stripQuotedText(rawText)
+      if (messageText && fromEmail) {
+        const subject = emailContent.subject ?? '(no subject)'
+        await sendEmail({
+          to: process.env.ADMIN_NOTIFY_EMAIL ?? 'support@jumplogs.com',
+          subject: `[Forwarded reply-to-noreply] ${subject}`,
+          from: 'support',
+          html: `<p style="font-family:sans-serif;font-size:13px;color:#555">
+            A user replied to a noreply address. Forwarded for your attention.
+          </p>
+          <table style="font-size:13px;margin-bottom:12px">
+            <tr><td style="color:#888;padding-right:12px">From</td><td>${fromName ? `${fromName} &lt;${fromEmail}&gt;` : fromEmail}</td></tr>
+            <tr><td style="color:#888;padding-right:12px">To</td><td>${toAddress}</td></tr>
+            <tr><td style="color:#888;padding-right:12px">Subject</td><td>${subject}</td></tr>
+          </table>
+          <div style="background:#f5f5f5;border-radius:6px;padding:16px;font-size:13px;white-space:pre-wrap">${messageText}</div>`,
+        })
+        console.log('[inbound] forwarded noreply reply from', fromEmail)
+      }
+    }
     return NextResponse.json({ ok: true, ignored: true, reason: 'not a ticket address' })
   }
   const ticketId = ticketMatch[1]
