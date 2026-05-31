@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
@@ -24,6 +24,32 @@ export default function LoginPage() {
   const [mfaCode, setMfaCode] = useState("")
   const [mfaError, setMfaError] = useState<string | null>(null)
   const [mfaLoading, setMfaLoading] = useState(false)
+
+  // Handle Supabase implicit-flow hash tokens (e.g. from admin impersonate links
+  // when the redirectTo URL isn't whitelisted in Supabase's allowed redirect URLs).
+  useEffect(() => {
+    const hash = window.location.hash
+    console.log('[login] hash on mount:', hash || '(empty)')
+    if (!hash.includes('access_token')) return
+    console.log('[login] access_token detected in hash — attempting to set session')
+    const params = new URLSearchParams(hash.replace(/^#/, ''))
+    const access_token = params.get('access_token')
+    const refresh_token = params.get('refresh_token')
+    const type = params.get('type')
+    console.log('[login] token type:', type, '| access_token prefix:', access_token?.slice(0, 20))
+    if (access_token) {
+      supabase.auth.setSession({ access_token, refresh_token: refresh_token ?? '' })
+        .then(({ data, error }) => {
+          console.log('[login] setSession result:', { user: data?.user?.email, error })
+          if (!error && data?.user) {
+            console.log('[login] redirecting to /dashboard')
+            window.location.href = '/dashboard'
+          } else {
+            console.error('[login] setSession failed:', error)
+          }
+        })
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()

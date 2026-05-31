@@ -28,7 +28,7 @@ type NoteItem = {
   created_at: string
 }
 
-type ActionKey = 'reset-password' | 'force-signout' | 'revoke-subscription' | 'refund' | 'lock' | 'delete'
+type ActionKey = 'reset-password' | 'force-signout' | 'revoke-subscription' | 'refund' | 'lock' | 'delete' | 'set-password'
 
 export type UserActionsProps = {
   userId: string
@@ -83,6 +83,13 @@ export default function UserActionsClient({
   const [extendedTrialEnd, setExtendedTrialEnd] = useState<string | null>(null)
   const [showExtendTrial, setShowExtendTrial] = useState(false)
 
+  // Set password state
+  const [showSetPassword, setShowSetPassword] = useState(false)
+  const [newPassword, setNewPassword]         = useState('')
+  const [settingPassword, setSettingPassword] = useState(false)
+  const [setPasswordError, setSetPasswordError] = useState<string | null>(null)
+  const [setPasswordDone, setSetPasswordDone]   = useState(false)
+
   // Admin notes state
   const [notes, setNotes]       = useState<NoteItem[]>(initNotes)
   const [addingNote, setAddingNote] = useState(false)
@@ -116,6 +123,33 @@ export default function UserActionsClient({
     } finally {
       setLoading(null)
       setConfirm(null)
+    }
+  }
+
+  // ── Set password ────────────────────────────────────────────────────────────
+
+  async function handleSetPassword() {
+    if (!newPassword || newPassword.length < 8) {
+      setSetPasswordError('Password must be at least 8 characters')
+      return
+    }
+    setSettingPassword(true)
+    setSetPasswordError(null)
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/set-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: newPassword }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error ?? 'Failed to set password')
+      setSetPasswordDone(true)
+      setNewPassword('')
+      setShowSetPassword(false)
+    } catch (e) {
+      setSetPasswordError(e instanceof Error ? e.message : 'Failed')
+    } finally {
+      setSettingPassword(false)
     }
   }
 
@@ -411,6 +445,50 @@ export default function UserActionsClient({
               <div className="font-mono text-[10px] text-danger pb-1.5">{errors['reset-password']}</div>
             )}
           </>
+        )}
+
+        {/* Set password */}
+        {setPasswordDone ? (
+          <div className="flex items-center py-2.5 border-b border-dashed border-border">
+            <span className="text-sm text-ok">✓ Password updated</span>
+          </div>
+        ) : showSetPassword ? (
+          <div className="py-2.5 border-b border-dashed border-border">
+            <div className="text-xs text-fg-2 mb-2">New password for <span className="font-mono text-fg">{userEmail}</span>:</div>
+            <input
+              type="password"
+              value={newPassword}
+              onChange={e => setNewPassword(e.target.value)}
+              placeholder="Min. 8 characters"
+              className="w-full px-2.5 py-1.5 bg-surface border border-border rounded-sm font-mono text-xs text-fg placeholder:text-fg-4 mb-2 outline-none focus:border-sky/60"
+            />
+            {setPasswordError && (
+              <div className="font-mono text-[10px] text-danger mb-2">{setPasswordError}</div>
+            )}
+            <div className="flex gap-1.5">
+              <button
+                onClick={handleSetPassword}
+                disabled={settingPassword || newPassword.length < 8}
+                className="flex-1 py-1.5 bg-sky/10 border border-sky/40 rounded-sm text-xs text-sky font-medium disabled:opacity-40 hover:bg-sky/20 transition-colors"
+              >
+                {settingPassword ? 'Setting…' : 'Set password'}
+              </button>
+              <button
+                onClick={() => { setShowSetPassword(false); setNewPassword(''); setSetPasswordError(null) }}
+                className="px-3 py-1.5 bg-surface-2 border border-border rounded-sm text-xs text-fg-3 hover:text-fg transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowSetPassword(true)}
+            className="w-full flex items-center justify-between py-2.5 border-b border-dashed border-border text-left text-sm text-fg-2 hover:text-fg transition-colors"
+          >
+            Set password…
+            <ChevronRight size={11} className="text-fg-4 shrink-0" />
+          </button>
         )}
 
         {/* Force sign-out */}

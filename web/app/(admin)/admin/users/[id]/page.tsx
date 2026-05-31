@@ -6,7 +6,8 @@ import UserActionsClient from '@/components/admin/UserActionsClient'
 import { type UserActionsProps } from '@/components/admin/UserActionsClient'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronRight, Mail, Eye, MoreHorizontal } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
+import UserHeroActions from '@/components/admin/UserHeroActions'
 
 function fmtDate(s: string | null) {
   if (!s) return '—'
@@ -168,17 +169,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
             {user.country && <Badge kind="muted">{user.country}</Badge>}
           </div>
         </div>
-        <div className="flex gap-2">
-          <button className="flex items-center gap-1.5 px-3 py-1.5 bg-surface border border-border rounded-sm text-xs text-fg-2 font-medium">
-            <Mail size={12} /> Email user
-          </button>
-          <button className="flex items-center gap-1.5 px-3 py-1.5 bg-surface border border-border rounded-sm text-xs text-fg-2 font-medium">
-            <Eye size={12} /> View as user
-          </button>
-          <button className="flex items-center gap-1.5 px-3 py-1.5 bg-surface border border-border rounded-sm text-xs text-fg-2 font-medium">
-            <MoreHorizontal size={12} /> More
-          </button>
-        </div>
+        <UserHeroActions userId={id} userEmail={user.email} userName={user.full_name ?? ''} />
       </div>
 
       {/* KPIs */}
