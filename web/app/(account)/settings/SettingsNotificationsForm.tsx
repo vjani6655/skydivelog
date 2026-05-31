@@ -139,7 +139,7 @@ export default function SettingsNotificationsForm({
           <InfoRow
             icon={Mail}
             label="Account & security alerts"
-            note="Sign-in from a new device, password changes, and other account activity."
+            note="Password changes, email changes, MFA updates, and other account activity."
           />
         </div>
       </section>

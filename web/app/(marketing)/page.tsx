@@ -46,7 +46,7 @@ const FEATURES = [
   { icon: BarChart2, title: "Track currency & progress",    body: "Auto-rolling 30-day window, custom alerts, never lapse without warning." },
   { icon: Package,   title: "Gear & repack tracking",       body: "AAD service, reserve repacks, jumps per canopy. Alerts before you need them." },
   { icon: Award,     title: "Certificates & medicals",      body: "Licences, ratings, medicals — expiry tracking with multi-stage warnings." },
-  { icon: Download,  title: "Export your logbook",          body: "PDF and CSV, APF, USPA, CSPA, BPA layouts supported." },
+  { icon: Download,  title: "Export your logbook",          body: "PDF (1-per-page or 10-per-page) and CSV. Your data, always yours." },
   { icon: Shield,    title: "Yours, forever",               body: "Cancel any time — keep a full export. We never sell data." },
 ]
 

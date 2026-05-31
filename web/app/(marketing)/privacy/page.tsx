@@ -24,7 +24,7 @@ Logbook data: Jump records you create — including date, dropzone, aircraft, al
 
 Equipment & certification records: Gear details, repack dates, certification records, and medical information you enter.
 
-Usage data: Basic, anonymised data about how the app is used (e.g. which features are accessed) to help us improve the product. This does not include your personal jump records.
+Server logs: Standard web server access logs (IP address, timestamp, HTTP method, response code) retained for security and debugging. These are not linked to your personal account data and are not used for product analytics.
 
 Push notification token: If you enable push notifications, we store your device token to send you reminders (e.g. currency expiry, repack due). You can disable notifications at any time.
 
