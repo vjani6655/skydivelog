@@ -81,6 +81,9 @@ export default async function RootLayout({
 
   return (
     <html lang="en" className={htmlClass}>
+      <head>
+        <link rel="me" href="https://www.instagram.com/jumplogs" />
+      </head>
       <body className="antialiased">
         <ThemeApplier theme={theme} />
         {children}
