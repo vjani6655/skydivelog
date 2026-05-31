@@ -98,18 +98,34 @@ async function fetchEmailContent(emailId: string) {
 
 export async function POST(req: Request) {
   const rawBody = await req.text()
+  console.log('[inbound] webhook hit — body length:', rawBody.length)
+
+  // Log which env vars are present (not their values)
+  console.log('[inbound] env check — RESEND_WEBHOOK_SIGNING_SECRET:', !!process.env.RESEND_WEBHOOK_SIGNING_SECRET, '| INBOUND_WEBHOOK_SECRET:', !!process.env.INBOUND_WEBHOOK_SECRET, '| INBOUND_EMAIL_DOMAIN:', process.env.INBOUND_EMAIL_DOMAIN ?? '(not set)', '| RESEND_API_KEY:', !!process.env.RESEND_API_KEY)
 
   // Verify Resend webhook signature (whsec_ signing secret from Resend dashboard)
   const signingSecret = process.env.RESEND_WEBHOOK_SIGNING_SECRET
   if (signingSecret) {
-    if (!verifyResendSignature(rawBody, req.headers, signingSecret)) {
+    const svixId = req.headers.get('svix-id')
+    const svixTs = req.headers.get('svix-timestamp')
+    const svixSig = req.headers.get('svix-signature')
+    console.log('[inbound] svix headers — id:', svixId, '| ts:', svixTs, '| sig present:', !!svixSig)
+    const valid = verifyResendSignature(rawBody, req.headers, signingSecret)
+    console.log('[inbound] signature valid:', valid)
+    if (!valid) {
+      console.warn('[inbound] REJECTED — invalid signature')
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
     }
   } else {
+    console.log('[inbound] no signing secret — falling back to URL secret check')
     // Fallback: URL secret check
     const url = new URL(req.url)
     const urlSecret = process.env.INBOUND_WEBHOOK_SECRET
-    if (urlSecret && url.searchParams.get('secret') !== urlSecret) {
+    const provided = url.searchParams.get('secret')
+    const match = urlSecret ? provided === urlSecret : true
+    console.log('[inbound] url secret match:', match, '| secret param present:', !!provided, '| env secret set:', !!urlSecret)
+    if (urlSecret && !match) {
+      console.warn('[inbound] REJECTED — URL secret mismatch')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
   }
@@ -118,14 +134,19 @@ export async function POST(req: Request) {
   try {
     event = JSON.parse(rawBody)
   } catch {
+    console.error('[inbound] failed to parse JSON body')
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
+  console.log('[inbound] event type:', event.type)
+
   if (event.type !== 'email.received') {
+    console.log('[inbound] ignoring non-email event:', event.type)
     return NextResponse.json({ ok: true, ignored: true })
   }
 
   const emailId = event.data?.email_id
+  console.log('[inbound] email_id:', emailId)
   if (!emailId) return NextResponse.json({ error: 'Missing email_id' }, { status: 400 })
 
   // Fetch actual email content from Resend API
@@ -139,9 +160,11 @@ export async function POST(req: Request) {
 
   const toAddress = emailContent.to?.[0] ?? ''
   const fromRaw = emailContent.from ?? ''
+  console.log('[inbound] email — to:', toAddress, '| from:', fromRaw, '| subject:', emailContent.subject)
 
   // Extract ticket ID from address: ticket+{uuid}@reply.jumplogs.com
   const ticketMatch = toAddress.match(/ticket\+([a-f0-9-]{36})@/i)
+  console.log('[inbound] ticket address match:', !!ticketMatch, ticketMatch ? ticketMatch[1] : '(none)')
   if (!ticketMatch) {
     // If someone replied to a noreply address, forward it to the support inbox
     if (/noreply@/i.test(toAddress)) {
@@ -192,6 +215,8 @@ export async function POST(req: Request) {
     console.error('[inbound] ticket not found:', ticketId)
     return NextResponse.json({ error: 'Ticket not found' }, { status: 404 })
   }
+
+  console.log('[inbound] ticket found:', ticketId, '| status:', ticket.status, '| ticket email:', ticket.email, '| sender:', fromEmail)
 
   // Verify sender matches ticket email
   if (ticket.email && ticket.email.toLowerCase() !== fromEmail) {
