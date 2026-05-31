@@ -51,7 +51,7 @@ You may not share your account with others or create accounts on behalf of third
     title: "Subscription & payments",
     content: `Jump Logs Pro is an annual subscription billed in USD. Your subscription renews automatically at the end of each billing period. You can cancel at any time from your account settings — access continues until the end of the paid period.
 
-Payments are processed by Stripe. We do not store your payment card details. Pricing may change with reasonable notice. No refunds are issued for the remaining period of a cancelled subscription unless required by applicable consumer law in your jurisdiction.`,
+Payments are processed by Stripe. We do not store your payment card details. Pricing may change with reasonable notice. No refunds are issued for the remaining period of a cancelled subscription, except where required by applicable consumer law. If you are an Australian consumer and the service fails to meet a consumer guarantee under the Australian Consumer Law, you may be entitled to a remedy including a refund under that legislation.`,
   },
   {
     id: "conduct",
@@ -80,7 +80,9 @@ Your jump data and logbook entries remain your property. By using the service, y
 
 WE DO NOT WARRANT THAT THE SERVICE WILL BE UNINTERRUPTED, ERROR-FREE, SECURE, OR FREE OF VIRUSES OR OTHER HARMFUL COMPONENTS. WE DO NOT WARRANT THAT ANY DEFECTS WILL BE CORRECTED.
 
-THE DEVELOPER IS AN INDIVIDUAL AND A QUALIFIED SKYDIVER, NOT A LICENSED AVIATION AUTHORITY, SAFETY INSPECTOR, OR EQUIPMENT TECHNICIAN. NOTHING IN THIS APP SHOULD BE TREATED AS PROFESSIONAL OR AUTHORITATIVE ADVICE ON ANY MATTER RELATING TO SKYDIVING SAFETY OR EQUIPMENT.`,
+THE DEVELOPER IS AN INDIVIDUAL AND A QUALIFIED SKYDIVER, NOT A LICENSED AVIATION AUTHORITY, SAFETY INSPECTOR, OR EQUIPMENT TECHNICIAN. NOTHING IN THIS APP SHOULD BE TREATED AS PROFESSIONAL OR AUTHORITATIVE ADVICE ON ANY MATTER RELATING TO SKYDIVING SAFETY OR EQUIPMENT.
+
+AUSTRALIAN CONSUMER LAW: NOTHING IN THESE TERMS EXCLUDES, RESTRICTS OR MODIFIES ANY RIGHT, REMEDY, GUARANTEE, WARRANTY OR OTHER TERM OR CONDITION IMPLIED OR IMPOSED BY THE AUSTRALIAN CONSUMER LAW (SCHEDULE 2 TO THE COMPETITION AND CONSUMER ACT 2010 (CTH)) WHICH CANNOT LAWFULLY BE EXCLUDED OR LIMITED. TO THE EXTENT PERMITTED BY THAT LEGISLATION, OUR LIABILITY FOR ANY FAILURE TO COMPLY WITH A CONSUMER GUARANTEE IS LIMITED (AT OUR OPTION) TO RE-SUPPLYING THE SERVICE OR PAYING THE COST OF HAVING THE SERVICE SUPPLIED AGAIN.`,
   },
   {
     id: "liability",
@@ -95,7 +97,7 @@ THE DEVELOPER IS AN INDIVIDUAL AND A QUALIFIED SKYDIVER, NOT A LICENSED AVIATION
 
 IN NO EVENT SHALL OUR TOTAL LIABILITY TO YOU EXCEED THE AMOUNT YOU PAID US IN THE 12 MONTHS PRECEDING THE CLAIM, OR $12 USD IF NO AMOUNT WAS PAID.
 
-SOME JURISDICTIONS DO NOT ALLOW EXCLUSION OF CERTAIN WARRANTIES OR LIMITATION OF LIABILITY. IN SUCH JURISDICTIONS, OUR LIABILITY IS LIMITED TO THE MINIMUM PERMITTED BY LAW.`,
+NOTHING IN THESE TERMS EXCLUDES OR LIMITS OUR LIABILITY WHERE IT WOULD BE UNLAWFUL TO DO SO, INCLUDING UNDER THE AUSTRALIAN CONSUMER LAW. WHERE THE AUSTRALIAN CONSUMER LAW APPLIES AND CANNOT BE EXCLUDED, THESE LIMITATIONS APPLY ONLY TO THE EXTENT PERMITTED BY THAT LEGISLATION.`,
   },
   {
     id: "indemnity",
@@ -110,7 +112,7 @@ SOME JURISDICTIONS DO NOT ALLOW EXCLUSION OF CERTAIN WARRANTIES OR LIMITATION OF
   {
     id: "termination",
     title: "Termination",
-    content: `We reserve the right to suspend or terminate your access to Jump Logs at any time, with or without cause, with or without notice. You may delete your account at any time from your account settings. Upon termination, your right to use the service ceases immediately, though you may export your data at any point before deletion.`,
+    content: `We reserve the right to suspend or terminate your access to Jump Logs immediately for breach of these terms, or otherwise with reasonable prior notice. You may delete your account at any time from your account settings. Upon termination, your right to use the service ceases, though you may export your data at any point before deletion.`,
   },
   {
     id: "law",

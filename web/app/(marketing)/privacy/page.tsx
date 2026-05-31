@@ -55,7 +55,9 @@ Resend (resend.com) — Transactional email delivery (e.g. confirmation emails, 
 
 Expo / Apple / Google — The mobile app is distributed via Expo, Apple App Store, and Google Play Store. These platforms may collect standard device and analytics data under their own privacy policies.
 
-We do not sell your data to any third party. We do not share your personal information or logbook data with any party not listed above.`,
+We do not sell your data to any third party. We do not share your personal information or logbook data with any party not listed above.
+
+Overseas disclosure: Supabase, Stripe, and Resend are based outside Australia (primarily United States infrastructure). Before disclosing your personal information to these recipients, we take reasonable steps to ensure they handle your information in a manner consistent with the Australian Privacy Principles under the Privacy Act 1988 (Cth). Each of these providers maintains their own privacy and security certifications (SOC 2, PCI DSS, ISO 27001) and contractual data processing obligations.`,
   },
   {
     id: "retention",
@@ -88,7 +90,9 @@ Deletion: You can delete your account and all associated data from Settings in t
 
 Portability: Your data export includes all structured logbook data in a portable format.
 
-If you are in the European Economic Area, you may also have rights under GDPR (including the right to lodge a complaint with your supervisory authority). If you are in Australia, the Australian Privacy Act 1988 may apply.
+If you are in the European Economic Area, you may also have rights under GDPR (including the right to lodge a complaint with your supervisory authority).
+
+If you are in Australia, the Privacy Act 1988 (Cth) and Australian Privacy Principles may apply to how we handle your personal information. You have the right to complain about a breach of the APPs to the Office of the Australian Information Commissioner (OAIC) at oaic.gov.au. We ask that you contact us first so we can attempt to resolve your concern directly.
 
 To exercise any of these rights, contact support@jumplogs.com.`,
   },
@@ -112,7 +116,9 @@ We do not use advertising cookies, cross-site tracking, or third-party analytics
   {
     id: "contact-privacy",
     title: "Contact",
-    content: `For privacy questions, data requests, or complaints, contact us at support@jumplogs.com. We aim to respond within 5 business days.`,
+    content: `For privacy questions, data requests, or complaints, contact us at support@jumplogs.com. We aim to respond within 5 business days.
+
+If we do not resolve your complaint to your satisfaction, you may escalate it to the Office of the Australian Information Commissioner (OAIC): oaic.gov.au · 1300 363 992.`,
   },
 ]
 
