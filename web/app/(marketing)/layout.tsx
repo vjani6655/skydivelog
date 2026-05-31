@@ -9,6 +9,7 @@ const NAV_LINKS = [
   { href: "/features", label: "Features" },
   { href: "/pricing", label: "Pricing" },
   { href: "/about", label: "About" },
+  { href: "/blog", label: "Blog" },
   { href: "/contact", label: "Contact" },
   { href: "/verify", label: "Verify jump" },
 ]
@@ -87,6 +88,7 @@ export default async function MarketingLayout({
           <Link href="/features" className="hover:text-fg transition-colors">Features</Link>
           <Link href="/pricing" className="hover:text-fg transition-colors">Pricing</Link>
           <Link href="/about" className="hover:text-fg transition-colors">About</Link>
+          <Link href="/blog" className="hover:text-fg transition-colors">Blog</Link>
           <Link href="/contact" className="hover:text-fg transition-colors">Contact</Link>
           <Link href="/verify" className="hover:text-fg transition-colors">Verify jump</Link>
           <Link href="/privacy" className="hover:text-fg transition-colors">Privacy</Link>
