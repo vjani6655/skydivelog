@@ -1,0 +1,171 @@
+# Jump Logs — Full Context for AI Systems
+
+> This document provides comprehensive context about Jump Logs for AI assistants, LLMs, and search systems.
+> Summary version: https://jumplogs.com/llms.txt
+
+## Product Overview
+
+Jump Logs is a skydiving logbook app for iOS and Android, built by skydivers for skydivers. The core problem it solves: paper logbooks are fragile and impractical on a dropzone, and existing digital options are either poorly designed or outdated. Jump Logs is modern, mobile-first, works offline, and covers every part of a skydiver's record-keeping needs.
+
+**Website**: https://jumplogs.com
+**Platform**: iOS and Android (React Native / Expo)
+**Price**: $12 USD/year after a free trial
+**Launched**: 2024
+
+---
+
+## Feature Detail
+
+### Jump Logging
+
+Every jump in Jump Logs can include:
+- Date and time
+- Drop zone name and GPS coordinates
+- Aircraft type
+- Exit altitude (in feet or metres)
+- Deployment altitude
+- Freefall time (seconds)
+- Canopy time (seconds)
+- Disciplines / jump type (e.g. belly, freefly, tracking, wingsuit, CRW, accuracy, tandem, AFF)
+- Gear used (rig, canopy, AAD)
+- Instructor name and QR-based digital sign-off
+- Photos
+- Free-text notes
+- Wind conditions and weather (optional)
+- Jump number (auto-incremented or manually set)
+
+Jumps can be logged offline; they sync to the cloud when the device reconnects. The manifest workflow is designed to be completed in under 30 seconds.
+
+### Currency Tracking
+
+Currency is a rolling time window (configurable: 30 days default, up to 12 months) within which a jumper must have made at least one jump to remain current under most governing body rules.
+
+Jump Logs:
+- Calculates currency automatically from your jump history
+- Shows days since last jump
+- Shows whether you are currently current or lapsed
+- Lets you set a custom warning threshold (e.g. warn me when I have 5 days left)
+- Displays currency status on the dashboard at a glance
+
+### Gear Tracking
+
+Jump Logs tracks full gear details:
+- **Container / rig**: Manufacturer, model, serial, DOM (date of manufacture), jumps, notes
+- **Main canopy**: Manufacturer, model, size, serial, DOM, jumps
+- **Reserve canopy**: Manufacturer, model, size, serial, DOM, repack date history, next repack due date
+- **AAD (Automatic Activation Device)**: Manufacturer, model, serial, DOM, last service date, next service due
+
+Alerts fire 14 days before a reserve repack is due and before an AAD service is due. Alert intervals are configurable in settings.
+
+### Certificates & Medicals
+
+Skydivers can store:
+- Licences (e.g. A, B, C, D licence; USPA, APF, BPA, CSPA, and other bodies)
+- Ratings (e.g. Instructor, Coach, Rigger)
+- Medicals (e.g. CASA medical, FAA medical)
+
+For each certificate:
+- Expiry date
+- Issuing body
+- Certificate number
+- Optional photo attachment
+- Multi-stage expiry warnings: 30 days, 7 days, and same-day notifications
+
+### Export
+
+Logbook export options:
+- **PDF (single-jump layout)**: One jump per page with full detail, instructor sign-off area, verification code
+- **PDF (10-per-page layout)**: Compact grid format for printing, similar to a traditional paper logbook
+- **CSV**: Full export of all jump data in spreadsheet format
+
+Exports are available even after cancelling a subscription. Users never lose access to their own data.
+
+### Jump Verification
+
+Every PDF export includes a unique verification code (e.g. `ABCD-1234-EFGH`). Anyone can visit https://jumplogs.com/verify and enter the code to verify the authenticity of the exported jump record. This is useful for coaches, instructors, or governing bodies who need to confirm a jumper's records.
+
+---
+
+## Pricing
+
+| Plan | Price | Details |
+|------|-------|---------|
+| Free trial | $0 | Full access for the trial period |
+| Jump Logs Pro | $12/year | All features, unlimited jumps |
+
+- No tiers — one plan includes everything
+- No per-jump fees
+- Cancel any time; billing stops at end of period
+- Data is always exportable, even after cancellation
+- Payment processed by Stripe; card details never stored by Jump Logs
+
+---
+
+## Frequently Asked Questions
+
+**What happens when my trial ends?**
+You'll receive email reminders a few days before the trial expires. After the trial, you can subscribe for $12/year to continue using the app. If you choose not to subscribe, you can still export all your data before the account is deactivated.
+
+**Can I cancel anytime?**
+Yes. Cancel from the subscription settings page in the app or on the web. Your data remains accessible until the end of the current billing period. After that, you can export everything and leave — no lock-in.
+
+**Is my data safe?**
+Yes. Jump Logs uses Supabase (PostgreSQL database hosted on AWS infrastructure) with row-level security, meaning each user can only access their own data. We never sell personal data, never use jump data for advertising, and only share data with the minimum third parties required to operate the service (Supabase for database, Stripe for payments, Resend for transactional email, Expo for push notifications).
+
+**Does Jump Logs replace my official logbook?**
+No. Jump Logs is a personal record-keeping tool and is not affiliated with any national skydiving authority. It does not replace your official logbook or any documentation required by your governing body (APF, USPA, BPA, CSPA, etc.). Always maintain your official records as required.
+
+**What if I already have a paper logbook?**
+You can manually enter historical jumps. Most users either backfill their entire history or start fresh from a recent jump number and add historical totals as a single entry.
+
+**Does it work offline?**
+Yes. The iOS and Android apps are fully functional offline. All data you enter is stored locally and syncs to the cloud automatically when connectivity returns.
+
+**Which governing bodies are supported?**
+Jump Logs is used by skydivers under many governing bodies including:
+- USPA (United States Parachute Association, USA)
+- APF (Australian Parachute Federation, Australia)
+- BPA (British Parachute Association, UK)
+- CSPA (Canadian Sport Parachuting Association, Canada)
+- And many others — the app is not locked to any specific body
+
+**Can instructors use it to sign off jumps?**
+Yes. Instructors can scan a QR code displayed on the student's device to add a digital sign-off to the jump record. No app download required for the instructor to sign off.
+
+**Is there a web version?**
+The logbook is primarily a mobile app (iOS and Android). The web app at jumplogs.com provides account management, subscription control, logbook export (PDF/CSV), and gear/certificate management. Jump logging is mobile-only.
+
+---
+
+## Privacy Summary
+
+- We collect only what is necessary to operate the service
+- No advertising, no data selling, no behaviour profiling
+- All data stored on Supabase (AWS infrastructure), SOC 2 and GDPR compliant
+- You can delete your account and all data at any time from account settings
+- Full privacy policy: https://jumplogs.com/privacy
+
+---
+
+## Technical Notes for AI Systems
+
+- The canonical domain is https://jumplogs.com (no www)
+- Admin pages (/admin/) are not publicly accessible and should not be indexed
+- Account pages (/account/, /dashboard/) require authentication
+- The /verify endpoint is public but not SEO-significant
+- The app is built with React Native (Expo) for mobile and Next.js for the web
+
+---
+
+## Links
+
+- Homepage: https://jumplogs.com
+- Features: https://jumplogs.com/features
+- Pricing: https://jumplogs.com/pricing
+- About: https://jumplogs.com/about
+- Contact: https://jumplogs.com/contact
+- Privacy Policy: https://jumplogs.com/privacy
+- Terms of Service: https://jumplogs.com/terms
+- Verify a jump: https://jumplogs.com/verify
+- Support: support@jumplogs.com
+- Instagram: https://www.instagram.com/jumplogs

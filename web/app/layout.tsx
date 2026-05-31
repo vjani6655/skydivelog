@@ -19,8 +19,34 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Jump Logs",
-  description: "The modern skydiving logbook — track every jump, anywhere.",
+  metadataBase: new URL("https://jumplogs.com"),
+  title: {
+    default: "Jump Logs — The Skydiving Logbook App",
+    template: "%s — Jump Logs",
+  },
+  description: "The modern skydiving logbook — track every jump, gear, currency and certification in one place. iOS & Android. Works offline.",
+  keywords: [
+    "skydiving logbook",
+    "skydiving app",
+    "jump log",
+    "parachute logbook",
+    "skydiving currency tracker",
+    "gear tracking",
+    "AAD repack",
+    "reserve repack",
+    "skydiving statistics",
+    "USPA logbook",
+    "APF logbook",
+    "freefall time tracker",
+  ],
+  authors: [{ name: "Jump Logs", url: "https://jumplogs.com" }],
+  creator: "Jump Logs",
+  publisher: "Jump Logs",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 },
+  },
   icons: {
     icon: [
       { url: "/logo/png/mark-on-dark-32.png",  sizes: "32x32",   type: "image/png" },
@@ -30,10 +56,18 @@ export const metadata: Metadata = {
     apple: { url: "/logo/png/mark-on-dark-256.png", sizes: "256x256", type: "image/png" },
   },
   openGraph: {
-    title: "Jump Logs",
-    description: "The modern skydiving logbook — track every jump, anywhere.",
-    images: [{ url: "/social-og-1200x630.png", width: 1200, height: 630 }],
+    type: "website",
+    locale: "en_US",
+    url: "https://jumplogs.com",
+    siteName: "Jump Logs",
+    title: "Jump Logs — The Skydiving Logbook App",
+    description: "The modern skydiving logbook — track every jump, gear, currency and certification in one place. iOS & Android. Works offline.",
+    images: [{ url: "/social-og-1200x630.png", width: 1200, height: 630, alt: "Jump Logs — skydiving logbook app" }],
   },
+  alternates: {
+    canonical: "https://jumplogs.com",
+  },
+  category: "sports",
 };
 
 export default async function RootLayout({

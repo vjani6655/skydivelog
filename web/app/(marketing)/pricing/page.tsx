@@ -1,5 +1,17 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { Check } from "lucide-react"
+
+export const metadata: Metadata = {
+  title: "Pricing",
+  description: "Jump Logs is $12/year after a free trial. Unlimited jumps, all features, iOS & Android. Cancel any time — your data is always exportable.",
+  alternates: { canonical: "https://jumplogs.com/pricing" },
+  openGraph: {
+    url: "https://jumplogs.com/pricing",
+    title: "Pricing — Jump Logs",
+    description: "$12/year after a free trial. All features included. Cancel any time.",
+  },
+}
 
 const FEATURES = [
   "Unlimited jump logs",
@@ -32,8 +44,29 @@ const FAQ = [
 ]
 
 export default function PricingPage() {
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: FAQ.map(({ q, a }) => ({
+      "@type": "Question",
+      name: q,
+      acceptedAnswer: { "@type": "Answer", text: a },
+    })),
+  }
+
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://jumplogs.com" },
+      { "@type": "ListItem", position: 2, name: "Pricing", item: "https://jumplogs.com/pricing" },
+    ],
+  }
+
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       <section
         className="pt-20 pb-14 px-5 text-center hero-gradient"
       >

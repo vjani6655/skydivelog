@@ -1,7 +1,14 @@
+import type { Metadata } from "next"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { ShieldCheck, ShieldAlert } from "lucide-react"
 import VerifyForm from "./VerifyForm"
 import VerifyResults, { type VerifiedJump, type VerifyJumper } from "./VerifyResults"
+
+export const metadata: Metadata = {
+  title: "Verify a Jump",
+  description: "Verify the authenticity of a skydiving jump record exported from Jump Logs.",
+  robots: { index: false, follow: false },
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

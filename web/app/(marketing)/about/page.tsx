@@ -1,6 +1,18 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import Image from "next/image"
 import { createAdminClient } from "@/lib/supabase/admin"
+
+export const metadata: Metadata = {
+  title: "About",
+  description: "Jump Logs is a skydiving logbook app built by jumpers, for jumpers. Learn about our mission to make logbook management simple and reliable.",
+  alternates: { canonical: "https://jumplogs.com/about" },
+  openGraph: {
+    url: "https://jumplogs.com/about",
+    title: "About — Jump Logs",
+    description: "Built by jumpers, for jumpers. Learn about Jump Logs and our mission.",
+  },
+}
 
 async function getTeamPhoto(): Promise<string | null> {
   try {
@@ -19,8 +31,18 @@ async function getTeamPhoto(): Promise<string | null> {
 export default async function AboutPage() {
   const teamPhotoUrl = await getTeamPhoto()
 
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://jumplogs.com" },
+      { "@type": "ListItem", position: 2, name: "About", item: "https://jumplogs.com/about" },
+    ],
+  }
+
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       {/* ── Hero ──────────────────────────────────────────────────────── */}
       <section className="pt-20 pb-14 px-5">
         <div className="max-w-5xl mx-auto">

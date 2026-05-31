@@ -1,8 +1,21 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import Image from "next/image"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { BookOpen, BarChart2, Package, Award, Download, Shield } from "lucide-react"
 import AppStoreButtons from "@/components/marketing/AppStoreButtons"
+import HomeJsonLd from "@/components/HomeJsonLd"
+
+export const metadata: Metadata = {
+  title: "Jump Logs — The Skydiving Logbook App",
+  description: "Track every jump, manage gear repacks, monitor currency, and export your logbook as PDF. The modern skydiving logbook for iOS & Android.",
+  alternates: { canonical: "https://jumplogs.com" },
+  openGraph: {
+    url: "https://jumplogs.com",
+    title: "Jump Logs — The Skydiving Logbook App",
+    description: "Track every jump, manage gear repacks, monitor currency, and export your logbook as PDF. The modern skydiving logbook for iOS & Android.",
+  },
+}
 
 async function getMedia(slot: string): Promise<string | null> {
   try {
@@ -60,6 +73,7 @@ export default async function HomePage() {
 
   return (
     <>
+      <HomeJsonLd />
       {/* ── Hero ─────────────────────────────────────────────────────── */}
       <section className="force-dark relative pt-24 pb-20 px-5 overflow-hidden hero-gradient">
         {/* Background photo + gradient overlay */}

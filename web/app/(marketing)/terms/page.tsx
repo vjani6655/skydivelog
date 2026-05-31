@@ -1,8 +1,10 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 
-export const metadata = {
-  title: "Terms of Service — Jump Logs",
+export const metadata: Metadata = {
+  title: "Terms of Service",
   description: "Terms of Service for Jump Logs, the skydiving logbook app.",
+  alternates: { canonical: "https://jumplogs.com/terms" },
 }
 
 const sections = [

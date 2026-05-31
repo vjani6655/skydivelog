@@ -1,7 +1,19 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import Image from "next/image"
 import { BookOpen, BarChart2, Package, Award, Download } from "lucide-react"
 import { createAdminClient } from "@/lib/supabase/admin"
+
+export const metadata: Metadata = {
+  title: "Features",
+  description: "Explore every feature of Jump Logs: offline jump logging with QR sign-off, 30-day currency tracking, gear and repack management, certificate tracking, and PDF/CSV export.",
+  alternates: { canonical: "https://jumplogs.com/features" },
+  openGraph: {
+    url: "https://jumplogs.com/features",
+    title: "Features — Jump Logs",
+    description: "Offline jump logging, currency tracking, gear repacks, certificates, and logbook export. Everything a skydiver needs.",
+  },
+}
 
 async function getFeatureMedia(): Promise<Record<string, string>> {
   try {
@@ -62,8 +74,19 @@ const SECTIONS = [
 export default async function FeaturesPage() {
   const media = await getFeatureMedia()
   const illustrationUrl = (slot: string) => media[slot] ?? media['features_illustration'] ?? null
+
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://jumplogs.com" },
+      { "@type": "ListItem", position: 2, name: "Features", item: "https://jumplogs.com/features" },
+    ],
+  }
+
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       {/* ── Hero ─────────────────────────────────────────────────────── */}
       <section
         className="pt-20 pb-14 px-5 hero-gradient"

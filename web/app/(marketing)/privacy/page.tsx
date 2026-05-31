@@ -1,8 +1,10 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 
-export const metadata = {
-  title: "Privacy Policy — Jump Logs",
+export const metadata: Metadata = {
+  title: "Privacy Policy",
   description: "Privacy Policy for Jump Logs, the skydiving logbook app.",
+  alternates: { canonical: "https://jumplogs.com/privacy" },
 }
 
 const sections = [

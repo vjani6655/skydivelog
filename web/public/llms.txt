@@ -1,0 +1,55 @@
+# Jump Logs
+
+> The modern skydiving logbook — track every jump, gear, currency and certification in one place. iOS & Android. Works offline.
+
+Jump Logs is a mobile-first skydiving logbook app for iOS and Android. It lets skydivers record every jump with full detail, track their currency windows, manage gear maintenance schedules, and export their logbook as PDF or CSV. The app works fully offline and syncs automatically when connectivity is restored.
+
+## Key Features
+
+- **Jump logging**: Record aircraft, altitude, freefall time, canopy time, disciplines, GPS location, instructor QR sign-off, photos and notes. Works offline with automatic sync.
+- **Currency tracking**: Configurable rolling currency window (default 30 days, up to 12 months). Warns you before you lapse — not after.
+- **Gear & repack tracking**: Track AAD service dates, reserve repacks, jumps per canopy, and full container details. Alerts fire 14 days before a repack deadline.
+- **Certificates & medicals**: Store licences, ratings, and medical certificates with 30-day, 7-day, and same-day expiry warnings.
+- **Logbook export**: PDF (single-jump or 10-per-page layout) and CSV export. Data is exportable even after cancellation.
+- **Jump verification**: Exported logbooks include unique verification codes. Third parties can verify jump authenticity at jumplogs.com/verify.
+
+## Pricing
+
+$12 USD per year after a free trial. All features included — no tiers, no add-ons. Cancel any time; data remains fully exportable.
+
+## Frequently Asked Questions
+
+**What happens when my trial ends?**
+We'll remind you a few days before. You can subscribe for $12/year or export your data and leave — no pressure.
+
+**Can I cancel anytime?**
+Yes. Cancel from your subscription settings. Your data stays accessible until the end of your billing period, then you can export everything.
+
+**Is my data safe?**
+Yes. We use Supabase (backed by AWS) with row-level security. We never sell your data and never use it for advertising.
+
+**What if I already have a paper logbook?**
+You can add historical jumps manually. Many users backfill their most recent jumps and start fresh from there.
+
+**Does it work offline?**
+Yes. The iOS and Android apps work completely offline. Everything syncs automatically when you're back in range.
+
+**Which governing bodies are supported?**
+Jump Logs is used by jumpers under USPA (USA), APF (Australia), BPA (UK), CSPA (Canada), and many other national governing bodies.
+
+## Target Users
+
+Skydivers at all experience levels — from AFF students to experienced licensed jumpers with thousands of jumps. The app is especially useful for licensed jumpers who need to track currency, gear maintenance deadlines, and certification expiry.
+
+## Links
+
+- Homepage: https://jumplogs.com
+- Features: https://jumplogs.com/features
+- Pricing: https://jumplogs.com/pricing
+- About: https://jumplogs.com/about
+- Contact: https://jumplogs.com/contact
+- Privacy Policy: https://jumplogs.com/privacy
+- Terms of Service: https://jumplogs.com/terms
+- Verify a jump: https://jumplogs.com/verify
+- Full LLM context: https://jumplogs.com/llms-full.txt
+- Support: support@jumplogs.com

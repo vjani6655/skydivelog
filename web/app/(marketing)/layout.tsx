@@ -91,6 +91,20 @@ export default async function MarketingLayout({
           <Link href="/verify" className="hover:text-fg transition-colors">Verify jump</Link>
           <Link href="/privacy" className="hover:text-fg transition-colors">Privacy</Link>
           <Link href="/terms" className="hover:text-fg transition-colors">Terms</Link>
+          <a
+            href="https://www.instagram.com/jumplogs"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Jump Logs on Instagram"
+            className="hover:text-fg transition-colors"
+          >
+            {/* Instagram SVG — lucide-react removed brand icons */}
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect width="20" height="20" x="2" y="2" rx="5" ry="5"/>
+              <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+              <line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/>
+            </svg>
+          </a>
           <span className="ml-auto">© {new Date().getFullYear()} Jump Logs</span>
         </div>
       </footer>
