@@ -55,7 +55,7 @@ const SECTIONS = [
     title: "Your data, exportable forever.",
     body: "One-tap PDF — single-jump or 10-per-page layout. Full CSV export for everything else. Cancel any time and still export your data.",
     illustration: "CERT · TEXTURE ILLUSTRATION",
-    features: ["PDF export (1 or 10 per page)", "Full CSV export", "Export after cancellation", "No lock-in, ever"],
+    features: ["PDF export (1 or upto 6 per page)", "Full CSV export", "Export after cancellation", "No lock-in, ever"],
   },
 ]
 

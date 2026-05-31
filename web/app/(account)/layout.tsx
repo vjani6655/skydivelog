@@ -96,7 +96,7 @@ export default async function AccountLayout({
   }
 
   return (
-    <div className="min-h-screen bg-bg flex">
+    <div className="min-h-screen bg-bg flex flex-col md:flex-row">
       <PrefsSyncer
         theme={profile?.theme ?? "dark"}
         dateFormat={profile?.date_format ?? "DD MMM YYYY"}
@@ -110,7 +110,7 @@ export default async function AccountLayout({
         cancelledInGrace={isCancelledInGrace}
         cancelAt={isCancelledInGrace ? sub?.renews_at ?? null : null}
       />
-      <main className="flex-1 min-w-0 overflow-auto px-12 py-8">
+      <main className="flex-1 min-w-0 overflow-auto px-4 py-6 md:px-12 md:py-8">
         {children}
       </main>
     </div>

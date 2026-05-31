@@ -2,6 +2,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { BookOpen, BarChart2, Package, Award, Download, Shield } from "lucide-react"
+import AppStoreButtons from "@/components/marketing/AppStoreButtons"
 
 async function getMedia(slot: string): Promise<string | null> {
   try {
@@ -51,42 +52,69 @@ const FEATURES = [
 ]
 
 export default async function HomePage() {
-  const [stats, appBannerUrl] = await Promise.all([
+  const [stats, appBannerUrl, heroBgUrl] = await Promise.all([
     getStats(),
     getMedia('marketing_app_banner'),
+    getMedia('hero-bg'),
   ])
 
   return (
     <>
       {/* ── Hero ─────────────────────────────────────────────────────── */}
-      <section
-        className="pt-24 pb-20 px-5 hero-gradient"
-      >
-        <div className="max-w-3xl mx-auto">
-          <div className="mb-6">
-            <span className="inline-flex items-center gap-2 border border-border rounded-pill px-3 py-1 text-overline font-semibold tracking-widest text-fg-3 uppercase">
-              V 2.4 · iOS &amp; Android
-            </span>
-          </div>
+      <section className="force-dark relative pt-24 pb-20 px-5 overflow-hidden hero-gradient">
+        {/* Background photo + gradient overlay */}
+        {heroBgUrl && (
+          <>
+            <Image
+              src={heroBgUrl}
+              alt=""
+              fill
+              className="object-cover object-left md:object-center"
+              unoptimized
+              priority
+            />
+            {/* Solid bg left → transparent right — text sits fully in the solid zone */}
+            <div
+              className="absolute inset-0"
+              style={{ background: "linear-gradient(to right, var(--c-bg) 45%, rgba(var(--c-bg-raw), 0.85) 55%, transparent 72%)" }}
+            />
+          </>
+        )}
+        <div className="relative max-w-5xl ml-[6%] mr-auto">
+          {/* Left column — all text stays within this so it never touches the photo */}
+          <div className="max-w-[520px]">
+            <div className="mb-6 flex flex-wrap items-center gap-3">
+              <span className="inline-flex items-center gap-2 border border-border rounded-pill px-3 py-1 text-overline font-semibold tracking-widest text-fg-3 uppercase">
+                V 2.4 · iOS &amp; Android
+              </span>
+              <span className="inline-flex items-center gap-2 border border-sky/40 bg-sky/5 rounded-pill px-3 py-1 text-overline font-bold tracking-widest uppercase text-sky">
+                <span className="w-1.5 h-1.5 rounded-full bg-sky animate-pulse" />
+                App launching June 2026
+              </span>
+            </div>
 
-          <h1 className="text-hero font-bold tracking-tight mb-5 leading-none">
-            <span className="text-fg block">Every jump.</span>
-            <span className="text-fg-3 block">Forever logged.</span>
-          </h1>
+            <h1 className="text-hero font-bold tracking-tight mb-5 leading-none">
+              <span className="text-fg block">Every jump.</span>
+              <span className="text-fg-3 block">Forever logged.</span>
+            </h1>
 
-          <p className="text-base text-fg-3 mb-8 max-w-sm leading-relaxed">
-            Jump Logs is the digital logbook built for licensed jumpers. Sign every jump in your pocket, track gear and currency, never miss a repack.
-          </p>
+            <p className="text-base text-fg-3 mb-8 leading-relaxed">
+              Jump Logs is the digital logbook built for licensed jumpers. Sign every jump in your pocket, track gear and currency, never miss a repack.
+            </p>
 
-          <div className="flex items-center gap-3 flex-wrap mb-4">
-            <Link href="/signup" className="bg-sky text-on-sky font-semibold px-5 py-2.5 rounded-sm text-sm hover:bg-sky/90 transition-colors">
-              Start free trial
-            </Link>
-            <Link href="/features" className="border border-border-strong text-fg-2 font-medium px-5 py-2.5 rounded-sm text-sm hover:bg-surface-2 hover:text-fg transition-colors">
-              See features
-            </Link>
-          </div>
-          <p className="text-overline text-fg-4 tracking-widest uppercase">$12 / year · Cancel any time</p>
+            <div className="flex items-center gap-3 flex-wrap mb-4">
+              <Link href="/signup" className="bg-sky text-on-sky font-semibold px-5 py-2.5 rounded-sm text-sm hover:bg-sky/90 transition-colors">
+                Start free trial
+              </Link>
+              <Link href="/features" className="border border-border-strong text-fg-2 font-medium px-5 py-2.5 rounded-sm text-sm hover:bg-surface-2 hover:text-fg transition-colors">
+                See features
+              </Link>
+            </div>
+            <p className="text-overline text-fg-4 tracking-widest uppercase mb-5">$12 / year · Cancel any time</p>
+
+            {/* ── App store buttons ── */}
+            <AppStoreButtons />
+          </div>{/* end left column */}
         </div>
       </section>
 
@@ -123,7 +151,7 @@ export default async function HomePage() {
           <div
             className="w-full rounded-xl overflow-hidden border border-border relative"
             style={{
-              height: 280,
+              height: 480,
               background: appBannerUrl ? undefined : "repeating-linear-gradient(135deg, #1A2740 0 8px, #121C2E 8px 16px)",
             }}
           >
@@ -185,25 +213,13 @@ export default async function HomePage() {
       </section>
 
       {/* ── App Store downloads ──────────────────────────────────────── */}
-      <section className="py-12 px-5 border-t border-border flex items-center justify-center gap-4">
-        <a href="#" className="flex items-center gap-3 border border-border rounded-lg px-4 py-2.5 hover:bg-surface-2 transition-colors">
-          <svg className="w-5 h-5 text-fg-2" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
-          </svg>
-          <div>
-            <p className="text-micro font-semibold tracking-widest uppercase text-fg-4">Download on</p>
-            <p className="text-sm font-semibold text-fg">App Store</p>
-          </div>
-        </a>
-        <a href="#" className="flex items-center gap-3 border border-border rounded-lg px-4 py-2.5 hover:bg-surface-2 transition-colors">
-          <svg className="w-5 h-5 text-fg-2" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M3.18 23.76c.37.21.8.22 1.2.03l11.4-6.37-2.5-2.5-10.1 8.84zM.5 1.6C.19 1.99.01 2.56.01 3.27v17.46c0 .71.18 1.28.49 1.67l.09.08 9.78-9.78v-.23L.59 1.52.5 1.6zM20.12 9.82l-2.64-1.47L14.92 11l2.56 2.56 2.64-1.48c.75-.42.75-1.84 0-2.26zm-17-8.02l10.1 8.84 2.5-2.5L4.38.03c-.4-.19-.83-.18-1.2.03l-.06-.26z"/>
-          </svg>
-          <div>
-            <p className="text-micro font-semibold tracking-widest uppercase text-fg-4">Available on</p>
-            <p className="text-sm font-semibold text-fg">Google Play</p>
-          </div>
-        </a>
+      <section className="py-14 px-5 border-t border-border">
+        <div className="max-w-5xl mx-auto flex flex-col items-center gap-4 text-center">
+          <p className="text-overline font-semibold tracking-widest uppercase text-fg-4">Coming soon</p>
+          <h3 className="text-h2 font-bold text-fg">The app is launching June 2026</h3>
+          <p className="text-sm text-fg-3 max-w-xs">Be first to know when it drops — enter your email and we&apos;ll notify you at launch.</p>
+          <AppStoreButtons />
+        </div>
       </section>
     </>
   )

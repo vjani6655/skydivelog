@@ -22,12 +22,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (adminRow.role !== 'super-admin') notFound()
 
   return (
-    <div className="min-h-screen flex bg-bg text-fg font-sans">
+    <div className="min-h-screen flex flex-col md:flex-row bg-bg text-fg font-sans">
       <AdminSidebar adminEmail={user.email!} adminName={adminRow.name ?? ''} adminRole={adminRow.role ?? 'admin'} />
 
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top bar */}
-        <header className="h-[52px] px-7 flex items-center gap-3.5 border-b border-border bg-bg shrink-0 sticky top-0 z-10">
+        {/* Top bar — desktop only */}
+        <header className="hidden md:flex h-[52px] px-7 items-center gap-3.5 border-b border-border bg-bg shrink-0 sticky top-0 z-10">
           <span className="font-mono text-[11px] text-fg-3 tracking-widest">JUMP LOGS / ADMIN</span>
           <div className="flex-1" />
           <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-ok/10">
@@ -41,7 +41,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Bell size={16} className="text-fg-2" />
         </header>
 
-        <main className="flex-1 p-7">{children}</main>
+        <main className="flex-1 p-4 md:p-7">{children}</main>
       </div>
     </div>
   )

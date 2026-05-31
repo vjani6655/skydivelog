@@ -151,7 +151,7 @@ export async function POST(req: Request) {
       if (messageText && fromEmail) {
         const subject = emailContent.subject ?? '(no subject)'
         await sendEmail({
-          to: process.env.ADMIN_NOTIFY_EMAIL ?? 'support@jumplogs.com',
+          to: process.env.ADMIN_NOTIFY_EMAIL ?? 'noreply@jumplogs.com',
           subject: `[Forwarded reply-to-noreply] ${subject}`,
           from: 'support',
           html: `<p style="font-family:sans-serif;font-size:13px;color:#555">

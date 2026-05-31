@@ -2,6 +2,7 @@ import Link from "next/link"
 import BrandMark from "@/components/BrandMark"
 import WebThemeToggle from "@/components/WebThemeToggle"
 import MarketingSignOutButton from "@/components/MarketingSignOutButton"
+import MobileMenu from "@/components/marketing/MobileMenu"
 import { createClient } from "@/lib/supabase/server"
 
 const NAV_LINKS = [
@@ -40,32 +41,37 @@ export default async function MarketingLayout({
 
           <div className="flex items-center gap-2">
             <WebThemeToggle />
-            {isLoggedIn ? (
-              <>
-                <Link
-                  href="/dashboard"
-                  className="text-sm text-fg-3 hover:text-fg px-3 py-1.5 rounded-sm transition-colors"
-                >
-                  Take me to dashboard
-                </Link>
-                <MarketingSignOutButton />
-              </>
-            ) : (
-              <>
-                <Link
-                  href="/login"
-                  className="text-sm text-fg-3 hover:text-fg px-3 py-1.5 rounded-sm transition-colors"
-                >
-                  Log in
-                </Link>
-                <Link
-                  href="/signup"
-                  className="bg-sky text-on-sky text-sm font-semibold px-4 py-1.5 rounded-sm hover:bg-sky/90 transition-colors"
-                >
-                  Sign up
-                </Link>
-              </>
-            )}
+            {/* Desktop-only CTA buttons */}
+            <div className="hidden md:flex items-center gap-2">
+              {isLoggedIn ? (
+                <>
+                  <Link
+                    href="/dashboard"
+                    className="text-sm text-fg-3 hover:text-fg px-3 py-1.5 rounded-sm transition-colors"
+                  >
+                    Take me to dashboard
+                  </Link>
+                  <MarketingSignOutButton />
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    className="text-sm text-fg-3 hover:text-fg px-3 py-1.5 rounded-sm transition-colors"
+                  >
+                    Log in
+                  </Link>
+                  <Link
+                    href="/signup"
+                    className="bg-sky text-on-sky text-sm font-semibold px-4 py-1.5 rounded-sm hover:bg-sky/90 transition-colors"
+                  >
+                    Sign up
+                  </Link>
+                </>
+              )}
+            </div>
+            {/* Mobile hamburger */}
+            <MobileMenu isLoggedIn={isLoggedIn} />
           </div>
         </div>
       </header>

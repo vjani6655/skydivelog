@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
@@ -14,6 +15,8 @@ import {
   Receipt,
   LogOut,
   LifeBuoy,
+  Menu,
+  X,
 } from "lucide-react"
 
 interface SidebarProps {
@@ -58,6 +61,7 @@ export default function AccountSidebar({ fullName, licenceNumber, plan, renewsAt
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -67,86 +71,138 @@ export default function AccountSidebar({ fullName, licenceNumber, plan, renewsAt
 
   const renews = fmtRenews(renewsAt)
 
-  return (
-    <aside className="hidden md:flex flex-col w-60 flex-shrink-0 bg-surface border-r border-border min-h-screen sticky top-0">
-      {/* Logo */}
-      <div className="px-6 pt-6 pb-6">
-        <Link href="/dashboard" className="flex items-center gap-2.5 px-2">
-          <BrandMark size={24} variant="simple" />
-          <span className="text-base font-bold text-fg tracking-tight">Jump Logs</span>
-        </Link>
-      </div>
+  const navLinks = (
+    <nav className="flex-1 px-4 space-y-0.5">
+      {NAV.map(({ href, label, icon: Icon }) => {
+        const active = pathname === href || pathname.startsWith(href + "/")
+        return (
+          <Link
+            key={href}
+            href={href}
+            onClick={() => setMobileOpen(false)}
+            className={`flex items-center gap-3 px-3 py-[10px] rounded-lg text-body font-medium transition-colors ${
+              active
+                ? "bg-sky-bg text-sky"
+                : "text-fg-2 hover:text-fg hover:bg-surface-2"
+            }`}
+          >
+            <Icon className="w-[17px] h-[17px] flex-shrink-0" />
+            {label}
+          </Link>
+        )
+      })}
+    </nav>
+  )
 
-      {/* Nav */}
-      <nav className="flex-1 px-4 space-y-0.5">
-        {NAV.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || pathname.startsWith(href + "/")
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={`flex items-center gap-3 px-3 py-[10px] rounded-lg text-body font-medium transition-colors ${
-                active
-                  ? "bg-sky-bg text-sky"
-                  : "text-fg-2 hover:text-fg hover:bg-surface-2"
-              }`}
-            >
-              <Icon className="w-[17px] h-[17px] flex-shrink-0" />
-              {label}
-            </Link>
-          )
-        })}
-      </nav>
-
-      {/* User + sign-out */}
-      <div className="px-4 pb-4 mt-auto space-y-1">
-        {/* User card */}
-        <div className="p-[14px] rounded-[10px] bg-bg border border-border">
-          <div className="flex items-center gap-2.5 mb-2">
-            <div className="w-8 h-8 rounded-full bg-sky/20 flex items-center justify-center flex-shrink-0">
-              <span className="text-xs font-bold text-sky">{initials(fullName)}</span>
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-fg truncate">{fullName}</p>
-              {licenceNumber && (
-                <p className="font-mono text-[10px] text-fg-3 truncate uppercase">{licenceNumber}</p>
-              )}
-            </div>
+  const userCard = (
+    <div className="px-4 pb-4 mt-auto space-y-1">
+      <div className="p-[14px] rounded-[10px] bg-bg border border-border">
+        <div className="flex items-center gap-2.5 mb-2">
+          <div className="w-8 h-8 rounded-full bg-sky/20 flex items-center justify-center flex-shrink-0">
+            <span className="text-xs font-bold text-sky">{initials(fullName)}</span>
           </div>
-          {plan ? (
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm bg-sky/10 border border-sky/25 text-[10px] font-semibold text-sky leading-none">
-                PRO
-              </span>
-              {renews && (
-                <span className="font-mono text-[10px] text-fg-3">RENEWS {renews.toUpperCase()}</span>
-              )}
-            </div>
-          ) : cancelledInGrace ? (
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm bg-warn/10 border border-warn/25 text-[10px] font-semibold text-warn leading-none">
-                CANCELLED
-              </span>
-              {cancelAt && (
-                <span className="font-mono text-[10px] text-fg-3">UNTIL {fmtRenews(cancelAt)?.toUpperCase()}</span>
-              )}
-            </div>
-          ) : (
-            <Link href="/subscription" className="text-[10px] text-sky hover:text-sky/80 font-medium">
-              Upgrade to Pro →
-            </Link>
-          )}
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-fg truncate">{fullName}</p>
+            {licenceNumber && (
+              <p className="font-mono text-[10px] text-fg-3 truncate uppercase">{licenceNumber}</p>
+            )}
+          </div>
         </div>
-
-        {/* Sign out */}
-        <button
-          onClick={handleSignOut}
-          className="flex items-center gap-2.5 w-full px-3 py-[8px] text-sm text-fg-3 hover:text-fg hover:bg-surface-2 rounded-lg transition-colors"
-        >
-          <LogOut className="w-[15px] h-[15px]" />
-          Sign out
-        </button>
+        {plan ? (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm bg-sky/10 border border-sky/25 text-[10px] font-semibold text-sky leading-none">
+              PRO
+            </span>
+            {renews && (
+              <span className="font-mono text-[10px] text-fg-3">RENEWS {renews.toUpperCase()}</span>
+            )}
+          </div>
+        ) : cancelledInGrace ? (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm bg-warn/10 border border-warn/25 text-[10px] font-semibold text-warn leading-none">
+              CANCELLED
+            </span>
+            {cancelAt && (
+              <span className="font-mono text-[10px] text-fg-3">UNTIL {fmtRenews(cancelAt)?.toUpperCase()}</span>
+            )}
+          </div>
+        ) : (
+          <Link href="/subscription" className="text-[10px] text-sky hover:text-sky/80 font-medium" onClick={() => setMobileOpen(false)}>
+            Upgrade to Pro →
+          </Link>
+        )}
       </div>
-    </aside>
+      <button
+        onClick={handleSignOut}
+        className="flex items-center gap-2.5 w-full px-3 py-[8px] text-sm text-fg-3 hover:text-fg hover:bg-surface-2 rounded-lg transition-colors"
+      >
+        <LogOut className="w-[15px] h-[15px]" />
+        Sign out
+      </button>
+    </div>
+  )
+
+  return (
+    <>
+      {/* Mobile sticky header */}
+      <header className="flex md:hidden sticky top-0 z-40 h-14 bg-surface border-b border-border items-center justify-between px-4 shrink-0">
+        <Link href="/dashboard" className="flex items-center gap-2">
+          <BrandMark size={20} variant="simple" />
+          <span className="text-sm font-bold text-fg tracking-tight">Jump Logs</span>
+        </Link>
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="p-2 -mr-1 text-fg-2 hover:text-fg transition-colors"
+          aria-label="Open navigation"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+      </header>
+
+      {/* Mobile drawer overlay */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setMobileOpen(false)}
+          />
+          <aside className="absolute left-0 top-0 bottom-0 w-72 flex flex-col bg-surface border-r border-border overflow-y-auto">
+            {/* Drawer header */}
+            <div className="flex items-center justify-between px-5 h-14 border-b border-border shrink-0">
+              <Link href="/dashboard" onClick={() => setMobileOpen(false)} className="flex items-center gap-2">
+                <BrandMark size={20} variant="simple" />
+                <span className="text-sm font-bold text-fg tracking-tight">Jump Logs</span>
+              </Link>
+              <button
+                onClick={() => setMobileOpen(false)}
+                className="p-1.5 text-fg-3 hover:text-fg transition-colors"
+                aria-label="Close navigation"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="py-4 flex-1 flex flex-col">
+              {navLinks}
+            </div>
+            {userCard}
+          </aside>
+        </div>
+      )}
+
+      {/* Desktop sidebar (unchanged) */}
+      <aside className="hidden md:flex flex-col w-60 flex-shrink-0 bg-surface border-r border-border min-h-screen sticky top-0">
+        {/* Logo */}
+        <div className="px-6 pt-6 pb-6">
+          <Link href="/dashboard" className="flex items-center gap-2.5 px-2">
+            <BrandMark size={24} variant="simple" />
+            <span className="text-base font-bold text-fg tracking-tight">Jump Logs</span>
+          </Link>
+        </div>
+        <div className="flex-1 flex flex-col">
+          {navLinks}
+        </div>
+        {userCard}
+      </aside>
+    </>
   )
 }
