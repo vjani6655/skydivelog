@@ -133,7 +133,7 @@ export default async function AdminAccountDetailPage({ params }: { params: Promi
 
         {/* Right column — actions */}
         <div>
-          <AdminDetailClient admin={admin} />
+          <AdminDetailClient admin={{ ...admin, last_sign_in_at }} />
         </div>
       </div>
     </div>
