@@ -12,7 +12,6 @@ interface GearRow {
   make_model: string
   serial_number: string
   manufactured_date: string | null
-  wing_loading: number | null
   jumps_on: number | null
   hours: number | null
   last_repack_date: string | null
@@ -132,15 +131,11 @@ function GearCard({ g, jumpCount }: { g: GearRow; jumpCount?: number }) {
             {jumpCount != null ? jumpCount : (g.jumps_on != null ? g.jumps_on : "—")}
           </p>
         </div>
-        {g.type !== "rig" && (
+        {g.type === "aad" && (
           <div>
-            <p className="font-mono text-[9px] tracking-widest uppercase text-fg-4 mb-1">
-              {g.type === "aad" ? "Hours" : "Wing load"}
-            </p>
+            <p className="font-mono text-[9px] tracking-widest uppercase text-fg-4 mb-1">Hours</p>
             <p className="font-mono text-[18px] font-medium text-fg leading-none">
-              {g.type === "aad"
-                ? (g.hours != null ? `${g.hours} h` : "—")
-                : (g.wing_loading != null ? g.wing_loading.toFixed(2) : "—")}
+              {g.hours != null ? `${g.hours} h` : "—"}
             </p>
           </div>
         )}
