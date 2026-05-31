@@ -65,6 +65,15 @@ export async function POST(request: Request) {
 
   // ── Users ───────────────────────────────────────────────────────────────────
   if (dataset === 'users') {
+    type UserRow = {
+      id: string; email: string | null; full_name: string | null
+      licence_number: string | null; licence_rating: string | null
+      date_of_birth: string | null; phone: string | null; country: string | null
+      created_at: string | null; last_sign_in_at: string | null; last_ip: string | null
+      two_factor_enabled: boolean | null; preferred_altitude_unit: string | null
+      marketing_emails_opt_in: boolean | null; emergency_contact_name: string | null
+      dropzones: { name: string | null } | null
+    }
     let q = db.from('users').select(
       'id, email, full_name, licence_number, licence_rating, date_of_birth,' +
       'phone, country, created_at, last_sign_in_at, last_ip,' +
@@ -76,18 +85,20 @@ export async function POST(request: Request) {
     if (toDateEnd) q = q.lte('created_at', toDateEnd)
     if (country && country !== 'all') q = q.eq('country', country)
 
-    const { data: users } = await q
-    const userIds = (users ?? []).map(u => u.id)
+    const { data: rawUsers } = await q
+    const users = (rawUsers ?? []) as unknown as UserRow[]
+    const userIds = users.map(u => u.id)
 
     // Subscriptions — pick effective sub per user (latest started_at)
+    type SubEntry = { user_id: string; status: string | null; plan: string | null; renews_at: string | null; stripe_customer_id: string | null; started_at: string | null }
     const { data: allSubs } = await db
       .from('subscriptions')
       .select('user_id, status, plan, renews_at, stripe_customer_id, started_at')
       .in('user_id', userIds)
-    const subMap: Record<string, typeof allSubs[0]> = {}
-    ;(allSubs ?? []).forEach(s => {
+    const subMap: Record<string, SubEntry> = {}
+    ;(allSubs ?? [] as SubEntry[]).forEach(s => {
       const ex = subMap[s.user_id]
-      if (!ex || s.started_at > ex.started_at) subMap[s.user_id] = s
+      if (!ex || (s.started_at ?? '') > (ex.started_at ?? '')) subMap[s.user_id] = s
     })
 
     // Jump counts + freefall
@@ -105,7 +116,6 @@ export async function POST(request: Request) {
     const statusFilter = (subStatus ?? []).map(s => s.toLowerCase())
     const trialMs = 14 * 86400000
 
-    type UserRow = typeof users[0]
     const COLS: Record<string, { header: string; fn: (u: UserRow) => string }> = {
       id:                   { header: 'ID',                   fn: u => esc(u.id) },
       email:                { header: 'Email',                fn: u => esc(u.email) },
@@ -121,11 +131,11 @@ export async function POST(request: Request) {
       two_factor:           { header: '2FA enabled',          fn: u => esc(u.two_factor_enabled) },
       preferred_units:      { header: 'Alt units',            fn: u => esc(u.preferred_altitude_unit) },
       marketing_opt_in:     { header: 'Marketing opt-in',     fn: u => esc(u.marketing_emails_opt_in) },
-      home_dz:              { header: 'Home DZ',              fn: u => esc((u.dropzones as { name?: string } | null)?.name) },
+      home_dz:              { header: 'Home DZ',              fn: u => esc(u.dropzones?.name) },
       emergency_contact:    { header: 'Emergency contact',    fn: u => esc(u.emergency_contact_name) },
       subscription_status:  { header: 'Sub status',          fn: u => {
         const s = subMap[u.id]
-        return esc(s ? s.status : (Date.now() < new Date(u.created_at).getTime() + trialMs ? 'trial' : 'expired'))
+        return esc(s ? s.status : (Date.now() < new Date(u.created_at ?? 0).getTime() + trialMs ? 'trial' : 'expired'))
       }},
       plan:                 { header: 'Plan',                 fn: u => esc(subMap[u.id]?.plan) },
       renews_at:            { header: 'Renews at',            fn: u => esc(isoDate(subMap[u.id]?.renews_at)) },
@@ -135,12 +145,12 @@ export async function POST(request: Request) {
     }
 
     const validCols = fields.filter(f => COLS[f])
-    let rows = users ?? []
+    let rows = users
     if (statusFilter.length) {
       rows = rows.filter(u => {
         const s = subMap[u.id]
-        const st = s ? s.status : (Date.now() < new Date(u.created_at).getTime() + trialMs ? 'trial' : 'expired')
-        return statusFilter.includes(st)
+        const st = s ? s.status : (Date.now() < new Date(u.created_at ?? 0).getTime() + trialMs ? 'trial' : 'expired')
+        return statusFilter.includes(st ?? '')
       })
     }
 
@@ -170,15 +180,26 @@ export async function POST(request: Request) {
     if (fromDate)  q = q.gte('date', fromDate)
     if (toDateEnd) q = q.lte('date', toDateEnd)
 
-    const { data: jumps } = await q
-
-    type JumpRow = typeof jumps[0]
+    const { data: rawJumps } = await q
+    type JumpRow = {
+      id: string | null; user_id: string | null; jump_number: number | null; date: string | null
+      aircraft_type: string | null; aircraft_rego: string | null
+      exit_altitude_ft: number | null; pull_altitude_ft: number | null; deploy_altitude_ft: number | null
+      freefall_seconds: number | null; canopy_seconds: number | null
+      jump_type: string | null; jumper_type: string | null; jump_stage: string | null
+      canopy_type: string | null; landing_accuracy_value: number | null; landing_accuracy_unit: string | null
+      notes: string | null; coordinates_lat: number | null; coordinates_lng: number | null
+      is_favourite: boolean | null; is_draft: boolean | null
+      created_at: string | null; updated_at: string | null
+      users: { email: string | null } | null; dropzones: { name: string | null } | null
+    }
+    const jumps = (rawJumps ?? []) as unknown as JumpRow[]
     const COLS: Record<string, { header: string; fn: (j: JumpRow) => string }> = {
       id:                     { header: 'ID',                   fn: j => esc(j.id) },
-      user_email:             { header: 'User email',           fn: j => esc((j.users as { email?: string } | null)?.email) },
+      user_email:             { header: 'User email',           fn: j => esc(j.users?.email) },
       jump_number:            { header: 'Jump #',               fn: j => esc(j.jump_number) },
       date:                   { header: 'Date',                 fn: j => esc(isoDate(j.date)) },
-      dropzone:               { header: 'Dropzone',             fn: j => esc((j.dropzones as { name?: string } | null)?.name) },
+      dropzone:               { header: 'Dropzone',             fn: j => esc(j.dropzones?.name) },
       aircraft_type:          { header: 'Aircraft type',        fn: j => esc(j.aircraft_type) },
       aircraft_rego:          { header: 'Aircraft rego',        fn: j => esc(j.aircraft_rego) },
       exit_altitude_ft:       { header: 'Exit alt (ft)',        fn: j => esc(j.exit_altitude_ft) },
@@ -203,7 +224,7 @@ export async function POST(request: Request) {
 
     const validCols = fields.filter(f => COLS[f])
     const header    = validCols.map(f => COLS[f].header).join(',')
-    const lines     = (jumps ?? []).map(j => validCols.map(f => COLS[f].fn(j)).join(','))
+    const lines     = jumps.map(j => validCols.map(f => COLS[f].fn(j)).join(','))
     const csv       = [header, ...lines].join('\n')
     const name      = `jumps_${new Date().toISOString().slice(0, 10)}.csv`
 
@@ -230,12 +251,20 @@ export async function POST(request: Request) {
       if (st.length) q = q.in('status', st)
     }
 
-    const { data: subs } = await q
-
-    type SubRow = typeof subs[0]
+    const { data: rawSubs } = await q
+    type SubRow = {
+      id: string | null; user_id: string | null
+      stripe_subscription_id: string | null; stripe_customer_id: string | null
+      status: string | null; plan: string | null; price_at_signup: number | null
+      started_at: string | null; renews_at: string | null
+      payment_method_brand: string | null; payment_method_last4: string | null; payment_method_expiry: string | null
+      refunded_at: string | null; refunded_amount: number | null
+      users: { email: string | null } | null
+    }
+    const subs = (rawSubs ?? []) as unknown as SubRow[]
     const COLS: Record<string, { header: string; fn: (s: SubRow) => string }> = {
       id:                     { header: 'ID',                   fn: s => esc(s.id) },
-      user_email:             { header: 'User email',           fn: s => esc((s.users as { email?: string } | null)?.email) },
+      user_email:             { header: 'User email',           fn: s => esc(s.users?.email) },
       stripe_subscription_id: { header: 'Stripe sub ID',        fn: s => esc(s.stripe_subscription_id) },
       stripe_customer_id:     { header: 'Stripe customer ID',   fn: s => esc(s.stripe_customer_id) },
       status:                 { header: 'Status',               fn: s => esc(s.status) },
@@ -246,13 +275,13 @@ export async function POST(request: Request) {
       payment_method_brand:   { header: 'Card brand',           fn: s => esc(s.payment_method_brand) },
       payment_method_last4:   { header: 'Card last 4',          fn: s => esc(s.payment_method_last4) },
       payment_method_expiry:  { header: 'Card expiry',          fn: s => esc(s.payment_method_expiry) },
-      refunded_at:            { header: 'Refunded at',          fn: s => esc(isoDate((s as Record<string,unknown>).refunded_at as string)) },
-      refunded_amount:        { header: 'Refunded amount',      fn: s => esc((s as Record<string,unknown>).refunded_amount) },
+      refunded_at:            { header: 'Refunded at',          fn: s => esc(isoDate(s.refunded_at)) },
+      refunded_amount:        { header: 'Refunded amount',      fn: s => esc(s.refunded_amount) },
     }
 
     const validCols = fields.filter(f => COLS[f])
     const header    = validCols.map(f => COLS[f].header).join(',')
-    const lines     = (subs ?? []).map(s => validCols.map(f => COLS[f].fn(s)).join(','))
+    const lines     = subs.map(s => validCols.map(f => COLS[f].fn(s)).join(','))
     const csv       = [header, ...lines].join('\n')
     const name      = `revenue_${new Date().toISOString().slice(0, 10)}.csv`
 
@@ -271,13 +300,17 @@ export async function POST(request: Request) {
     if (fromDate)  q = q.gte('created_at', fromDate)
     if (toDateEnd) q = q.lte('created_at', toDateEnd)
 
-    const { data: entries } = await q
-
-    type AuditRow = typeof entries[0]
+    const { data: rawEntries } = await q
+    type AuditRow = {
+      id: string | null; action: string | null; target: string | null
+      reason: string | null; created_at: string | null
+      admins: { name: string | null; email: string | null } | null
+    }
+    const entries = (rawEntries ?? []) as unknown as AuditRow[]
     const COLS: Record<string, { header: string; fn: (e: AuditRow) => string }> = {
       id:          { header: 'ID',          fn: e => esc(e.id) },
-      admin_name:  { header: 'Admin name',  fn: e => esc((e.admins as { name?: string; email?: string } | null)?.name) },
-      admin_email: { header: 'Admin email', fn: e => esc((e.admins as { name?: string; email?: string } | null)?.email) },
+      admin_name:  { header: 'Admin name',  fn: e => esc(e.admins?.name) },
+      admin_email: { header: 'Admin email', fn: e => esc(e.admins?.email) },
       action:      { header: 'Action',      fn: e => esc(e.action) },
       target:      { header: 'Target',      fn: e => esc(e.target) },
       reason:      { header: 'Reason',      fn: e => esc(e.reason) },
@@ -286,7 +319,7 @@ export async function POST(request: Request) {
 
     const validCols = fields.filter(f => COLS[f])
     const header    = validCols.map(f => COLS[f].header).join(',')
-    const lines     = (entries ?? []).map(e => validCols.map(f => COLS[f].fn(e)).join(','))
+    const lines     = entries.map(e => validCols.map(f => COLS[f].fn(e)).join(','))
     const csv       = [header, ...lines].join('\n')
     const name      = `audit_${new Date().toISOString().slice(0, 10)}.csv`
 
