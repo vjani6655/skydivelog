@@ -9,7 +9,7 @@ import { useColors } from '@/lib/theme';
 import type { JumpFull } from '@/lib/types';
 
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
+  return new Date(iso).toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
 }
 
 export default function FavouritesScreen() {

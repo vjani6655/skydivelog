@@ -41,7 +41,7 @@ export default async function AdminAccountDetailPage({ params }: { params: Promi
 
   const [{ data: admin }, { data: auditEntries }] = await Promise.all([
     db.from('admins')
-      .select('id, name, email, role, last_sign_in_at, active')
+      .select('id, name, email, role, active')
       .eq('id', id)
       .maybeSingle(),
     db.from('audit_log')
@@ -52,6 +52,11 @@ export default async function AdminAccountDetailPage({ params }: { params: Promi
   ])
 
   if (!admin) notFound()
+
+  // Fetch last_sign_in_at from auth.users (admins table column is never written to)
+  const { data: authList } = await db.auth.admin.listUsers({ perPage: 1000 })
+  const authUser = (authList?.users ?? []).find(u => u.email === admin.email)
+  const last_sign_in_at = authUser?.last_sign_in_at ?? null
 
   const roleDesc = ROLE_DESCS[admin.role] ?? ''
   const roleBadgeKind = ROLE_BADGE[admin.role] ?? 'muted'
@@ -91,7 +96,7 @@ export default async function AdminAccountDetailPage({ params }: { params: Promi
               {[
                 { label: 'Role', value: <Badge kind={roleBadgeKind}>{admin.role.toUpperCase()}</Badge> },
                 { label: 'Status', value: <Badge kind={admin.active ? 'ok' : 'muted'}>{admin.active ? 'ACTIVE' : 'INACTIVE'}</Badge> },
-                { label: 'Last sign-in', value: <span className="font-mono text-xs text-fg-2">{fmtDate(admin.last_sign_in_at)}</span> },
+                { label: 'Last sign-in', value: <span className="font-mono text-xs text-fg-2">{fmtDate(last_sign_in_at)}</span> },
                 { label: 'Role description', value: <span className="text-xs text-fg-2">{roleDesc}</span> },
               ].map(({ label, value }) => (
                 <div key={label}>

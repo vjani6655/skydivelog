@@ -151,19 +151,35 @@ function InviteModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
 // ── Row Actions Menu ──────────────────────────────────────────
 function AdminRowMenu({ admin, onRefresh }: { admin: AdminRow; onRefresh: () => void }) {
   const [open, setOpen] = useState(false)
+  const [menuPos, setMenuPos] = useState({ top: 0, right: 0 })
   const [changingRole, setChangingRole] = useState(false)
   const [selectedRole, setSelectedRole] = useState(admin.role)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const ref = useRef<HTMLDivElement>(null)
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      if (
+        menuRef.current && !menuRef.current.contains(e.target as Node) &&
+        btnRef.current  && !btnRef.current.contains(e.target as Node)
+      ) setOpen(false)
     }
     if (open) document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
+
+  function handleOpen() {
+    if (open) { setOpen(false); return }
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect()
+      setMenuPos({ top: r.bottom + 4, right: window.innerWidth - r.right })
+    }
+    setChangingRole(false)
+    setError('')
+    setOpen(true)
+  }
 
   async function doPatch(body: object) {
     setError('')
@@ -198,16 +214,21 @@ function AdminRowMenu({ admin, onRefresh }: { admin: AdminRow; onRefresh: () => 
   }
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative">
       <button
-        onClick={() => { setOpen(v => !v); setChangingRole(false); setError('') }}
+        ref={btnRef}
+        onClick={handleOpen}
         className="text-fg-3 hover:text-fg transition-colors"
         disabled={loading}
       >
         <MoreHorizontal size={14} />
       </button>
       {open && (
-        <div className="absolute right-0 top-6 z-30 w-52 bg-surface border border-border rounded-md shadow-xl py-1">
+        <div
+          ref={menuRef}
+          className="fixed z-[9999] w-52 bg-surface border border-border rounded-md shadow-xl py-1"
+          style={{ top: menuPos.top, right: menuPos.right }}
+        >
           {error && <p className="text-[11px] text-danger px-3 py-1.5 border-b border-border">{error}</p>}
           {!changingRole ? (
             <>

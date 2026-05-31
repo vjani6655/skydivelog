@@ -40,13 +40,19 @@ export default function ForgotPasswordScreen() {
     setEmailError('');
     setSubmitError('');
     setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
-    setLoading(false);
-    if (error) {
-      setSubmitError(error.message);
-    } else {
-      setSent(true);
+    try {
+      const webUrl = process.env.EXPO_PUBLIC_WEB_URL ?? 'https://www.jumplogs.com';
+      await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${webUrl}/api/auth/callback?next=/reset-password`,
+      });
+    } catch {
+      setLoading(false);
+      setSubmitError('Network error. Please check your connection and try again.');
+      return;
     }
+    setLoading(false);
+    // Always show success — standard password reset UX (don't reveal if email exists).
+    setSent(true);
   };
 
   if (sent) {

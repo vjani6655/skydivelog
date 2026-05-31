@@ -12,7 +12,7 @@ import typography from '@/constants/typography';
 import { Badge, Tag } from '@/components/ui';
 import type { JumpDetailProps } from '@/app/(tabs)/log/[id]';
 import type { JumpEditChange } from '@/lib/types';
-import { usePrefs, altNumStr, fmtDetailDate } from '@/lib/prefsContext';
+import { usePrefs, altNumStr, fmtDetailDate, fmtJumpDateTime } from '@/lib/prefsContext';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -158,7 +158,7 @@ export default function DetailCockpit({ jump, signatures, tags, edits }: JumpDet
       <View style={styles.card}>
         <View style={styles.detailRow}>
           <Text style={[typography.overline, { color: colors.fg3, width: 110 }]}>DATE</Text>
-          <Text style={[typography.sm, { color: colors.fg, flex: 1 }]}>{fmtDetailDate(jump.date, prefs.dateFormat)}</Text>
+          <Text style={[typography.sm, { color: colors.fg, flex: 1 }]}>{fmtJumpDateTime(jump.date, prefs.dateFormat)}</Text>
         </View>
         {jump.jumper_type ? (
           <View style={[styles.detailRow, { marginTop: 8 }]}>

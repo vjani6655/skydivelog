@@ -6,6 +6,7 @@ import { spacing, radii } from '@/constants/tokens';
 import type { ColorSet } from '@/constants/tokens';
 import { useColors } from '@/lib/theme';
 import { useAppMedia } from '@/lib/useAppMedia';
+import { getAppVersion } from '@/lib/useForceUpgrade';
 
 function WelcomeHero() {
   const colors = useColors();
@@ -74,6 +75,7 @@ export default function WelcomeScreen() {
           <Text style={styles.legalSep}> · </Text>
           <Text style={styles.legalLink} onPress={() => Linking.openURL('https://jumplogs.com/privacy')}>Privacy</Text>
         </View>
+        <Text style={styles.versionTag}>v{getAppVersion()}</Text>
       </View>
     </View>
   );
@@ -178,6 +180,13 @@ function makeStyles(c: ColorSet) {
     fontFamily: 'JetBrainsMono-Regular',
     fontSize: 10,
     color: c.fg4,
+  },
+  versionTag: {
+    fontFamily: 'JetBrainsMono-Regular',
+    fontSize: 10,
+    color: c.fg4,
+    textAlign: 'center',
+    marginTop: spacing[2],
   },
   });
 }

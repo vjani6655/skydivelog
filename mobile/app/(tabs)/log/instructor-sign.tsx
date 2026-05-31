@@ -18,7 +18,7 @@ const CANVAS_H = 200;
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  return new Date(iso).toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 }
 function fmtSecs(s: number | null | undefined): string {
   if (!s) return '—';

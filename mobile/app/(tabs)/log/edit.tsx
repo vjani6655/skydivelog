@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { spacing, radii } from '@/constants/tokens';
 import type { ColorSet } from '@/constants/tokens';
 import { useColors } from '@/lib/theme';
+import { usePrefs, fmtJumpDateTime } from '@/lib/prefsContext';
 import type { JumpFull } from '@/lib/types';
 
 const JUMP_TYPES = ['Belly', 'Tracking', 'Wingsuit', 'Freefly', 'CRW', 'AFF', 'Tandem', 'Coach', 'Demo', 'Night', 'Camera Flying'];
@@ -51,6 +52,7 @@ function Label({ text }: { text: string }) {
 export default function EditJumpScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { prefs } = usePrefs();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [jump, setJump] = useState<JumpFull | null>(null);
   const [loading, setLoading] = useState(true);
@@ -256,7 +258,7 @@ export default function EditJumpScreen() {
         <ScrollView style={styles.flex} contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
 
           <Label text="DATE" />
-          <View style={styles.inputReadonly}><Text style={styles.inputReadonlyText}>{jump?.date}</Text></View>
+          <View style={styles.inputReadonly}><Text style={styles.inputReadonlyText}>{fmtJumpDateTime(jump?.date, prefs.dateFormat)}</Text></View>
 
           <Label text="DROPZONE" />
           <View style={styles.inputWithIcon}>

@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase';
 import { UserPrefsProvider } from '@/lib/prefsContext';
 import { registerPushToken } from '@/lib/notifications';
+import ForceUpgradeGate from '@/components/ForceUpgradeGate';
 
 /** 
  * getSession() hangs indefinitely offline when the access token is expired
@@ -130,17 +131,19 @@ export default function RootLayout() {
 
   return (
     <UserPrefsProvider>
-    <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
-      <Stack.Screen name="index" />
-      <Stack.Screen name="welcome" />
-      <Stack.Screen name="sign-in" options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="create-account" options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="paywall" options={{ animation: 'slide_from_bottom', presentation: 'modal' }} />
-      <Stack.Screen name="subscription-success" options={{ animation: 'fade', gestureEnabled: false }} />
-      <Stack.Screen name="forgot-password" options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="(auth)" />
-    </Stack>
+      <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="welcome" />
+        <Stack.Screen name="sign-in" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="create-account" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="paywall" options={{ animation: 'slide_from_bottom', presentation: 'modal' }} />
+        <Stack.Screen name="subscription-success" options={{ animation: 'fade', gestureEnabled: false }} />
+        <Stack.Screen name="forgot-password" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="(auth)" />
+      </Stack>
+      {/* Force-upgrade gate — shown instantly via Supabase Realtime when admin triggers it */}
+      <ForceUpgradeGate />
     </UserPrefsProvider>
   );
 }

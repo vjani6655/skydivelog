@@ -14,7 +14,7 @@ import { Tag, Badge } from '@/components/ui';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect, Path } from 'react-native-svg';
 import type { JumpDetailProps } from '@/app/(tabs)/log/[id]';
 import type { JumpEditChange } from '@/lib/types';
-import { usePrefs, fmtAltMini, altNumStr, fmtDetailDate, fmtDate } from '@/lib/prefsContext';
+import { usePrefs, fmtAltMini, altNumStr, fmtDetailDate, fmtJumpDateTime, fmtDate } from '@/lib/prefsContext';
 import { useAppMedia } from '@/lib/useAppMedia';
 
 const { height: SCREEN_H } = Dimensions.get('window');
@@ -178,7 +178,7 @@ export default function DetailPhotoLed({ jump, signatures, tags, edits }: JumpDe
         <View style={{ marginTop: spacing[3] }}>
           <Text style={[typography.overline, { color: colors.fg3 }]}>DATE</Text>
           <Text style={[typography.sm, { color: colors.fg2, marginTop: spacing[1] }]}>
-            {fmtDetailDate(jump.created_at, prefs.dateFormat)}
+            {fmtJumpDateTime(jump.date, prefs.dateFormat)}
           </Text>
         </View>
         {/* Tags */}

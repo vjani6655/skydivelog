@@ -1,10 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
-import { Lock, Eye, EyeOff, Check, X, AlertCircle } from "lucide-react"
+import { Lock, Eye, EyeOff, Check, X, AlertCircle, ShieldCheck } from "lucide-react"
 
 function StrengthRow({ ok, label }: { ok: boolean; label: string }) {
   return (
@@ -16,18 +15,33 @@ function StrengthRow({ ok, label }: { ok: boolean; label: string }) {
 }
 
 export default function ResetPasswordPage() {
-  const router = useRouter()
   const supabase = createClient()
   const [password, setPassword] = useState("")
   const [linkError, setLinkError] = useState<string | null>(null)
   const [sessionReady, setSessionReady] = useState(false)
-  // True when arriving via implicit flow (#access_token in hash)
   const [awaitingRecovery, setAwaitingRecovery] = useState(false)
+  // MFA state
+  const [needsMfa, setNeedsMfa] = useState(false)
+  const [mfaFactorId, setMfaFactorId] = useState<string | null>(null)
+  const [mfaCode, setMfaCode] = useState("")
+  const [mfaError, setMfaError] = useState<string | null>(null)
+  const [mfaLoading, setMfaLoading] = useState(false)
+
+  const checkMfaRequired = async () => {
+    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+    if (aal && aal.nextLevel === 'aal2' && aal.currentLevel !== 'aal2') {
+      // User has MFA enabled — need to verify before password update
+      const { data: factors } = await supabase.auth.mfa.listFactors()
+      const totp = factors?.totp?.[0]
+      if (totp) {
+        setMfaFactorId(totp.id)
+        setNeedsMfa(true)
+      }
+    }
+  }
 
   useEffect(() => {
-    // Check query params (PKCE error forwarded from callback)
     const qParams = new URLSearchParams(window.location.search)
-    // Check hash (implicit flow direct redirect)
     const hParams = window.location.hash ? new URLSearchParams(window.location.hash.slice(1)) : null
     const errorCode = qParams.get("error_code") ?? hParams?.get("error_code") ?? null
     if (errorCode === "otp_expired") {
@@ -36,33 +50,60 @@ export default function ResetPasswordPage() {
       setLinkError("This reset link is invalid or has already been used.")
     }
 
-    // If the hash contains an access_token it's an implicit-flow recovery redirect.
-    // Wait for the PASSWORD_RECOVERY event before allowing form submission.
     if (hParams?.get("access_token") && hParams?.get("type") === "recovery") {
       setAwaitingRecovery(true)
     } else {
-      // PKCE flow: session already set via callback cookie — form is ready immediately
       setSessionReady(true)
+      checkMfaRequired()
     }
 
-    // Listen for PASSWORD_RECOVERY event (implicit flow: #access_token in hash)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') setSessionReady(true)
+      if (event === 'PASSWORD_RECOVERY') {
+        setSessionReady(true)
+        checkMfaRequired()
+      }
     })
     return () => subscription.unsubscribe()
-  // supabase is a stable createClient() instance — safe to omit from deps
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const handleMfaVerify = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!mfaFactorId) return
+    setMfaLoading(true)
+    setMfaError(null)
+    const { data: challenge } = await supabase.auth.mfa.challenge({ factorId: mfaFactorId })
+    if (!challenge) {
+      setMfaError("Failed to start MFA challenge. Please try again.")
+      setMfaLoading(false)
+      return
+    }
+    const { error } = await supabase.auth.mfa.verify({
+      factorId: mfaFactorId,
+      challengeId: challenge.id,
+      code: mfaCode.trim(),
+    })
+    if (error) {
+      setMfaError("Invalid code. Please try again.")
+      setMfaLoading(false)
+    } else {
+      setNeedsMfa(false)
+      setMfaLoading(false)
+    }
+  }
+
   const [confirm, setConfirm] = useState("")
   const [showPass, setShowPass] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [done, setDone] = useState(false)
 
   const checks = {
     length: password.length >= 8,
     mixedCase: /[a-z]/.test(password) && /[A-Z]/.test(password),
-    numberOrSymbol: /[0-9!@#$%^&*()_+\-=[\]{};':"|,.<>/?]/.test(password),
+    number: /[0-9]/.test(password),
+    symbol: /[!@#$%^&*()_+\-=[\]{};':"|,.<>/?]/.test(password),
   }
   const strength = Object.values(checks).filter(Boolean).length
 
@@ -81,9 +122,27 @@ export default function ResetPasswordPage() {
       setError(error.message)
       setLoading(false)
     } else {
-      router.push("/dashboard")
-      router.refresh()
+      await supabase.auth.signOut()
+      setDone(true)
     }
+  }
+
+  if (done) {
+    return (
+      <div className="bg-surface border border-border rounded-xl p-8 text-center">
+        <div className="w-12 h-12 rounded-full bg-ok/10 flex items-center justify-center mx-auto mb-4">
+          <Check className="w-6 h-6 text-ok" />
+        </div>
+        <h2 className="text-2xl font-bold text-fg mb-2">Password updated.</h2>
+        <p className="text-sm text-fg-3 mb-1">
+          Your password has been changed successfully.
+        </p>
+        <p className="text-sm text-fg-3 mb-6">
+          Open the <strong className="text-fg">JumpLogs app</strong> on your device and sign in with your new password.
+        </p>
+        <p className="text-xs text-fg-4">You can close this page.</p>
+      </div>
+    )
   }
 
   return (
@@ -108,6 +167,48 @@ export default function ResetPasswordPage() {
         <div className="text-center py-8">
           <p className="text-sm text-fg-3">Setting up your reset session…</p>
         </div>
+      ) : needsMfa ? (
+        <>
+          <div className="mb-8">
+            <div className="w-12 h-12 rounded-full bg-sky/10 flex items-center justify-center mb-4">
+              <ShieldCheck className="w-6 h-6 text-sky" />
+            </div>
+            <h1 className="text-3xl font-bold text-fg tracking-tight mb-1.5">Verify your identity.</h1>
+            <p className="text-sm text-fg-3">Your account has two-factor authentication enabled. Enter your authenticator code to continue.</p>
+          </div>
+          <form onSubmit={handleMfaVerify} className="space-y-4">
+            <div>
+              <label className="block text-overline font-semibold tracking-widest uppercase text-fg-3 mb-1.5">
+                Authenticator code
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                required
+                autoFocus
+                autoComplete="one-time-code"
+                value={mfaCode}
+                onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ''))}
+                className="w-full bg-surface-2 border border-border rounded-sm px-4 py-2.5 text-sm text-fg placeholder:text-fg-4 focus:outline-none focus:border-sky transition-colors tracking-widest text-center font-mono text-lg"
+                placeholder="000000"
+              />
+            </div>
+            {mfaError && (
+              <p className="text-xs text-danger bg-danger-bg border border-danger/20 rounded-sm px-3 py-2">
+                {mfaError}
+              </p>
+            )}
+            <button
+              type="submit"
+              disabled={mfaLoading || mfaCode.length < 6}
+              className="w-full bg-sky text-on-sky font-semibold rounded-sm py-2.5 text-sm hover:bg-sky/90 disabled:opacity-50 transition-colors"
+            >
+              {mfaLoading ? "Verifying…" : "Verify"}
+            </button>
+          </form>
+        </>
       ) : (
         <>
         <div className="mb-8">
@@ -146,14 +247,14 @@ export default function ResetPasswordPage() {
         {password.length > 0 && (
           <div className="space-y-2">
             <div className="flex gap-1 h-1">
-              {[0, 1, 2].map((i) => (
+              {[0, 1, 2, 3].map((i) => (
                 <div
                   key={i}
                   className={`flex-1 rounded-full transition-colors ${
                     i < strength
-                      ? strength === 1
+                      ? strength <= 1
                         ? "bg-danger"
-                        : strength === 2
+                        : strength <= 3
                         ? "bg-warn"
                         : "bg-ok"
                       : "bg-surface-3"
@@ -164,7 +265,8 @@ export default function ResetPasswordPage() {
             <div className="flex flex-wrap gap-x-4 gap-y-1">
               <StrengthRow ok={checks.length} label="8+ chars" />
               <StrengthRow ok={checks.mixedCase} label="Mixed case" />
-              <StrengthRow ok={checks.numberOrSymbol} label="Number or symbol" />
+              <StrengthRow ok={checks.number} label="Number" />
+              <StrengthRow ok={checks.symbol} label="Symbol" />
             </div>
           </div>
         )}

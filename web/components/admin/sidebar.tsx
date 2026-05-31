@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, ShieldAlert, CreditCard, Repeat, Tag, Percent,
-  BarChart2, Download, Mail, Bell, Settings, ChevronRight, Image, LogOut, BookOpen,
+  BarChart2, Download, Mail, Bell, Settings, ChevronRight, Image, LogOut, BookOpen, Smartphone,
 } from 'lucide-react'
 import AdminThemeToggle from './AdminThemeToggle'
 import { createClient } from '@/lib/supabase/client'
@@ -36,6 +36,7 @@ const NAV_GROUPS = [
       { key: 'platform', label: 'Platform stats', href: '/admin/platform', Icon: BarChart2 },
       { key: 'data',     label: 'Data export',    href: '/admin/data',     Icon: Download },
       { key: 'media',    label: 'Media',           href: '/admin/media',    Icon: Image },
+      { key: 'app',      label: 'Force upgrade',   href: '/admin/app',      Icon: Smartphone },
     ],
   },
   {

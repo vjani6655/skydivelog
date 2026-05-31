@@ -6,6 +6,7 @@ import { router } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
+import { getAppVersion } from '@/lib/useForceUpgrade';
 import { supabase } from '@/lib/supabase';
 import { getUnreadCount } from '@/lib/notifications';
 import { spacing, radii } from '@/constants/tokens';
@@ -226,7 +227,7 @@ export default function ProfileScreen() {
           <Ionicons name="log-out-outline" size={16} color={colors.danger} />
           <Text style={styles.signOutText}>Sign out</Text>
         </TouchableOpacity>
-        <Text style={styles.version}>v{Constants.expoConfig?.version ?? '1.0.0'}</Text>
+        <Text style={styles.version}>v{getAppVersion()}</Text>
       </ScrollView>
     </SafeAreaView>
   );

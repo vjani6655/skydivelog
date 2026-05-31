@@ -42,7 +42,7 @@ function fmtTotalFF(seconds: number): string {
 
 function monthKey(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleDateString('en-AU', { month: 'long', year: 'numeric' }).toUpperCase();
+  return d.toLocaleDateString('en-AU', { month: 'long', year: 'numeric', timeZone: 'UTC' }).toUpperCase();
 }
 
 // ─── screen ──────────────────────────────────────────────────────────────────

@@ -4,9 +4,10 @@
 // Set INBOUND_EMAIL_DOMAIN  — subdomain configured for Resend inbound (e.g. reply.jumplogs.com)
 //                            Resend POSTs to /api/webhooks/email-inbound when mail arrives.
 
-const FROM           = 'Jump Logs Support <support@reply.jumplogs.com>'
-const ADMIN_EMAIL    = process.env.ADMIN_NOTIFY_EMAIL    ?? 'support@jumplogs.com'
-const INBOUND_DOMAIN = process.env.INBOUND_EMAIL_DOMAIN  ?? 'reply.jumplogs.com'
+const FROM_SUPPORT   = 'JumpLogs Support <support@app.jumplogs.com>'
+const FROM_NOREPLY   = 'JumpLogs No-Reply <noreply@app.jumplogs.com>'
+const ADMIN_EMAIL    = process.env.ADMIN_NOTIFY_EMAIL    ?? 'support@app.jumplogs.com'
+const INBOUND_DOMAIN = process.env.INBOUND_EMAIL_DOMAIN  ?? 'app.jumplogs.com'
 
 /** Per-ticket reply-to address — encodes the ticket ID so inbound replies route back automatically. */
 export function ticketReplyAddress(ticketId: string) {
@@ -18,15 +19,17 @@ interface SendOptions {
   subject: string
   html: string
   replyTo?: string
+  from?: 'support' | 'noreply'
 }
 
-export async function sendEmail({ to, subject, html, replyTo }: SendOptions) {
+export async function sendEmail({ to, subject, html, replyTo, from = 'support' }: SendOptions) {
   const apiKey = process.env.RESEND_API_KEY
   if (!apiKey) {
     console.warn('[email] RESEND_API_KEY not set — skipping email send')
     return
   }
-  const body: Record<string, unknown> = { from: FROM, to, subject, html }
+  const fromAddress = from === 'noreply' ? FROM_NOREPLY : FROM_SUPPORT
+  const body: Record<string, unknown> = { from: fromAddress, to, subject, html }
   if (replyTo) body.reply_to = replyTo
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',

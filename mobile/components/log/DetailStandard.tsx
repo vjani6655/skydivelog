@@ -12,7 +12,7 @@ import typography from '@/constants/typography';
 import { Badge, Field, Tag } from '@/components/ui';
 import type { JumpDetailProps } from '@/app/(tabs)/log/[id]';
 import type { JumpEditChange } from '@/lib/types';
-import { usePrefs, altNumStr, fmtDetailDate } from '@/lib/prefsContext';
+import { usePrefs, altNumStr, fmtDetailDate, fmtJumpDateTime } from '@/lib/prefsContext';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -98,7 +98,7 @@ export default function DetailStandard({ jump, signatures, tags, edits }: JumpDe
 
       {/* Field list */}
       <View style={styles.fields}>
-        <Field label="DATE"      value={fmtDetailDate(jump.date, prefs.dateFormat)} />
+        <Field label="DATE"      value={fmtJumpDateTime(jump.date, prefs.dateFormat)} />
         <Field label="DROPZONE"  value={dzName} />
         <Field label="AIRCRAFT"  value={aircraft} />
         {(jump as any).canopy_type ? (

@@ -55,8 +55,21 @@ function parseMSS(s: string): number | null {
   return (isNaN(m) || isNaN(sec)) ? null : m * 60 + sec;
 }
 
-function fmtDate(d: Date): string {
-  return d.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+/** Displays the currently selected local date+time in the picker button. */
+function fmtDateTime(d: Date): string {
+  const datePart = d.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  const timePart = d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', hour12: false });
+  return `${datePart} · ${timePart}`;
+}
+
+/**
+ * Saves the user's local wall-clock time as if it were UTC.
+ * e.g. 2pm in Sydney is stored as T14:00:00Z, not T04:00:00Z.
+ * This means the value is always displayed the same regardless of viewer timezone.
+ */
+function toLocalISOAsUTC(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00.000Z`;
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -252,8 +265,8 @@ function SignaturePad({ paths, onChange, onDrawing }: SigPadProps) {
   );
 }
 
-// ─── Date Picker ──────────────────────────────────────────────────────────────
-function DateField({ value, onChange }: { value: Date; onChange: (d: Date) => void }) {
+// ─── Date & Time Picker ───────────────────────────────────────────────────────
+function DateTimeField({ value, onChange }: { value: Date; onChange: (d: Date) => void }) {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [open, setOpen] = useState(false);
@@ -264,9 +277,9 @@ function DateField({ value, onChange }: { value: Date; onChange: (d: Date) => vo
 
   return (
     <View style={styles.flex}>
-      <Label text="DATE" />
+      <Label text="DATE & TIME" />
       <TouchableOpacity style={styles.input} onPress={() => { setDraft(value); setOpen(true); }} activeOpacity={0.7}>
-        <Text style={{ fontFamily: 'InterTight-Regular', fontSize: 15, color: colors.fg }}>{fmtDate(value)}</Text>
+        <Text style={{ fontFamily: 'InterTight-Regular', fontSize: 15, color: colors.fg }}>{fmtDateTime(value)}</Text>
       </TouchableOpacity>
       <Modal transparent animationType="slide" visible={open} onRequestClose={cancel}>
         <TouchableOpacity style={styles.dateModalOverlay} activeOpacity={1} onPress={cancel}>
@@ -277,14 +290,14 @@ function DateField({ value, onChange }: { value: Date; onChange: (d: Date) => vo
                 <TouchableOpacity onPress={cancel} style={styles.dateModalToolbarBtn}>
                   <Text style={styles.dateModalCancelText}>Cancel</Text>
                 </TouchableOpacity>
-                <Text style={styles.dateModalTitle}>Date</Text>
+                <Text style={styles.dateModalTitle}>Date & Time</Text>
                 <TouchableOpacity onPress={confirm} style={styles.dateModalToolbarBtn}>
                   <Text style={styles.dateModalDoneText}>Done</Text>
                 </TouchableOpacity>
               </View>
               <DateTimePicker
                 value={draft}
-                mode="date"
+                mode="datetime"
                 display="spinner"
                 maximumDate={new Date()}
                 onChange={(_, d) => { if (d) setDraft(d); }}
@@ -466,7 +479,13 @@ export default function NewJumpScreen() {
         .eq('id', draftId)
         .single();
       if (data) {
-        setJumpDate(new Date(data.date));
+        // data.date is stored as local-wall-clock-as-UTC; reconstruct a local Date
+        // that has the same hour/minute as the originally entered time.
+        const stored = new Date(data.date);
+        setJumpDate(new Date(
+          stored.getUTCFullYear(), stored.getUTCMonth(), stored.getUTCDate(),
+          stored.getUTCHours(), stored.getUTCMinutes(),
+        ));
         setJumpNum(String(data.jump_number));
         setDzName((data.dropzones as { name: string } | null)?.name ?? '');
         setAcType(data.aircraft_type ?? '');
@@ -518,7 +537,7 @@ export default function NewJumpScreen() {
 
       const jumpPayload = {
         jump_number: jumpNumInt,
-        date: jumpDate.toISOString(),
+        date: toLocalISOAsUTC(jumpDate),
         dropzone_id: dropzoneId,
         aircraft_type: acType.trim() || null,
         aircraft_rego: acRego.trim() || null,
@@ -628,7 +647,7 @@ export default function NewJumpScreen() {
 
       const draftPayload = {
         jump_number: jumpNumInt,
-        date: jumpDate.toISOString(),
+        date: toLocalISOAsUTC(jumpDate),
         dropzone_id: dropzoneId,
         aircraft_type: acType.trim() || null,
         aircraft_rego: acRego.trim() || null,
@@ -739,7 +758,7 @@ export default function NewJumpScreen() {
           {step === 1 && (<>
             <Text style={styles.stepTitle}>The basics</Text>
             <View style={styles.row2}>
-              <DateField value={jumpDate} onChange={setJumpDate} />
+              <DateTimeField value={jumpDate} onChange={setJumpDate} />
               <View style={{ width: 110 }}>
                 <Label text="JUMP #" />
                 <TextInput

@@ -85,8 +85,9 @@ export function fmtAltMini(ft: number | null | undefined, unit: AltUnit): string
 }
 
 /**
- * Format a timestamp string for jump detail views.
- * Shows: "Sat 26 May 2026 · 14:30" (date part respects user's date format).
+ * Format a timestamp string for system timestamps (created_at, updated_at, signed_at, etc.).
+ * Interprets the value in the device's local timezone.
+ * Shows: "Sat 26 May 2026 · 14:30"
  */
 export function fmtDetailDate(iso: string | null | undefined, fmt: DateFmt): string {
   if (!iso) return '—';
@@ -96,6 +97,22 @@ export function fmtDetailDate(iso: string | null | undefined, fmt: DateFmt): str
   const mm = String(d.getMinutes()).padStart(2, '0');
   const datePart = fmtDate(iso.slice(0, 10), fmt);
   return `${days[d.getDay()]} ${datePart} · ${hh}:${mm}`;
+}
+
+/**
+ * Format a jump date/time that was stored as "local wall-clock time as UTC"
+ * (i.e. the user's local time at log time, saved with a Z suffix).
+ * Always interprets in UTC so the stored value is shown as-is, regardless of
+ * where the viewer is located.
+ * Shows: "Sat 26 May 2026 · 14:30"
+ */
+export function fmtJumpDateTime(iso: string | null | undefined, fmt: DateFmt): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  const timeStr = d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' });
+  const isoDate = new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'UTC' }).format(d);
+  const dayOfWeek = new Intl.DateTimeFormat('en', { weekday: 'short', timeZone: 'UTC' }).format(d);
+  return `${dayOfWeek} ${fmtDate(isoDate, fmt)} · ${timeStr}`;
 }
 
 function applyTheme(theme: ThemePref) {
