@@ -94,7 +94,7 @@ export async function GET(req: Request) {
     results.email_send = 'ERROR: RESEND_API_KEY not set'
   } else {
     const resendBody: Record<string, unknown> = {
-      from: 'Jump Logs Support <support@jumplogs.com>',
+      from: 'Jump Logs Support <support@app.jumplogs.com>',
       to: recipientEmail,
       subject: template.subject,
       html: template.html,
