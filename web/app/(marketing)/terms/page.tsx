@@ -51,7 +51,11 @@ You may not share your account with others or create accounts on behalf of third
     title: "Subscription & payments",
     content: `Jump Logs Pro is an annual subscription billed in USD. Your subscription renews automatically at the end of each billing period. You can cancel at any time from your account settings — access continues until the end of the paid period.
 
-Payments are processed by Stripe. We do not store your payment card details. Pricing may change with reasonable notice. No refunds are issued for the remaining period of a cancelled subscription, except where required by applicable consumer law. If you are an Australian consumer and the service fails to meet a consumer guarantee under the Australian Consumer Law, you may be entitled to a remedy including a refund under that legislation.`,
+Payments are processed by Stripe. We do not store your payment card details. Pricing may change with reasonable notice.
+
+No refunds are issued for change of mind. Australian Consumer Law does not require refunds for change of mind on digital services.
+
+Where a remedy is available under the Australian Consumer Law because the service fails to meet a consumer guarantee, any refund or remedy will be proportional to the period of the subscription that has not yet been used. If you have used the service for 30 days or more of a 12-month subscription period, you have received substantial benefit from the service and no refund of the used portion will be provided. Any remedy will apply only to the remaining unused subscription period.`,
   },
   {
     id: "conduct",
