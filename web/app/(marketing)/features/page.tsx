@@ -39,7 +39,7 @@ const SECTIONS = [
     title: "Track every component.",
     body: "Rigs, canopies, AADs, reserves. Jumps-on, hours, repack and service due. Notifications fire 14 days before a repack — adjustable in settings.",
     illustration: "PARACHUTE · TEXTURE ILLUSTRATION",
-    features: ["Container & canopy tracking", "Reserve & AAD history", "Repack reminders", "Wing loading tracking", "Service log"],
+    features: ["Container & canopy tracking", "Reserve & AAD history", "Repack reminders", "Service log"],
   },
   {
     label: "Certificates",
