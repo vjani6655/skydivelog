@@ -93,12 +93,12 @@ export default async function AboutPage() {
             <div>
               <h2 className="text-2xl font-bold text-fg mb-3">Built in the open.</h2>
               <p className="text-sm text-fg-3 leading-relaxed">
-                Two people. Both jumpers. We publish a public roadmap, ship every two weeks, and
-                answer support emails ourselves.
+                One person. A jumper. I publish a public roadmap, ship every two weeks, and
+                answer support emails myself.
               </p>
             </div>
             <p className="text-sm text-fg-3 leading-relaxed">
-              We do not raise venture capital. We are not for sale. The price is $12 and it will stay
+              I do not raise venture capital. I am not for sale. The price is $12 and it will stay
               that way.
             </p>
 
