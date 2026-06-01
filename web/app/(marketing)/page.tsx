@@ -103,7 +103,7 @@ export default async function HomePage() {
               </span>
               <span className="inline-flex items-center gap-2 border border-sky/40 bg-sky/5 rounded-pill px-3 py-1 text-overline font-bold tracking-widest uppercase text-sky">
                 <span className="w-1.5 h-1.5 rounded-full bg-sky animate-pulse" />
-                App launching June 2026
+                App launching soon
               </span>
             </div>
 

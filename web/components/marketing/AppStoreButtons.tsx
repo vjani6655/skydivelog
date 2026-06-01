@@ -100,7 +100,7 @@ export default function AppStoreButtons() {
 
                 <h3 className="text-xl font-bold text-fg mb-2">App coming soon</h3>
                 <p className="text-sm text-fg-3 mb-6 leading-relaxed">
-                  Jump Logs for iOS &amp; Android is launching in April. Enter your email below and we&apos;ll notify you the moment it&apos;s live.
+                  Jump Logs for iOS &amp; Android is launching soon. Enter your email below and we&apos;ll notify you the moment it&apos;s live.
                 </p>
 
                 <form onSubmit={handleSubmit} className="flex flex-col gap-3">
