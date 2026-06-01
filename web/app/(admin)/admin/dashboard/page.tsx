@@ -4,6 +4,17 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { KPI, AdminCard, LineChart, AdminPageHeader } from '@/components/admin/ui'
 import { Download, Calendar } from 'lucide-react'
 import Link from 'next/link'
+import type { HealthResponse } from '@/app/api/admin/health/route'
+
+async function getHealth(): Promise<HealthResponse | null> {
+  try {
+    const base = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+    const res = await fetch(`${base}/api/admin/health`, { cache: 'no-store' })
+    return res.json()
+  } catch {
+    return null
+  }
+}
 
 function fmt(n: number): string {
   return n >= 1_000_000
@@ -34,6 +45,7 @@ export default async function AdminDashboardPage() {
   const sixtyDaysAgo  = new Date(Date.now() - 60 * 86400000).toISOString()
 
   const [
+    health,
     { count: totalUsers },
     { count: activeSubsCount },
     { count: overdueCount },
@@ -51,10 +63,10 @@ export default async function AdminDashboardPage() {
     { data: jumpStats },
     { data: recentUsers },
     { data: recentJumps },
-    { data: incidentTickets },
     { data: recentPayments },
     { data: recentCancellations },
   ] = await Promise.all([
+    getHealth(),
     db.from('users').select('*', { count: 'exact', head: true }),
     db.from('subscriptions').select('*', { count: 'exact', head: true }).eq('status', 'active'),
     db.from('subscriptions').select('*', { count: 'exact', head: true }).eq('status', 'overdue'),
@@ -72,7 +84,6 @@ export default async function AdminDashboardPage() {
     db.from('jumps').select('freefall_seconds').is('deleted_at', null),
     db.from('users').select('id, email, full_name, created_at').order('created_at', { ascending: false }).limit(3),
     db.from('jumps').select('user_id, jump_number, jump_type, created_at, users(email, full_name)').is('deleted_at', null).order('created_at', { ascending: false }).limit(3),
-    db.from('support_tickets').select('id, subject, category, status, created_at').eq('status', 'open').order('created_at', { ascending: false }).limit(3),
     db.from('subscriptions').select('price_at_signup, started_at, users(email)').eq('status', 'active').order('started_at', { ascending: false }).limit(3),
     db.from('subscriptions').select('cancelled_at, price_at_signup, users(email, full_name)').eq('status', 'cancelled').not('cancelled_at', 'is', null).order('cancelled_at', { ascending: false }).limit(3),
   ])
@@ -151,13 +162,6 @@ export default async function AdminDashboardPage() {
     })
   })
   activities.sort((a, b) => b.rawMs - a.rawMs)
-
-  const incidentColor: Record<string, string> = {
-    open: 'text-warn', waiting: 'text-sky', closed: 'text-ok',
-  }
-  const incidentLabel: Record<string, string> = {
-    open: 'INVESTIGATING', waiting: 'MONITORING', closed: 'RESOLVED',
-  }
 
   return (
     <div>
@@ -260,23 +264,29 @@ export default async function AdminDashboardPage() {
           ))}
         </AdminCard>
 
-        {/* Open incidents */}
-        <AdminCard title={`OPEN INCIDENTS · ${incidentTickets?.length ?? 0}`}>
-          {incidentTickets && incidentTickets.length > 0 ? incidentTickets.map(t => (
-            <div key={t.id} className="py-2.5 border-b border-dashed border-border last:border-0">
-              <div className="flex justify-between items-start gap-2 mb-1">
-                <span className="text-xs text-fg leading-snug">{t.subject}</span>
-                <span className="font-mono text-[10px] text-fg-3 whitespace-nowrap">{timeAgo(t.created_at)}</span>
-              </div>
-              <span className={`font-mono text-[10px] ${incidentColor[t.status] ?? 'text-fg-3'}`}>
-                ● {incidentLabel[t.status] ?? t.status.toUpperCase()}
-              </span>
-            </div>
-          )) : (
+        {/* System health */}
+        <AdminCard title="SYSTEM HEALTH" action={
+          <Link href="/admin/health" className="font-mono text-[10px] text-sky hover:underline">VIEW ALL →</Link>
+        }>
+          {!health ? (
+            <div className="py-4 text-xs text-danger text-center">Health check failed</div>
+          ) : health.ok ? (
             <div className="py-6 flex flex-col items-center gap-1.5">
-              <span className="font-mono text-[10px] text-ok">● ALL SYSTEMS NOMINAL</span>
-              <span className="text-xs text-fg-3">No open incidents</span>
+              <span className="font-mono text-[10px] text-ok">● ALL SYSTEMS OPERATIONAL</span>
+              <span className="text-xs text-fg-3">Supabase · Stripe · Resend</span>
             </div>
+          ) : (
+            health.services.map(s => (
+              <Link key={s.name} href="/admin/health"
+                className="flex justify-between items-center py-2.5 border-b border-dashed border-border last:border-0 hover:bg-surface-2 -mx-4 px-4 transition-colors">
+                <span className="text-xs text-fg-2">{s.name}</span>
+                <span className={`font-mono text-[10px] font-semibold ${
+                  s.status === 'ok' ? 'text-ok' : s.status === 'degraded' ? 'text-warn' : 'text-danger'
+                }`}>
+                  ● {s.status.toUpperCase()}
+                </span>
+              </Link>
+            ))
           )}
         </AdminCard>
 
