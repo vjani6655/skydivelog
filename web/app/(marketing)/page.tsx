@@ -230,7 +230,7 @@ export default async function HomePage() {
       <section className="py-14 px-5 border-t border-border">
         <div className="max-w-5xl mx-auto flex flex-col items-center gap-4 text-center">
           <p className="text-overline font-semibold tracking-widest uppercase text-fg-4">Coming soon</p>
-          <h3 className="text-h2 font-bold text-fg">The app is launching June 2026</h3>
+          <h3 className="text-h2 font-bold text-fg">The app is launching soon</h3>
           <p className="text-sm text-fg-3 max-w-xs">Be first to know when it drops — enter your email and we&apos;ll notify you at launch.</p>
           <AppStoreButtons />
         </div>
