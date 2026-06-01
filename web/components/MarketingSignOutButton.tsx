@@ -1,14 +1,13 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
+import { signOut } from "@/app/actions/auth"
 
 export default function MarketingSignOutButton() {
   const router = useRouter()
 
   const handleSignOut = async () => {
-    const supabase = createClient()
-    await supabase.auth.signOut()
+    await signOut()
     router.refresh()
   }
 
