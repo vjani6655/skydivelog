@@ -220,7 +220,7 @@ export default async function HomePage() {
               Get Jump Logs
             </Link>
             <Link href="/pricing" className="border border-border text-fg-2 font-medium px-5 py-2.5 rounded-sm text-sm hover:bg-surface hover:text-fg transition-colors whitespace-nowrap">
-              Compare to others
+              Pricing
             </Link>
           </div>
         </div>
