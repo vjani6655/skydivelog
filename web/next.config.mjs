@@ -1,5 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'wpadbvvwmayabltmtmpm.supabase.co',
+        pathname: '/storage/v1/object/public/**',
+      },
+    ],
+    formats: ['image/avif', 'image/webp'],
+  },
   experimental: {
     serverComponentsExternalPackages: ['@react-pdf/renderer', '@react-pdf/font', '@react-pdf/layout'],
     // Tell Vercel's file-tracing to include font TTFs that @react-pdf loads via

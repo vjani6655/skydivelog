@@ -84,7 +84,6 @@ export default async function HomePage() {
               alt=""
               fill
               className="object-cover object-left md:object-center"
-              unoptimized
               priority
             />
             {/* Solid bg left → transparent right — text sits fully in the solid zone */}
@@ -175,7 +174,7 @@ export default async function HomePage() {
                 alt="Jump Logs app screens"
                 fill
                 className="object-cover"
-                unoptimized
+                loading="lazy"
               />
             ) : (
               <div className="flex items-end justify-center h-full pb-4">
