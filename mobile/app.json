@@ -10,11 +10,12 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.skydivelog.app",
-      "buildNumber": "3",
+      "buildNumber": "5",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSSpeechRecognitionUsageDescription": "Used to log jumps by voice.",
-        "NSMicrophoneUsageDescription": "Used to record your jump description for voice logging."
+        "NSMicrophoneUsageDescription": "Used to record your jump description for voice logging.",
+        "NSPhotoLibraryUsageDescription": "Used to attach photos to your jump log entries."
       }
     },
     "android": {
