@@ -242,6 +242,38 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
               ))}
             </AdminCard>
           )}
+
+          {/* Subscription history — left column, below activity */}
+          {(allSubs?.length ?? 0) > 0 && (
+            <AdminCard title="SUBSCRIPTION HISTORY">
+              <div className="space-y-2">
+                {[...(allSubs ?? [])].sort((a, b) => {
+                  const dateDiff = new Date(b.started_at).getTime() - new Date(a.started_at).getTime()
+                  if (dateDiff !== 0) return dateDiff
+                  const p: Record<string, number> = { active: 0, overdue: 1, cancelled: 2 }
+                  return (p[a.status] ?? 3) - (p[b.status] ?? 3)
+                }).map((s, i) => (
+                  <div key={s.id} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
+                    <div>
+                      <div className="text-xs font-medium text-fg">{s.plan ?? 'Pro'} · ${Number(s.price_at_signup).toFixed(2)}</div>
+                      <div className="font-mono text-[10px] text-fg-3 mt-0.5">
+                        {fmtDate(s.started_at)}{s.renews_at ? ` → ${fmtDateShort(s.renews_at)}` : ''}
+                      </div>
+                      {s.refunded_at && (
+                        <div className="font-mono text-[10px] text-warn mt-0.5">
+                          Refunded ${Number(s.refunded_amount ?? s.price_at_signup).toFixed(2)} · {fmtDate(s.refunded_at)}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {i === 0 && <span className="font-mono text-[9px] text-fg-4 uppercase">latest</span>}
+                      <Badge kind={s.refunded_at ? 'danger' : (statusKind[s.status] ?? 'muted')}>{s.refunded_at ? 'REFUNDED' : s.status.toUpperCase()}</Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </AdminCard>
+          )}
         </div>
 
         {/* Right column */}
@@ -255,40 +287,8 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
           userCreatedAt={user.created_at}
           notes={(adminNotes ?? []) as { id: string; reason: string; created_at: string }[]}
           customTrialEndsAt={customTrialEnd ?? null}
+          voiceLogEnabled={user.voice_log_enabled ?? null}
         />
-
-        {/* Subscription history */}
-        {(allSubs?.length ?? 0) > 0 && (
-          <AdminCard title="Subscription history">
-            <div className="space-y-2">
-              {[...(allSubs ?? [])].sort((a, b) => {
-                // Most recent first; when started_at ties, active beats cancelled
-                const dateDiff = new Date(b.started_at).getTime() - new Date(a.started_at).getTime()
-                if (dateDiff !== 0) return dateDiff
-                const p: Record<string, number> = { active: 0, overdue: 1, cancelled: 2 }
-                return (p[a.status] ?? 3) - (p[b.status] ?? 3)
-              }).map((s, i) => (
-                <div key={s.id} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
-                  <div>
-                    <div className="text-xs font-medium text-fg">{s.plan ?? 'Pro'} · ${Number(s.price_at_signup).toFixed(2)}</div>
-                    <div className="font-mono text-[10px] text-fg-3 mt-0.5">
-                      {fmtDate(s.started_at)}{s.renews_at ? ` → ${fmtDateShort(s.renews_at)}` : ''}
-                    </div>
-                    {s.refunded_at && (
-                      <div className="font-mono text-[10px] text-warn mt-0.5">
-                        Refunded ${Number(s.refunded_amount ?? s.price_at_signup).toFixed(2)} · {fmtDate(s.refunded_at)}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {i === 0 && <span className="font-mono text-[9px] text-fg-4 uppercase">latest</span>}
-                    <Badge kind={s.refunded_at ? 'danger' : (statusKind[s.status] ?? 'muted')}>{s.refunded_at ? 'REFUNDED' : s.status.toUpperCase()}</Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </AdminCard>
-        )}
       </div>
     </div>
   )

@@ -11,6 +11,7 @@
   "dependencies": {
     "@expo-google-fonts/inter-tight": "^0.4.2",
     "@expo-google-fonts/jetbrains-mono": "^0.4.1",
+    "@next/swc-darwin-arm64": "^14.2.33",
     "@react-pdf/renderer": "^4.5.1",
     "@stripe/stripe-js": "^9.6.0",
     "@supabase/ssr": "^0.10.3",

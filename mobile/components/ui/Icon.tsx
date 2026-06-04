@@ -46,6 +46,9 @@ const iconMap: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
   'wifi-off':       'wifi-outline',
   share:            'share-outline',
   pdf:              'document-text-outline',
+  mic:              'mic-outline',
+  checkmark:        'checkmark-outline',
+  sparkles:         'sparkles-outline',
 };
 
 interface IconProps {

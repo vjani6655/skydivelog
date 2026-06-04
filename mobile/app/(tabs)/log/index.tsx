@@ -11,6 +11,7 @@ import {
   TextInput,
   SafeAreaView,
   TouchableOpacity,
+  Modal,
 } from 'react-native';
 import { useFocusEffect, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,6 +28,9 @@ import TimelineGroup from '@/components/log/TimelineGroup';
 import { FilterSheet, DEFAULT_FILTER } from '@/components/log/FilterSheet';
 import { usePrefs } from '@/lib/prefsContext';
 import type { FilterState } from '@/components/log/FilterSheet';
+import VoiceLogModal from '@/components/ui/VoiceLogModal';
+import { useVoiceLogEnabled } from '@/lib/useVoiceLogEnabled';
+import { prewarmTTS } from '@/lib/openaiTTS';
 
 type Layout = 'Compact' | 'Cards' | 'Timeline';
 
@@ -51,6 +55,7 @@ export default function LogScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { prefs } = usePrefs();
+  const voiceLogEnabled = useVoiceLogEnabled();
   const [jumps, setJumps] = useState<JumpFull[]>([]);
   const [layout, setLayout] = useState<Layout>('Cards');
   const [loading, setLoading] = useState(true);
@@ -63,6 +68,8 @@ export default function LogScreen() {
   const [userCreatedAt, setUserCreatedAt] = useState<string | null>(null);
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
   const [subActive, setSubActive] = useState(false);
+  const [voiceModalVisible, setVoiceModalVisible] = useState(false);
+  const [voiceDisclaimerVisible, setVoiceDisclaimerVisible] = useState(false);
 
   // ── data fetch ────────────────────────────────────────────────────────────
   const fetchAll = async () => {
@@ -155,6 +162,26 @@ export default function LogScreen() {
       router.push('/(tabs)/log/new');
     }
   };
+
+  const handleVoiceOpen = () => {
+    if (trialExpired) {
+      router.push({ pathname: '/paywall', params: { reason: 'trial_expired' } } as any);
+    } else if (inTrial && jumps.length >= 5) {
+      router.push({ pathname: '/paywall', params: { skippable: '1', reason: 'trial_limit' } } as any);
+    } else {
+      // Start prewarming the opening greeting immediately while the disclaimer is shown
+      const greeting = suggestedJumpNumber
+        ? `I'll log jump ${suggestedJumpNumber}. Tell me about your jump — say the dropzone, aircraft, exit altitude, freefall and canopy times, and jump type. Just speak naturally.`
+        : `Tell me about your jump. Say the dropzone, aircraft, exit altitude, freefall and canopy times, and jump type. Speak naturally and I'll fill in what I can.`;
+      prewarmTTS(greeting);
+      setVoiceDisclaimerVisible(true);
+    }
+  };
+
+  const handleVoiceComplete = () => {
+    setVoiceModalVisible(false);
+    router.push({ pathname: '/(tabs)/log/new', params: { voicePrefill: '1' } } as any);
+  };
   const totalFF = useMemo(
     () => jumps.reduce((s, j) => s + (j.freefall_seconds ?? 0), 0),
     [jumps],
@@ -195,6 +222,11 @@ export default function LogScreen() {
     }
     return list;
   }, [jumps, activeFilter, searchQuery, filter]);
+
+  // ── derived hint for voice agent ──────────────────────────────────────────
+  const suggestedJumpNumber = jumps.length > 0
+    ? (jumps[0].jump_number ?? 0) + 1
+    : undefined;
 
   // ── timeline groups ───────────────────────────────────────────────────────
   const timelineGroups = useMemo(() => {
@@ -326,6 +358,61 @@ export default function LogScreen() {
     />
   );
 
+  const fabEl = voiceLogEnabled ? (
+    <TouchableOpacity style={styles.fab} onPress={handleVoiceOpen} activeOpacity={0.85}>
+      <Ionicons name="mic" size={26} color={colors.onSky} />
+    </TouchableOpacity>
+  ) : null;
+
+  const voiceModalEl = (
+    <VoiceLogModal
+      visible={voiceModalVisible}
+      onClose={() => setVoiceModalVisible(false)}
+      onComplete={handleVoiceComplete}
+      suggestedJumpNumber={suggestedJumpNumber}
+    />
+  );
+
+  const voiceDisclaimerEl = (
+    <Modal
+      visible={voiceDisclaimerVisible}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setVoiceDisclaimerVisible(false)}
+    >
+      <View style={styles.disclaimerOverlay}>
+        <View style={styles.disclaimerCard}>
+          <View style={styles.disclaimerIconRow}>
+            <Ionicons name="mic" size={28} color={colors.sky} />
+          </View>
+          <Text style={styles.disclaimerTitle}>Voice Log</Text>
+          <Text style={styles.disclaimerBody}>
+            Voice logging is designed for{' '}
+            <Text style={styles.disclaimerBold}>licensed jumpers</Text>.
+            Student jumps require instructor sign-off and additional details that must be filled in manually.
+          </Text>
+          <TouchableOpacity
+            style={styles.disclaimerBtn}
+            activeOpacity={0.8}
+            onPress={() => {
+              setVoiceDisclaimerVisible(false);
+              setVoiceModalVisible(true);
+            }}
+          >
+            <Text style={styles.disclaimerBtnText}>Got it</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.disclaimerCancel}
+            activeOpacity={0.7}
+            onPress={() => setVoiceDisclaimerVisible(false)}
+          >
+            <Text style={styles.disclaimerCancelText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
   if (layout === 'Timeline') {
     return (
       <SafeAreaView style={styles.screen}>
@@ -363,6 +450,9 @@ export default function LogScreen() {
           ListEmptyComponent={Empty}
         />
         {filterSheetEl}
+        {fabEl}
+        {voiceModalEl}
+        {voiceDisclaimerEl}
       </SafeAreaView>
     );
   }
@@ -403,6 +493,9 @@ export default function LogScreen() {
           ListEmptyComponent={Empty}
         />
         {filterSheetEl}
+        {fabEl}
+        {voiceModalEl}
+        {voiceDisclaimerEl}
       </SafeAreaView>
     );
   }
@@ -443,6 +536,9 @@ export default function LogScreen() {
         ListEmptyComponent={Empty}
       />
       {filterSheetEl}
+      {fabEl}
+      {voiceModalEl}
+      {voiceDisclaimerEl}
     </SafeAreaView>
   );
 }
@@ -593,6 +689,94 @@ function makeStyles(c: ColorSet) {
     fontFamily: 'InterTight-SemiBold',
     fontSize: 14,
     color: c.onSky,
+  },
+
+  // ── voice FAB ────────────────────────────────────────────────
+  fab: {
+    position: 'absolute',
+    bottom: 28,
+    right: 20,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: c.sky,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  disclaimerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing[5],
+  },
+  disclaimerCard: {
+    backgroundColor: c.surface,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    borderColor: c.border,
+    padding: spacing[6],
+    width: '100%',
+    maxWidth: 360,
+    alignItems: 'center',
+  },
+  disclaimerIconRow: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: c.skyBg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing[4],
+  },
+  disclaimerTitle: {
+    fontFamily: 'InterTight-Bold',
+    fontSize: 18,
+    color: c.fg,
+    letterSpacing: -0.3,
+    marginBottom: spacing[3],
+  },
+  disclaimerBody: {
+    fontFamily: 'InterTight-Regular',
+    fontSize: 14,
+    color: c.fg2,
+    lineHeight: 21,
+    textAlign: 'center',
+    marginBottom: spacing[5],
+  },
+  disclaimerBold: {
+    fontFamily: 'InterTight-Bold',
+    color: c.fg,
+  },
+  disclaimerBtn: {
+    backgroundColor: c.sky,
+    borderRadius: radii.lg,
+    paddingVertical: spacing[3],
+    paddingHorizontal: spacing[6],
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: spacing[2],
+  },
+  disclaimerBtnText: {
+    fontFamily: 'InterTight-Bold',
+    fontSize: 15,
+    color: c.onSky,
+    letterSpacing: -0.2,
+  },
+  disclaimerCancel: {
+    paddingVertical: spacing[2],
+    width: '100%',
+    alignItems: 'center',
+  },
+  disclaimerCancelText: {
+    fontFamily: 'InterTight-Regular',
+    fontSize: 14,
+    color: c.fg3,
   },
   });
 }

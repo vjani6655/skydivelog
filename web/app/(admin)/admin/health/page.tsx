@@ -5,7 +5,8 @@ import type { HealthResponse, ServiceHealth } from '@/app/api/admin/health/route
 
 async function fetchHealth(): Promise<HealthResponse | null> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL
+      ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
     const res = await fetch(`${baseUrl}/api/admin/health`, { cache: 'no-store' })
     return res.json()
   } catch {

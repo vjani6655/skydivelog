@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { AlertTriangle, CheckCircle2, Smartphone, ToggleLeft, ToggleRight } from 'lucide-react'
 
 type AppConfig = {
@@ -12,6 +12,7 @@ type AppConfig = {
   android_store_url: string | null
   updated_at: string
   updated_by_email: string | null
+  voice_log_enabled: boolean
 }
 
 export default function AppConfigClient({ initial }: { initial: AppConfig }) {
@@ -19,6 +20,14 @@ export default function AppConfigClient({ initial }: { initial: AppConfig }) {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [toast, setToast] = useState<string | null>(null)
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function showToast(msg: string) {
+    setToast(msg)
+    if (toastTimer.current) clearTimeout(toastTimer.current)
+    toastTimer.current = setTimeout(() => setToast(null), 3000)
+  }
 
   const update = (patch: Partial<AppConfig>) => {
     setCfg(p => ({ ...p, ...patch }))
@@ -43,6 +52,28 @@ export default function AppConfigClient({ initial }: { initial: AppConfig }) {
       setSaved(true)
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleVoiceLogToggle = async () => {
+    const next = !cfg.voice_log_enabled
+    setCfg(p => ({ ...p, voice_log_enabled: next }))
+    try {
+      const res = await fetch('/api/admin/app-config', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...cfg, voice_log_enabled: next }),
+      })
+      if (!res.ok) {
+        const j = await res.json()
+        setCfg(p => ({ ...p, voice_log_enabled: !next })) // revert
+        showToast('Failed to save: ' + (j.error ?? 'unknown error'))
+      } else {
+        showToast(next ? 'Voice log enabled — mic button is now visible.' : 'Voice log disabled — mic button is now hidden.')
+      }
+    } catch {
+      setCfg(p => ({ ...p, voice_log_enabled: !next })) // revert
+      showToast('Failed to save.')
     }
   }
 
@@ -78,6 +109,37 @@ export default function AppConfigClient({ initial }: { initial: AppConfig }) {
         >
           {isActive
             ? <ToggleRight size={28} className="text-danger" />
+            : <ToggleLeft size={28} className="text-fg-3" />
+          }
+        </button>
+      </div>
+
+      {/* Voice Log toggle */}
+      <div className={`flex items-start gap-3 p-4 rounded-xl border ${
+        cfg.voice_log_enabled
+          ? 'bg-surface border-border'
+          : 'bg-warn/5 border-warn/30'
+      }`}>
+        <div className={`mt-0.5 shrink-0 ${cfg.voice_log_enabled ? 'text-ok' : 'text-warn'}`}>
+          {cfg.voice_log_enabled ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className={`text-sm font-semibold ${cfg.voice_log_enabled ? 'text-fg' : 'text-warn'}`}>
+            {cfg.voice_log_enabled ? 'Voice log is enabled' : 'Voice log is DISABLED'}
+          </div>
+          <div className="text-xs text-fg-3 mt-0.5">
+            {cfg.voice_log_enabled
+              ? 'The microphone button is visible to all users. Individual users can be overridden on their profile page.'
+              : 'The microphone button is hidden for all users globally. Per-user overrides still apply.'
+            }
+          </div>
+        </div>
+        <button
+          onClick={handleVoiceLogToggle}
+          className="shrink-0 mt-0.5"
+        >
+          {cfg.voice_log_enabled
+            ? <ToggleRight size={28} className="text-ok" />
             : <ToggleLeft size={28} className="text-fg-3" />
           }
         </button>
@@ -205,6 +267,14 @@ export default function AppConfigClient({ initial }: { initial: AppConfig }) {
           <div className="font-mono text-[10px] text-[#3D4E6A]">Current version: 1.0.0</div>
         </div>
       </div>
+
+      {/* Toast notification */}
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface border border-border shadow-lg text-sm text-fg animate-fade-in">
+          <CheckCircle2 size={14} className="text-ok shrink-0" />
+          {toast}
+        </div>
+      )}
 
     </div>
   )

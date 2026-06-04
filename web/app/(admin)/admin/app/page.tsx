@@ -24,6 +24,7 @@ export default async function AppConfigPage() {
     android_store_url: null,
     updated_at: new Date().toISOString(),
     updated_by_email: null,
+    voice_log_enabled: true,
   }
 
   return (

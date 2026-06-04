@@ -45,6 +45,7 @@ export async function PATCH(req: Request) {
       upgrade_message:       String(body.upgrade_message ?? '').trim(),
       ios_store_url:         body.ios_store_url ? String(body.ios_store_url).trim() : null,
       android_store_url:     body.android_store_url ? String(body.android_store_url).trim() : null,
+      voice_log_enabled:     body.voice_log_enabled !== undefined ? Boolean(body.voice_log_enabled) : true,
       updated_at:            new Date().toISOString(),
       updated_by_email:      admin.user.email,
     })

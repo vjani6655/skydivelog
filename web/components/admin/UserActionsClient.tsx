@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, ToggleLeft, ToggleRight } from 'lucide-react'
 import { AdminCard, Badge, Divider } from '@/components/admin/ui'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -40,6 +40,7 @@ export type UserActionsProps = {
   userCreatedAt: string
   notes: NoteItem[]
   customTrialEndsAt: string | null
+  voiceLogEnabled: boolean | null
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -64,7 +65,7 @@ const STATUS_BADGE: Record<string, 'ok' | 'sky' | 'warn' | 'muted' | 'danger'> =
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function UserActionsClient({
-  userId, userEmail, sub, inTrial, trialDaysLeft, trialEndDateIso, userCreatedAt, notes: initNotes, customTrialEndsAt,
+  userId, userEmail, sub, inTrial, trialDaysLeft, trialEndDateIso, userCreatedAt, notes: initNotes, customTrialEndsAt, voiceLogEnabled: initVoiceLog,
 }: UserActionsProps) {
   const router = useRouter()
 
@@ -96,6 +97,11 @@ export default function UserActionsClient({
   const [noteText, setNoteText] = useState('')
   const [savingNote, setSavingNote] = useState(false)
   const [noteError, setNoteError]   = useState<string | null>(null)
+
+  // Voice log override state (null = inherit global)
+  const [voiceLog, setVoiceLog]           = useState<boolean | null>(initVoiceLog)
+  const [savingVoiceLog, setSavingVoiceLog] = useState(false)
+  const [voiceLogError, setVoiceLogError]   = useState<string | null>(null)
 
   // ── API helper ──────────────────────────────────────────────────────────────
 
@@ -150,6 +156,27 @@ export default function UserActionsClient({
       setSetPasswordError(e instanceof Error ? e.message : 'Failed')
     } finally {
       setSettingPassword(false)
+    }
+  }
+
+  // ── Voice log override ──────────────────────────────────────────────────────
+
+  async function handleVoiceLogChange(next: boolean | null) {
+    setSavingVoiceLog(true)
+    setVoiceLogError(null)
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/voice-log`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ voice_log_enabled: next }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error ?? 'Failed to update')
+      setVoiceLog(next)
+    } catch (e) {
+      setVoiceLogError(e instanceof Error ? e.message : 'Failed')
+    } finally {
+      setSavingVoiceLog(false)
     }
   }
 
@@ -633,6 +660,46 @@ export default function UserActionsClient({
             <ChevronRight size={11} className="text-fg-4 shrink-0" />
           </button>
         )}
+      </AdminCard>
+
+      {/* ── VOICE LOG ─────────────────────────────────────── */}
+      <AdminCard title="VOICE LOG">
+        <div className="text-xs text-fg-3 mb-3">
+          Override the global voice-log setting for this user.
+        </div>
+        <div className="flex flex-col gap-1.5">
+          {([true, false, null] as (boolean | null)[]).map((val, i) => {
+            const label = val === null ? 'Inherit global' : val ? 'Enabled' : 'Disabled'
+            const desc  = val === null ? 'Follows the app-wide toggle' : val ? 'Mic button always shown' : 'Mic button always hidden'
+            const isSelected = voiceLog === val
+            return (
+              <button
+                key={i}
+                onClick={() => !isSelected && handleVoiceLogChange(val)}
+                disabled={savingVoiceLog}
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border text-left transition-colors ${
+                  isSelected
+                    ? val === false
+                      ? 'bg-warn/10 border-warn/40 text-warn'
+                      : val === true
+                        ? 'bg-ok/10 border-ok/40 text-ok'
+                        : 'bg-sky/10 border-sky/40 text-sky'
+                    : 'bg-surface border-border text-fg-3 hover:text-fg hover:border-border'
+                } disabled:opacity-50`}
+              >
+                {isSelected
+                  ? <ToggleRight size={16} className="shrink-0" />
+                  : <ToggleLeft  size={16} className="shrink-0" />
+                }
+                <div>
+                  <div className="text-xs font-semibold">{label}</div>
+                  <div className="font-mono text-[10px] opacity-70 mt-0.5">{desc}</div>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+        {voiceLogError && <div className="font-mono text-[10px] text-danger mt-2">{voiceLogError}</div>}
       </AdminCard>
 
       {/* ── ADMIN NOTES ───────────────────────────────────── */}

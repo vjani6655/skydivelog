@@ -11,9 +11,10 @@ import { PanResponder } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { enqueueJump, isOfflineError, getRawQueue } from '@/lib/offlineQueue';
+import { loadVoicePrefill, clearVoicePrefill } from '@/lib/jumpAgent';
 import type { QueuedJumpSignature } from '@/lib/offlineQueue';
 import { supabase } from '@/lib/supabase';
-import { spacing, radii } from '@/constants/tokens';
+import { spacing, radii, shadows } from '@/constants/tokens';
 import type { ColorSet } from '@/constants/tokens';
 import { useColors } from '@/lib/theme';
 import Toggle from '@/components/ui/Toggle';
@@ -348,7 +349,7 @@ function SavedScreen({ jumpNum, totalJumps, jumpId }: { jumpNum: number; totalJu
 export default function NewJumpScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const { draftId } = useLocalSearchParams<{ draftId?: string }>();
+  const { draftId, voicePrefill } = useLocalSearchParams<{ draftId?: string; voicePrefill?: string }>();
 
   const [step, setStep] = useState<Step>(1);
   const [saving, setSaving] = useState(false);
@@ -357,6 +358,7 @@ export default function NewJumpScreen() {
   const [savedJumpNum, setSavedJumpNum] = useState(0);
   const [totalJumps, setTotalJumps] = useState(0);
   const [scrollEnabled, setScrollEnabled] = useState(true);
+  const scrollRef = useRef<ScrollView>(null);
 
   // Step 1
   const [jumpDate, setJumpDate] = useState(new Date());
@@ -401,15 +403,60 @@ export default function NewJumpScreen() {
   const jumpNumWarning = jumpNum.trim() && !isNaN(jumpNumInt) && expectedNext !== null && jumpNumInt !== expectedNext
     ? `Jump #${jumpNumInt} skips from your last (#${lastJumpNum}). Expected #${expectedNext} — you can still save.`
     : null;
-  // Warning B: fresh account starting above #1 (user has prior jumps not in this app)
-  const freshStartWarning = lastJumpNum === null && jumpNum.trim() && !isNaN(jumpNumInt) && jumpNumInt > 1
+  // Warning B: fresh account starting above #1 (user has prior jumps not in this app).
+  // Suppressed during voice prefill — the AI already confirmed the number with the user.
+  const freshStartWarning = !voicePrefill && lastJumpNum === null && jumpNum.trim() && !isNaN(jumpNumInt) && jumpNumInt > 1
     ? `Starting at #${jumpNumInt} means you have ${jumpNumInt - 1} jump${jumpNumInt - 1 === 1 ? '' : 's'} elsewhere not yet in this app. That’s fine — you can still save.`
     : null;
   const activeWarning = jumpNumWarning ?? freshStartWarning;
 
-  // Load persisted defaults + last jump number on focus (skip when editing a draft)
+  // Apply voice prefill — runs once when voicePrefill param is present
+  useEffect(() => {
+    if (!voicePrefill) return;
+    (async () => {
+      const fields = await loadVoicePrefill();
+      if (!fields) return;
+      await clearVoicePrefill();
+      if (fields.jumpNumber)  setJumpNum(String(fields.jumpNumber));
+      if (fields.dzName)      setDzName(fields.dzName);
+      if (fields.acType)      setAcType(fields.acType);
+      if (fields.acRego)      setAcRego(fields.acRego);
+      if (fields.exitAlt)     setExitAlt(String(fields.exitAlt));
+      if (fields.ffSecs)      setFfSecs(String(fields.ffSecs));
+      if (fields.canopyTime)  setCanopyInput(fields.canopyTime);
+      if (fields.canopyType)  setCanopyType(fields.canopyType);
+      if (fields.jumpType)    setJumpType(fields.jumpType);
+      if (fields.notes)       setNotes(fields.notes);
+      if (fields.isFav !== undefined) setIsFav(fields.isFav);
+      if (fields.peopleOnJump) setPeopleOnJump(String(fields.peopleOnJump));
+      if (fields.pullAlt)     setPullAlt(String(fields.pullAlt));
+      if (fields.landingAccuracy) {
+        const parts = fields.landingAccuracy.split(' ');
+        if (parts.length === 2) {
+          setLandingAccuracyValue(parts[0]);
+          setLandingAccuracyUnit(parts[1]);
+        }
+      }
+      if (fields.jumperType)  setJumperType(fields.jumperType);
+      // Apply voice-supplied date and/or time
+      if (fields.jumpDate || fields.jumpTime) {
+        const base = fields.jumpDate
+          ? (() => { const [y, m, d] = fields.jumpDate!.split('-').map(Number); return new Date(y, m - 1, d); })()
+          : new Date();
+        if (fields.jumpTime) {
+          const [h, mn] = fields.jumpTime.split(':').map(Number);
+          base.setHours(h, mn, 0, 0);
+        }
+        setJumpDate(base);
+      }
+      setStep(4);
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voicePrefill]);
+
+  // Load persisted defaults + last jump number on focus (skip when editing a draft or voice-prefilling)
   useFocusEffect(useCallback(() => {
-    if (draftId) return;
+    if (draftId || voicePrefill) return;
     (async () => {
       const saved = await AsyncStorage.getItem(PERSIST_KEY).catch(() => null);
       if (saved) {
@@ -747,6 +794,7 @@ export default function NewJumpScreen() {
 
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
+          ref={scrollRef}
           style={styles.flex}
           contentContainerStyle={styles.body}
           keyboardShouldPersistTaps="handled"
@@ -925,40 +973,126 @@ export default function NewJumpScreen() {
 
             {/* ── Jump summary for the signer to review ── */}
             <View style={styles.signSummaryBox}>
-              <View style={styles.signSummaryRow}>
-                <View style={styles.signSummaryStat}>
-                  <Text style={styles.signSummaryLabel}>JUMP #</Text>
-                  <Text style={styles.signSummaryValue}>{jumpNum || '—'}</Text>
+              {/* Hero row: Jump # + Date */}
+              <View style={styles.signSummaryHero}>
+                <View style={styles.signSummaryHeroLeft}>
+                  <Text style={styles.signSummaryHeroLabel}>JUMP</Text>
+                  <Text style={styles.signSummaryHeroNum}>#{jumpNum || '—'}</Text>
                 </View>
-                <View style={styles.signSummaryStat}>
-                  <Text style={styles.signSummaryLabel}>DATE</Text>
-                  <Text style={styles.signSummaryValue}>{jumpDate.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}</Text>
-                </View>
-                <View style={styles.signSummaryStat}>
-                  <Text style={styles.signSummaryLabel}>EXIT ALT</Text>
-                  <Text style={styles.signSummaryValue}>{exitAlt ? `${(parseInt(exitAlt, 10) / 1000).toFixed(1)}k ft` : '—'}</Text>
-                </View>
-                <View style={styles.signSummaryStat}>
-                  <Text style={styles.signSummaryLabel}>FF</Text>
-                  <Text style={styles.signSummaryValue}>{ffSecs ? `${ffSecs}s` : '—'}</Text>
+                <View style={styles.signSummaryHeroRight}>
+                  <Text style={styles.signSummaryHeroDate}>
+                    {jumpDate.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                  </Text>
+                  {jumpDate.getHours() + jumpDate.getMinutes() > 0 ? <Text style={styles.signSummaryHeroTime}>{jumpDate.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })}</Text> : null}
                 </View>
               </View>
-              {(jumpType.trim() || landingAccuracyValue.trim()) ? (
-                <View style={[styles.signSummaryRow, { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(74,158,255,0.15)' }]}>
-                  {jumpType.trim() ? (
-                    <View style={[styles.signSummaryStat, { flex: 2 }]}>
-                      <Text style={styles.signSummaryLabel}>TYPE</Text>
-                      <Text style={styles.signSummaryValue} numberOfLines={1}>{jumpType}</Text>
+
+              {/* Stats row: Exit alt + FF + Canopy time + Pull alt */}
+              <View style={styles.signSummaryDivider} />
+              <View style={styles.signSummaryStatRow}>
+                <View style={styles.signSummaryStat}>
+                  <Text style={styles.signSummaryLabel}>EXIT ALT</Text>
+                  <Text style={styles.signSummaryValue}>{exitAlt ? `${(parseInt(exitAlt, 10) / 1000).toFixed(1)}k` : '—'}</Text>
+                  <Text style={styles.signSummaryUnit}>ft</Text>
+                </View>
+                <View style={styles.signSummaryStatDiv} />
+                <View style={styles.signSummaryStat}>
+                  <Text style={styles.signSummaryLabel}>FREEFALL</Text>
+                  <Text style={styles.signSummaryValue}>{ffSecs || '—'}</Text>
+                  <Text style={styles.signSummaryUnit}>sec</Text>
+                </View>
+                {canopyInput.trim() ? (<>
+                  <View style={styles.signSummaryStatDiv} />
+                  <View style={styles.signSummaryStat}>
+                    <Text style={styles.signSummaryLabel}>CANOPY</Text>
+                    <Text style={styles.signSummaryValue}>{canopyInput}</Text>
+                    <Text style={styles.signSummaryUnit}>min</Text>
+                  </View>
+                </>) : null}
+                {pullAlt.trim() ? (<>
+                  <View style={styles.signSummaryStatDiv} />
+                  <View style={styles.signSummaryStat}>
+                    <Text style={styles.signSummaryLabel}>PULL</Text>
+                    <Text style={styles.signSummaryValue}>{pullAlt}</Text>
+                    <Text style={styles.signSummaryUnit}>ft</Text>
+                  </View>
+                </>) : null}
+              </View>
+
+              {/* Details rows */}
+              {(dzName.trim() || acType.trim() || acRego.trim()) ? (<>
+                <View style={styles.signSummaryDivider} />
+                <View style={styles.signSummaryDetailRow}>
+                  {dzName.trim() ? (
+                    <View style={styles.signSummaryDetailItem}>
+                      <Text style={styles.signSummaryLabel}>DROPZONE</Text>
+                      <Text style={styles.signSummaryDetailVal} numberOfLines={1}>{dzName}</Text>
                     </View>
                   ) : null}
-                  {landingAccuracyValue.trim() ? (
-                    <View style={[styles.signSummaryStat, { flex: 2 }]}>
-                      <Text style={styles.signSummaryLabel}>LANDING ACCURACY</Text>
-                      <Text style={[styles.signSummaryValue, { color: colors.ok }]}>{landingAccuracyValue} {landingAccuracyUnit}</Text>
+                  {(acType.trim() || acRego.trim()) ? (
+                    <View style={styles.signSummaryDetailItem}>
+                      <Text style={styles.signSummaryLabel}>AIRCRAFT</Text>
+                      <Text style={styles.signSummaryDetailVal} numberOfLines={1}>{[acType, acRego].filter(Boolean).join(' · ')}</Text>
                     </View>
                   ) : null}
                 </View>
-              ) : null}
+              </>) : null}
+
+              {(jumpType.trim() || canopyType.trim()) ? (<>
+                <View style={styles.signSummaryDivider} />
+                <View style={styles.signSummaryDetailRow}>
+                  {jumpType.trim() ? (
+                    <View style={styles.signSummaryDetailItem}>
+                      <Text style={styles.signSummaryLabel}>JUMP TYPE</Text>
+                      <Text style={styles.signSummaryDetailVal}>{jumpType}</Text>
+                    </View>
+                  ) : null}
+                  {canopyType.trim() ? (
+                    <View style={styles.signSummaryDetailItem}>
+                      <Text style={styles.signSummaryLabel}>CANOPY</Text>
+                      <Text style={styles.signSummaryDetailVal} numberOfLines={1}>{canopyType}</Text>
+                    </View>
+                  ) : null}
+                  {jumperType.trim() ? (
+                    <View style={styles.signSummaryDetailItem}>
+                      <Text style={styles.signSummaryLabel}>JUMPER</Text>
+                      <Text style={styles.signSummaryDetailVal}>{jumperType}</Text>
+                    </View>
+                  ) : null}
+                </View>
+              </>) : null}
+
+              {(landingAccuracyValue.trim() || peopleOnJump.trim() || isFav) ? (<>
+                <View style={styles.signSummaryDivider} />
+                <View style={styles.signSummaryDetailRow}>
+                  {landingAccuracyValue.trim() ? (
+                    <View style={styles.signSummaryDetailItem}>
+                      <Text style={styles.signSummaryLabel}>LANDING</Text>
+                      <Text style={[styles.signSummaryDetailVal, { color: colors.ok }]}>{landingAccuracyValue} {landingAccuracyUnit}</Text>
+                    </View>
+                  ) : null}
+                  {peopleOnJump.trim() ? (
+                    <View style={styles.signSummaryDetailItem}>
+                      <Text style={styles.signSummaryLabel}>PEOPLE</Text>
+                      <Text style={styles.signSummaryDetailVal}>{peopleOnJump}</Text>
+                    </View>
+                  ) : null}
+                  {isFav ? (
+                    <View style={styles.signSummaryDetailItem}>
+                      <Text style={styles.signSummaryLabel}>FAVOURITE</Text>
+                      <Text style={[styles.signSummaryDetailVal, { color: '#FFD700' }]}>★ Yes</Text>
+                    </View>
+                  ) : null}
+                </View>
+              </>) : null}
+
+              {notes.trim() ? (<>
+                <View style={styles.signSummaryDivider} />
+                <View style={styles.signSummaryNotes}>
+                  <Text style={styles.signSummaryLabel}>NOTES</Text>
+                  <Text style={styles.signSummaryNotesText}>{notes}</Text>
+                </View>
+              </>) : null}
             </View>
 
             <View style={errors.signature ? { borderWidth: 1, borderColor: colors.danger, borderRadius: radii.lg, marginBottom: 4 } : undefined}>
@@ -998,13 +1132,13 @@ export default function NewJumpScreen() {
 
             <View style={{ height: spacing[3] }} />
             <Label text="SIGNED BY" />
-            <TextInput style={[styles.input, errors.signerName ? styles.inputError : null]} value={signerName} onChangeText={v => { setSignerName(v); setErrors(e => ({ ...e, signerName: '' })); }} placeholder="Full name" placeholderTextColor={colors.fg3} />
+            <TextInput style={[styles.input, errors.signerName ? styles.inputError : null]} value={signerName} onChangeText={v => { setSignerName(v); setErrors(e => ({ ...e, signerName: '' })); }} placeholder="Full name" placeholderTextColor={colors.fg3} onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)} />
             {errors.signerName && <Text style={styles.fieldError}>{errors.signerName}</Text>}
             <Label text="LICENCE #" />
-            <TextInput style={[styles.input, errors.signerLicence ? styles.inputError : null]} value={signerLicence} onChangeText={v => { setSignerLicence(v); setErrors(e => ({ ...e, signerLicence: '' })); }} placeholder="APF 14829" placeholderTextColor={colors.fg3} autoCapitalize="none" autoCorrect={false} />
+            <TextInput style={[styles.input, errors.signerLicence ? styles.inputError : null]} value={signerLicence} onChangeText={v => { setSignerLicence(v); setErrors(e => ({ ...e, signerLicence: '' })); }} placeholder="APF 14829" placeholderTextColor={colors.fg3} autoCapitalize="none" autoCorrect={false} onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)} />
             {errors.signerLicence && <Text style={styles.fieldError}>{errors.signerLicence}</Text>}
             <Label text={jumperType === 'Student' ? 'INSTRUCTOR NOTES' : 'SIGNER NOTES (optional)'} />
-            <TextInput style={[styles.input, styles.textareaSm, errors.signerNotes ? styles.inputError : null]} value={signerNotes} onChangeText={v => { setSignerNotes(v); setErrors(e => ({ ...e, signerNotes: '' })); }} multiline numberOfLines={3} placeholder="Instructor notes..." placeholderTextColor={colors.fg3} textAlignVertical="top" />
+            <TextInput style={[styles.input, styles.textareaSm, errors.signerNotes ? styles.inputError : null]} value={signerNotes} onChangeText={v => { setSignerNotes(v); setErrors(e => ({ ...e, signerNotes: '' })); }} multiline numberOfLines={3} placeholder="Instructor notes..." placeholderTextColor={colors.fg3} textAlignVertical="top" onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)} />
             {errors.signerNotes && <Text style={styles.fieldError}>{errors.signerNotes}</Text>}
           </>)}
 
@@ -1127,11 +1261,26 @@ function makeStyles(c: ColorSet) {
   outcomeBtnPass: { backgroundColor: c.sky, borderColor: c.sky },
   outcomeBtnRepeat: { backgroundColor: c.warn, borderColor: c.warn },
   // Sign-off jump summary box
-  signSummaryBox: { backgroundColor: c.skyBg, borderWidth: 1, borderColor: 'rgba(74,158,255,0.25)', borderRadius: radii.lg, padding: spacing[4], marginBottom: spacing[4] },
-  signSummaryRow: { flexDirection: 'row', gap: spacing[2] },
-  signSummaryStat: { flex: 1 },
-  signSummaryLabel: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, letterSpacing: 0.8, color: c.fg3, marginBottom: 2 },
-  signSummaryValue: { fontFamily: 'InterTight-SemiBold', fontSize: 13, color: c.fg, letterSpacing: -0.2 },
+  signSummaryBox: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii['2xl'], overflow: 'hidden', marginBottom: spacing[4], ...shadows.card },
+  signSummaryHero: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing[4], paddingVertical: spacing[4], backgroundColor: c.surface2 },
+  signSummaryHeroLeft: { gap: 2 },
+  signSummaryHeroRight: { alignItems: 'flex-end', gap: 2 },
+  signSummaryHeroLabel: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, letterSpacing: 1.2, color: c.fg3 },
+  signSummaryHeroNum: { fontFamily: 'InterTight-Bold', fontSize: 32, letterSpacing: -1, color: c.fg, lineHeight: 36 },
+  signSummaryHeroDate: { fontFamily: 'InterTight-SemiBold', fontSize: 15, letterSpacing: -0.3, color: c.fg },
+  signSummaryHeroTime: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, color: c.fg3, textAlign: 'right' },
+  signSummaryDivider: { height: 1, backgroundColor: c.border },
+  signSummaryStatRow: { flexDirection: 'row', paddingHorizontal: spacing[4], paddingVertical: spacing[4] },
+  signSummaryStat: { flex: 1, alignItems: 'center', gap: 2 },
+  signSummaryStatDiv: { width: 1, backgroundColor: c.border, marginVertical: 2 },
+  signSummaryLabel: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, letterSpacing: 0.8, color: c.fg3 },
+  signSummaryValue: { fontFamily: 'InterTight-Bold', fontSize: 20, letterSpacing: -0.5, color: c.fg, lineHeight: 24 },
+  signSummaryUnit: { fontFamily: 'JetBrainsMono-Regular', fontSize: 9, letterSpacing: 0.5, color: c.fg3 },
+  signSummaryDetailRow: { flexDirection: 'row', paddingHorizontal: spacing[4], paddingVertical: spacing[3], gap: spacing[4] },
+  signSummaryDetailItem: { flex: 1, gap: 3 },
+  signSummaryDetailVal: { fontFamily: 'InterTight-SemiBold', fontSize: 14, letterSpacing: -0.2, color: c.fg },
+  signSummaryNotes: { paddingHorizontal: spacing[4], paddingVertical: spacing[3], gap: spacing[1] },
+  signSummaryNotesText: { fontFamily: 'InterTight-Regular', fontSize: 13, lineHeight: 19, color: c.fg2 },
   outcomeBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: c.fg2 },
   // Date picker
   dateModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
