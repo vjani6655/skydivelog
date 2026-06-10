@@ -46,8 +46,9 @@ export default function QRScreen() {
   }, [jumpId]);
 
   const expired = secondsLeft === 0;
-  // QR payload: a simple object with the jump ID and a timestamp token
-  const qrValue = JSON.stringify({ jumpId, t: Math.floor(Date.now() / (EXPIRES_IN * 1000)) });
+  // QR payload: a deep link URL that opens the instructor-sign screen directly
+  const token = Math.floor(Date.now() / (EXPIRES_IN * 1000));
+  const qrValue = `mobile:///log/instructor-sign?jumpId=${jumpId}&t=${token}`;
 
   return (
     <SafeAreaView style={styles.screen}>

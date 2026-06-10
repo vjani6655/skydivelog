@@ -4,7 +4,7 @@ import {
   SafeAreaView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
   Modal, Dimensions,
 } from 'react-native';
-import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
 import { PanResponder } from 'react-native';
@@ -227,40 +227,60 @@ function SignaturePad({ paths, onChange, onDrawing }: SigPadProps) {
         </View>
       </View>
 
-      {/* Full-screen signature modal */}
+      {/* Full-screen signature modal — portrait modal, content rotated 90deg to fill landscape */}
       <Modal
         visible={fullScreen}
         animationType="slide"
-        supportedOrientations={['portrait', 'landscape']}
+        supportedOrientations={['portrait']}
         onRequestClose={() => setFullScreen(false)}
       >
-        <SafeAreaView style={styles.fsScreen}>
-          <View
-            style={styles.fsCanvas}
-            {...fsPan.panHandlers}
-            onLayout={e => {
-              fsLayout.current = { width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height };
-            }}
-          >
-            <Svg viewBox={`0 0 ${CANVAS_W} ${CANVAS_H}`} style={StyleSheet.absoluteFill}>
-              <SigPaths />
-            </Svg>
-            {isEmpty && (
-              <View style={styles.sigPlaceholder} pointerEvents="none">
-                <Text style={styles.sigPlaceholderText}>Sign here</Text>
+        {(() => {
+          const { width: sw, height: sh } = Dimensions.get('window');
+          return (
+            <View style={{ flex: 1, backgroundColor: colors.bg }}>
+              {/* Canvas: rotated 90deg, sized to fill the full screen as landscape */}
+              <View
+                style={{
+                  position: 'absolute',
+                  width: sh,
+                  height: sw,
+                  top: (sh - sw) / 2,
+                  left: (sw - sh) / 2,
+                  transform: [{ rotate: '90deg' }],
+                }}
+                {...fsPan.panHandlers}
+                onLayout={e => {
+                  fsLayout.current = { width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height };
+                }}
+              >
+                <Svg viewBox={`0 0 ${CANVAS_W} ${CANVAS_H}`} style={StyleSheet.absoluteFill}>
+                  <SigPaths />
+                </Svg>
+                {isEmpty && (
+                  <View style={styles.sigPlaceholder} pointerEvents="none">
+                    <Text style={styles.sigPlaceholderText}>Sign here</Text>
+                  </View>
+                )}
               </View>
-            )}
-          </View>
-          <View style={styles.fsFooter}>
-            <TouchableOpacity style={[styles.fsBtn, styles.fsBtnGhost]} onPress={clear}>
-              <Text style={styles.fsBtnGhostText}>Clear</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.fsBtn, styles.fsBtnPrimary]} onPress={() => setFullScreen(false)}>
-              <Ionicons name="checkmark" size={18} color={colors.onSky} />
-              <Text style={styles.fsBtnPrimaryText}>Done</Text>
-            </TouchableOpacity>
-          </View>
-        </SafeAreaView>
+              {/* Buttons — counter-rotated so text is upright in landscape hold */}
+              <View style={{
+                position: 'absolute',
+                bottom: spacing[8],
+                right: spacing[5],
+                gap: spacing[2],
+                transform: [{ rotate: '90deg' }],
+              }}>
+                <TouchableOpacity style={[styles.fsBtn, styles.fsBtnPrimary, { paddingHorizontal: spacing[5] }]} onPress={() => setFullScreen(false)}>
+                  <Ionicons name="checkmark" size={16} color={colors.onSky} />
+                  <Text style={styles.fsBtnPrimaryText}>Done</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.fsBtn, styles.fsBtnGhost, { paddingHorizontal: spacing[5] }]} onPress={isEmpty ? () => setFullScreen(false) : clear}>
+                  <Text style={styles.fsBtnGhostText}>{isEmpty ? 'Cancel' : 'Clear'}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          );
+        })()}
       </Modal>
     </>
   );
@@ -348,6 +368,7 @@ function SavedScreen({ jumpNum, totalJumps, jumpId }: { jumpNum: number; totalJu
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export default function NewJumpScreen() {
   const colors = useColors();
+  const navigation = useNavigation();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { draftId, voicePrefill } = useLocalSearchParams<{ draftId?: string; voicePrefill?: string }>();
 
@@ -359,6 +380,12 @@ export default function NewJumpScreen() {
   const [totalJumps, setTotalJumps] = useState(0);
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const scrollRef = useRef<ScrollView>(null);
+
+  // Disable swipe-back gesture on step 4 (signing) so a signature stroke
+  // doesn't accidentally navigate back to step 3.
+  useEffect(() => {
+    navigation.setOptions({ gestureEnabled: step !== 4 });
+  }, [step, navigation]);
 
   // Step 1
   const [jumpDate, setJumpDate] = useState(new Date());
@@ -1170,6 +1197,9 @@ export default function NewJumpScreen() {
           {step === 4 && (<>
             <View style={styles.step4Row}>
               <TouchableOpacity style={[styles.btn, styles.btnGhost, { flex: 1 }]} onPress={() => setStep(3)} activeOpacity={0.7}><Text style={styles.btnGhostText}>Back</Text></TouchableOpacity>
+              <TouchableOpacity style={[styles.btn, styles.btnGhost, { width: 44, paddingHorizontal: 0 }]} onPress={() => router.push({ pathname: '/(tabs)/log/qr', params: { jumpNum } })} activeOpacity={0.7}>
+                <Ionicons name="qr-code-outline" size={20} color={colors.fg2} />
+              </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.btn, styles.btnPrimary, { flex: 2 }, saving && styles.btnDisabled]}
                 onPress={handleSave}
@@ -1179,10 +1209,6 @@ export default function NewJumpScreen() {
                 {saving ? <ActivityIndicator size="small" color={colors.onSky} /> : <><Ionicons name="checkmark" size={16} color={colors.onSky} /><Text style={styles.btnPrimaryText}>Save & sign jump</Text></>}
               </TouchableOpacity>
             </View>
-            <TouchableOpacity style={[styles.btn, styles.btnGhost, { marginTop: spacing[2] }]} onPress={() => router.push({ pathname: '/(tabs)/log/qr', params: { jumpNum } })} activeOpacity={0.7}>
-              <Ionicons name="qr-code-outline" size={16} color={colors.fg2} />
-              <Text style={styles.btnGhostText}>Hand to instructor (QR)</Text>
-            </TouchableOpacity>
             {jumperType !== 'Student' && (
               <TouchableOpacity style={[styles.btn, styles.btnGhost, { marginTop: spacing[2] }]} onPress={handleSaveDraft} disabled={saving} activeOpacity={0.7}>
                 <Ionicons name="bookmark-outline" size={16} color={colors.fg2} />
