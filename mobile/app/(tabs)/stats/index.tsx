@@ -113,8 +113,12 @@ function makeProgressStyles(c: ColorSet) {
 interface StatsBag {
   totalJumps: number;
   maxJumpNum: number;
-  totalFFSecs: number;
-  totalCanopySecs: number;
+  totalFFSecs: number;     // career total (app + prior)
+  appFFSecs: number;       // logged in app only
+  priorFFSecs: number;
+  totalCanopySecs: number; // career total (app + prior)
+  appCanopySecs: number;   // logged in app only
+  priorCanopySecs: number;
   avgFFSecs: number;
   daysSinceLast: number;
   currencyDays: number;
@@ -164,11 +168,13 @@ function StatsA({ s }: { s: StatsBag }) {
           <Text style={styles.label}>Freefall</Text>
           <Text style={styles.monoMd}>{fmtHM(s.totalFFSecs)}</Text>
           <Text style={styles.labelSm}>{s.totalFFSecs}s · avg {s.avgFFSecs}s</Text>
+          {s.priorFFSecs > 0 && <Text style={styles.labelSm}>{fmtHM(s.appFFSecs)} logged on app</Text>}
         </View>
         <View style={[styles.card, styles.flex]}>
           <Text style={styles.label}>Canopy</Text>
           <Text style={styles.monoMd}>{fmtHM(s.totalCanopySecs)}</Text>
-          <Text style={styles.labelSm}>avg {fmtHMColon(Math.round(s.totalCanopySecs / Math.max(s.totalJumps, 1)))}</Text>
+          <Text style={styles.labelSm}>avg {fmtHMColon(Math.round(s.appCanopySecs / Math.max(s.totalJumps, 1)))}</Text>
+          {s.priorCanopySecs > 0 && <Text style={styles.labelSm}>{fmtHM(s.appCanopySecs)} logged on app</Text>}
         </View>
       </View>
 
@@ -244,11 +250,13 @@ function StatsB({ s }: { s: StatsBag }) {
           <Text style={styles.telLabel}>FREEFALL</Text>
           <Text style={styles.telValue}>{fmtHMColon(s.totalFFSecs)}</Text>
           <Text style={styles.telUnit}>h:m</Text>
+          {s.priorFFSecs > 0 && <Text style={styles.telUnit}>{fmtHMColon(s.appFFSecs)} on app</Text>}
         </View>
         <View style={[styles.card, styles.flex]}>
           <Text style={styles.telLabel}>CANOPY</Text>
           <Text style={styles.telValue}>{fmtHMColon(s.totalCanopySecs)}</Text>
           <Text style={styles.telUnit}>h:m</Text>
+          {s.priorCanopySecs > 0 && <Text style={styles.telUnit}>{fmtHMColon(s.appCanopySecs)} on app</Text>}
         </View>
       </View>
       <View style={styles.row2}>
@@ -332,7 +340,7 @@ function StatsC({ s }: { s: StatsBag }) {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing[4] }}>
           {[
             { label: 'Total', value: String(s.maxJumpNum || s.totalJumps), sub: s.maxJumpNum > s.totalJumps ? `${s.totalJumps} on app` : 'all time' },
-            { label: 'Freefall', value: fmtHM(s.totalFFSecs), sub: 'total' },
+            { label: 'Freefall', value: fmtHM(s.totalFFSecs), sub: s.priorFFSecs > 0 ? `${fmtHM(s.appFFSecs)} on app` : 'total' },
             { label: 'Avg FF', value: s.avgFFSecs + 's', sub: 'per jump' },
             { label: 'Top DZ', value: s.topDZ || '—', sub: 'most visited' },
           ].map(({ label, value, sub }) => (
@@ -408,6 +416,8 @@ export default function StatsScreen() {
   const [layout, setLayout] = useState<StatsLayout>('Cards');
   const [jumps, setJumps] = useState<JumpFull[]>([]);
   const [currencyMonths, setCurrencyMonths] = useState(1);
+  const [priorFFSecs, setPriorFFSecs] = useState(0);
+  const [priorCanopySecs, setPriorCanopySecs] = useState(0);
 
   const fetchAll = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -415,12 +425,14 @@ export default function StatsScreen() {
     if (!user) { setLoading(false); return; }
 
     const [{ data: userData }, { data: jumpData }] = await Promise.all([
-      supabase.from('users').select('display_layout_stats_overview, currency_alert_months').eq('id', user.id).single(),
+      supabase.from('users').select('display_layout_stats_overview, currency_alert_months, prior_freefall_seconds, prior_canopy_seconds').eq('id', user.id).single(),
       supabase.from('jumps').select('*, dropzones(name, region, latitude, longitude)').eq('user_id', user.id).is('deleted_at', null).order('date', { ascending: false }),
     ]);
 
     if (userData?.display_layout_stats_overview) setLayout(userData.display_layout_stats_overview as StatsLayout);
     if (userData?.currency_alert_months != null) setCurrencyMonths(userData.currency_alert_months);
+    setPriorFFSecs(userData?.prior_freefall_seconds ?? 0);
+    setPriorCanopySecs(userData?.prior_canopy_seconds ?? 0);
     setJumps((jumpData ?? []) as JumpFull[]);
     setLoading(false);
     setRefreshing(false);
@@ -430,9 +442,11 @@ export default function StatsScreen() {
 
   const stats: StatsBag = useMemo(() => {
     const totalJumps = jumps.length;
-    const totalFFSecs = jumps.reduce((s, j) => s + (j.freefall_seconds ?? 0), 0);
-    const totalCanopySecs = jumps.reduce((s, j) => s + (j.canopy_seconds ?? 0), 0);
-    const avgFFSecs = totalJumps ? Math.round(totalFFSecs / totalJumps) : 0;
+    const appFFSecs = jumps.reduce((s, j) => s + (j.freefall_seconds ?? 0), 0);
+    const appCanopySecs = jumps.reduce((s, j) => s + (j.canopy_seconds ?? 0), 0);
+    const totalFFSecs = appFFSecs + priorFFSecs;
+    const totalCanopySecs = appCanopySecs + priorCanopySecs;
+    const avgFFSecs = totalJumps ? Math.round(appFFSecs / totalJumps) : 0;
     const daysSinceLast = daysSinceLastJump(jumps);
 
     const now = new Date();
@@ -465,8 +479,8 @@ export default function StatsScreen() {
 
     const maxJumpNum = jumps.reduce((mx, j) => Math.max(mx, j.jump_number ?? 0), 0);
 
-    return { totalJumps, maxJumpNum, totalFFSecs, totalCanopySecs, avgFFSecs, daysSinceLast, currencyDays: currencyMonths * 30, monthlySparkline: monthlyCounts, typeBreakdown, weeklyCounts, topDZ, thisYear };
-  }, [jumps, currencyMonths]);
+    return { totalJumps, maxJumpNum, totalFFSecs, appFFSecs, priorFFSecs, totalCanopySecs, appCanopySecs, priorCanopySecs, avgFFSecs, daysSinceLast, currencyDays: currencyMonths * 30, monthlySparkline: monthlyCounts, typeBreakdown, weeklyCounts, topDZ, thisYear };
+  }, [jumps, currencyMonths, priorFFSecs, priorCanopySecs]);
 
   if (loading) {
     return <View style={[styles.screen, styles.center]}><ActivityIndicator color={colors.sky} /></View>;

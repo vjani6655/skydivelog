@@ -54,7 +54,7 @@ export default function ProfileScreen() {
     emergency_contact_phone: string | null;
   } | null>(null);
   const [email, setEmail] = useState<string | null>(null);
-  const [stats, setStats] = useState({ jumps: 0, ff: 0, dzs: 0 });
+  const [stats, setStats] = useState({ jumps: 0, ff: 0, appFF: 0, canopy: 0, appCanopy: 0, dzs: 0 });
   const [loading, setLoading] = useState(true);
   const [userCreatedAt, setUserCreatedAt] = useState<string | null>(null);
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
@@ -68,8 +68,8 @@ export default function ProfileScreen() {
     setEmail(user.email ?? null);
 
     const [profileRes, jumpsRes, subRes, unreadCount] = await Promise.all([
-      supabase.from('users').select('full_name, licence_number, licence_rating, country, date_of_birth, phone, home_dropzone_id, emergency_contact_name, emergency_contact_relationship, emergency_contact_phone, prior_freefall_seconds').eq('id', user.id).single(),
-      supabase.from('jumps').select('freefall_seconds, dropzone_id, jump_number').eq('user_id', user.id).is('deleted_at', null),
+      supabase.from('users').select('full_name, licence_number, licence_rating, country, date_of_birth, phone, home_dropzone_id, emergency_contact_name, emergency_contact_relationship, emergency_contact_phone, prior_freefall_seconds, prior_canopy_seconds').eq('id', user.id).single(),
+      supabase.from('jumps').select('freefall_seconds, canopy_seconds, dropzone_id, jump_number').eq('user_id', user.id).is('deleted_at', null),
       supabase.from('subscriptions').select('status, renews_at').eq('user_id', user.id).order('started_at', { ascending: false }).limit(1).maybeSingle(),
       getUnreadCount(supabase, user.id).catch(() => 0),
     ]);
@@ -81,13 +81,15 @@ export default function ProfileScreen() {
 
     setProfile(profileRes.data ?? null);
     const jumps = jumpsRes.data ?? [];
-    const totalFF = jumps.reduce((s, j) => s + (j.freefall_seconds ?? 0), 0);
+    const appFF = jumps.reduce((s, j) => s + (j.freefall_seconds ?? 0), 0);
+    const appCanopy = jumps.reduce((s, j) => s + ((j as any).canopy_seconds ?? 0), 0);
     const priorFF = (profileRes.data as any)?.prior_freefall_seconds ?? 0;
+    const priorCanopy = (profileRes.data as any)?.prior_canopy_seconds ?? 0;
     const dzCount = new Set(jumps.map(j => j.dropzone_id).filter(Boolean)).size;
     // Use the highest jump number as the career total — correctly reflects
     // users who started logging mid-career (e.g. started at jump #250)
     const maxJumpNum = jumps.reduce((mx, j) => Math.max(mx, (j as any).jump_number ?? 0), 0);
-    setStats({ jumps: maxJumpNum || jumps.length, ff: totalFF + priorFF, dzs: dzCount });
+    setStats({ jumps: maxJumpNum || jumps.length, ff: appFF + priorFF, appFF, canopy: appCanopy + priorCanopy, appCanopy, dzs: dzCount });
     setLoading(false);
   }, []);
 
@@ -180,16 +182,28 @@ export default function ProfileScreen() {
 
         {/* Stats row */}
         <View style={styles.statsRow}>
-          {[
-            { label: 'JUMPS', value: stats.jumps },
-            { label: 'FF TIME', value: formatFF(stats.ff) },
-            { label: 'DZs', value: stats.dzs },
-          ].map(s => (
-            <View key={s.label} style={styles.statCard}>
-              <Text style={styles.statValue}>{s.value}</Text>
-              <Text style={styles.statLabel}>{s.label}</Text>
-            </View>
-          ))}
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{stats.jumps}</Text>
+            <Text style={styles.statLabel}>JUMPS</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{formatFF(stats.ff)}</Text>
+            <Text style={styles.statLabel}>FF TIME</Text>
+            {stats.ff > stats.appFF && (
+              <Text style={[styles.statLabel, { fontSize: 9, marginTop: 1 }]}>{formatFF(stats.appFF)} on app</Text>
+            )}
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{formatFF(stats.canopy)}</Text>
+            <Text style={styles.statLabel}>CANOPY</Text>
+            {stats.canopy > stats.appCanopy && (
+              <Text style={[styles.statLabel, { fontSize: 9, marginTop: 1 }]}>{formatFF(stats.appCanopy)} on app</Text>
+            )}
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{stats.dzs}</Text>
+            <Text style={styles.statLabel}>DZs</Text>
+          </View>
         </View>
 
         {/* Menu */}

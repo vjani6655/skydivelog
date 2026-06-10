@@ -10,8 +10,8 @@ import { useColors } from '@/lib/theme';
 import type { JumpFull } from '@/lib/types';
 
 const SORT_OPTIONS = [
-  { key: 'date_desc', label: 'Date · newest' },
-  { key: 'date_asc',  label: 'Date · oldest' },
+  { key: 'date_desc', label: 'Newest first' },
+  { key: 'date_asc',  label: 'Oldest first' },
   { key: 'jump_num',  label: 'Jump number' },
   { key: 'freefall',  label: 'Freefall time' },
 ] as const;

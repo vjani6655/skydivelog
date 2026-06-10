@@ -116,6 +116,7 @@ export default function SettingsScreen() {
 
   // Prior freefall
   const [priorFFInput, setPriorFFInput] = useState(''); // stored as "Xh Ym" display
+  const [priorCanopyInput, setPriorCanopyInput] = useState('');
   const [firstJumpNumber, setFirstJumpNumber] = useState<number | null>(null);
 
   // 2FA state
@@ -136,7 +137,7 @@ export default function SettingsScreen() {
       if (!user) return;
       setNotifUserId(user.id);
       const [{ data }, loadedPrefs] = await Promise.all([
-        supabase.from('users').select('display_layout_jump_list, display_layout_jump_detail, display_layout_stats_overview, currency_alert_months, repack_reminder_days, cert_expiry_warning_days, prior_freefall_seconds').eq('id', user.id).single(),
+        supabase.from('users').select('display_layout_jump_list, display_layout_jump_detail, display_layout_stats_overview, currency_alert_months, repack_reminder_days, cert_expiry_warning_days, prior_freefall_seconds, prior_canopy_seconds').eq('id', user.id).single(),
         loadNotifPrefs(supabase, user.id),
         registerPushToken(supabase, user.id),
       ]);
@@ -153,6 +154,13 @@ export default function SettingsScreen() {
           const h = Math.floor(secs / 3600);
           const m = Math.floor((secs % 3600) / 60);
           setPriorFFInput(h > 0 ? `${h}h ${m}m` : `${m}m`);
+        }
+        // Populate prior canopy display
+        const csecs = data.prior_canopy_seconds ?? 0;
+        if (csecs > 0) {
+          const ch = Math.floor(csecs / 3600);
+          const cm = Math.floor((csecs % 3600) / 60);
+          setPriorCanopyInput(ch > 0 ? `${ch}h ${cm}m` : `${cm}m`);
         }
       }
 
@@ -203,6 +211,17 @@ export default function SettingsScreen() {
         priorFFSecs = hours * 3600 + mins * 60;
       }
 
+      let priorCanopySecs = 0;
+      const cStr = priorCanopyInput.trim().toLowerCase();
+      if (cStr) {
+        const hMatch = cStr.match(/(\d+)\s*h/);
+        const mMatch = cStr.match(/(\d+)\s*m/);
+        const plainMin = !hMatch && !mMatch ? parseInt(cStr, 10) : NaN;
+        const hours = hMatch ? parseInt(hMatch[1], 10) : 0;
+        const mins = mMatch ? parseInt(mMatch[1], 10) : (!isNaN(plainMin) ? plainMin : 0);
+        priorCanopySecs = hours * 3600 + mins * 60;
+      }
+
       const { error } = await supabase.from('users').update({
         display_layout_jump_list: layoutList,
         display_layout_jump_detail: layoutDetail,
@@ -211,6 +230,7 @@ export default function SettingsScreen() {
         repack_reminder_days: repackDays,
         cert_expiry_warning_days: certDays,
         prior_freefall_seconds: priorFFSecs,
+        prior_canopy_seconds: priorCanopySecs,
       }).eq('id', user.id);
       if (error) {
         Alert.alert('Error', error.message);
@@ -284,6 +304,10 @@ export default function SettingsScreen() {
   };
 
   return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
     <SafeAreaView style={styles.screen}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
@@ -407,6 +431,20 @@ export default function SettingsScreen() {
               autoCapitalize="none"
               autoCorrect={false}
             />
+            <View style={{ height: spacing[4] }} />
+            <Text style={[styles.subLabel, { paddingHorizontal: 0, paddingTop: 0 }]}>CANOPY TIME BEFORE THIS APP</Text>
+            <Text style={{ fontFamily: 'InterTight-Regular', fontSize: 12, color: colors.fg3, marginBottom: spacing[2], marginTop: spacing[1] }}>
+              Total time under canopy before you started logging here.
+            </Text>
+            <TextInput
+              style={[styles.chip, { borderRadius: radii.md, paddingHorizontal: spacing[3], paddingVertical: spacing[2.5], fontFamily: 'JetBrainsMono-Regular', fontSize: 14, color: colors.fg, minWidth: 120 }]}
+              value={priorCanopyInput}
+              onChangeText={setPriorCanopyInput}
+              placeholder="e.g. 8h 30m"
+              placeholderTextColor={colors.fg3}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
           </View>
         </View>
 
@@ -490,6 +528,7 @@ export default function SettingsScreen() {
         </Modal>
       </ScrollView>
     </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }
 

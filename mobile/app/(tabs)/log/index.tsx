@@ -192,6 +192,16 @@ export default function LogScreen() {
     [jumps],
   );
 
+  // ── is any filter/sort active? ────────────────────────────────────────────
+  const isFilterActive = useMemo(() =>
+    activeFilter !== 'All' ||
+    searchQuery.trim().length > 0 ||
+    filter.jumpTypes.length > 0 ||
+    filter.favouritesOnly ||
+    filter.signedOnly ||
+    filter.sort !== DEFAULT_FILTER.sort,
+  [activeFilter, searchQuery, filter]);
+
   // ── filtered list ─────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
     let list = jumps;
@@ -215,9 +225,12 @@ export default function LogScreen() {
         String(j.jump_number).includes(q),
       );
     }
-    // Sort
+    // Sort — always use jump_number as primary order so late-logged jumps
+    // (e.g. logging #301 after #302) appear in the correct sequence.
     if (filter.sort === 'date_asc') {
-      list = [...list].sort((a, b) => a.date.localeCompare(b.date));
+      list = [...list].sort((a, b) => (a.jump_number ?? 0) - (b.jump_number ?? 0));
+    } else if (filter.sort === 'date_desc') {
+      list = [...list].sort((a, b) => (b.jump_number ?? 0) - (a.jump_number ?? 0));
     } else if (filter.sort === 'jump_num') {
       list = [...list].sort((a, b) => (b.jump_number ?? 0) - (a.jump_number ?? 0));
     } else if (filter.sort === 'freefall') {
@@ -281,7 +294,10 @@ export default function LogScreen() {
             style={styles.iconBtn}
             onPress={() => setFilterVisible(true)}
           >
-            <Ionicons name="options-outline" size={19} color={colors.fg2} />
+            <Ionicons name="options-outline" size={19} color={isFilterActive ? colors.sky : colors.fg2} />
+            {isFilterActive && (
+              <View style={styles.filterDot} />
+            )}
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.iconBtn, styles.addBtn]}
@@ -335,7 +351,23 @@ export default function LogScreen() {
   );
 
   // ── empty state ───────────────────────────────────────────────────────────
-  const Empty = (
+  const Empty = isFilterActive ? (
+    <View style={styles.empty}>
+      <Ionicons name="filter-outline" size={48} color={colors.fg3} />
+      <Text style={styles.emptyTitle}>No jumps match</Text>
+      <Text style={styles.emptyBody}>Your current filters didn’t match any jumps</Text>
+      <TouchableOpacity
+        style={styles.emptyBtn}
+        onPress={() => {
+          setActiveFilter('All');
+          setSearchQuery('');
+          setFilter(DEFAULT_FILTER);
+        }}
+      >
+        <Text style={styles.emptyBtnText}>Clear filters</Text>
+      </TouchableOpacity>
+    </View>
+  ) : (
     <View style={styles.empty}>
       <Ionicons name="albums-outline" size={48} color={colors.fg3} />
       <Text style={styles.emptyTitle}>No jumps yet</Text>
@@ -693,6 +725,15 @@ function makeStyles(c: ColorSet) {
     fontFamily: 'InterTight-SemiBold',
     fontSize: 14,
     color: c.onSky,
+  },
+  filterDot: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: c.sky,
   },
 
   // ── voice FAB ────────────────────────────────────────────────
