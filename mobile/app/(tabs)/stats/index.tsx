@@ -27,6 +27,15 @@ function fmtHMColon(seconds: number): string {
   return `${h}:${String(m).padStart(2, '0')}`;
 }
 
+// For average values — shows "Xm Ys" when >= 60s, else just "Xs"
+function fmtAvg(seconds: number): string {
+  if (seconds <= 0) return '0s';
+  if (seconds < 60) return `${seconds}s`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return s > 0 ? `${m}m ${s}s` : `${m}m`;
+}
+
 function daysSinceLastJump(jumps: JumpFull[]): number {
   if (!jumps.length) return 999;
   const lastDate = new Date(jumps[0].date);
@@ -167,14 +176,26 @@ function StatsA({ s }: { s: StatsBag }) {
         <View style={[styles.card, styles.flex]}>
           <Text style={styles.label}>Freefall</Text>
           <Text style={styles.monoMd}>{fmtHM(s.totalFFSecs)}</Text>
-          <Text style={styles.labelSm}>{s.totalFFSecs}s · avg {s.avgFFSecs}s</Text>
-          {s.priorFFSecs > 0 && <Text style={styles.labelSm}>{fmtHM(s.appFFSecs)} logged on app</Text>}
+          {s.priorFFSecs > 0 ? (
+            <>
+              <Text style={styles.labelSm}>{fmtHM(s.appFFSecs)} logged on app</Text>
+              <Text style={styles.labelSm}>avg {fmtAvg(Math.round(s.totalFFSecs / Math.max(s.maxJumpNum, 1)))} career</Text>
+            </>
+          ) : (
+            <Text style={styles.labelSm}>avg {fmtAvg(s.avgFFSecs)} per jump</Text>
+          )}
         </View>
         <View style={[styles.card, styles.flex]}>
-          <Text style={styles.label}>Canopy</Text>
+          <Text style={styles.label}>Canopy time</Text>
           <Text style={styles.monoMd}>{fmtHM(s.totalCanopySecs)}</Text>
-          <Text style={styles.labelSm}>avg {fmtHMColon(Math.round(s.appCanopySecs / Math.max(s.totalJumps, 1)))}</Text>
-          {s.priorCanopySecs > 0 && <Text style={styles.labelSm}>{fmtHM(s.appCanopySecs)} logged on app</Text>}
+          {s.priorCanopySecs > 0 ? (
+            <>
+              <Text style={styles.labelSm}>{fmtHM(s.appCanopySecs)} logged on app</Text>
+              <Text style={styles.labelSm}>avg {fmtAvg(Math.round(s.totalCanopySecs / Math.max(s.maxJumpNum, 1)))} career</Text>
+            </>
+          ) : (
+            <Text style={styles.labelSm}>avg {fmtAvg(Math.round(s.appCanopySecs / Math.max(jumps.length, 1)))} per jump</Text>
+          )}
         </View>
       </View>
 
@@ -253,7 +274,7 @@ function StatsB({ s }: { s: StatsBag }) {
           {s.priorFFSecs > 0 && <Text style={styles.telUnit}>{fmtHMColon(s.appFFSecs)} on app</Text>}
         </View>
         <View style={[styles.card, styles.flex]}>
-          <Text style={styles.telLabel}>CANOPY</Text>
+          <Text style={styles.telLabel}>CANOPY TIME</Text>
           <Text style={styles.telValue}>{fmtHMColon(s.totalCanopySecs)}</Text>
           <Text style={styles.telUnit}>h:m</Text>
           {s.priorCanopySecs > 0 && <Text style={styles.telUnit}>{fmtHMColon(s.appCanopySecs)} on app</Text>}

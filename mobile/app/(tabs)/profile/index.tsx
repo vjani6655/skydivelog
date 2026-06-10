@@ -189,20 +189,10 @@ export default function ProfileScreen() {
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{formatFF(stats.ff)}</Text>
             <Text style={styles.statLabel}>FF TIME</Text>
-            {stats.ff > stats.appFF && (
-              <Text style={[styles.statLabel, { fontSize: 9, marginTop: 1 }]}>{formatFF(stats.appFF)} on app</Text>
-            )}
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{formatFF(stats.canopy)}</Text>
             <Text style={styles.statLabel}>CANOPY</Text>
-            {stats.canopy > stats.appCanopy && (
-              <Text style={[styles.statLabel, { fontSize: 9, marginTop: 1 }]}>{formatFF(stats.appCanopy)} on app</Text>
-            )}
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>{stats.dzs}</Text>
-            <Text style={styles.statLabel}>DZs</Text>
           </View>
         </View>
 

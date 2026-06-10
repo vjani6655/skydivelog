@@ -208,7 +208,7 @@ export default function SignInScreen() {
                 />
                 <TouchableOpacity onPress={() => setShowPassword(v => !v)} activeOpacity={0.7} style={styles.eyeBtn}>
                   <Ionicons
-                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                    name={showPassword ? 'eye-outline' : 'eye-off-outline'}
                     size={18}
                     color={colors.fg3}
                   />

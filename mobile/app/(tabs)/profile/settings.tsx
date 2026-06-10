@@ -304,10 +304,6 @@ export default function SettingsScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
     <SafeAreaView style={styles.screen}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
@@ -319,6 +315,10 @@ export default function SettingsScreen() {
         </TouchableOpacity>
       </View>
 
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
       <ScrollView style={styles.flex} contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
         <SectionTitle text="NOTIFICATIONS" />
         <View style={styles.card}>
@@ -527,8 +527,8 @@ export default function SettingsScreen() {
           </KeyboardAvoidingView>
         </Modal>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
-    </KeyboardAvoidingView>
   );
 }
 
