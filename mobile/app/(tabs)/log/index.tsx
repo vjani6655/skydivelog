@@ -84,7 +84,7 @@ export default function LogScreen() {
       supabase.from('users').select('display_layout_jump_list').eq('id', user.id).single(),
       supabase
         .from('jumps')
-        .select('*, dropzones(name, region, latitude, longitude)')
+        .select('*, dropzones(name, region, latitude, longitude), signatures(id, signed_at)')
         .eq('user_id', user.id)
         .is('deleted_at', null)
         .order('date', { ascending: false })
@@ -203,6 +203,9 @@ export default function LogScreen() {
     }
     if (filter.favouritesOnly) {
       list = list.filter(j => j.is_favourite);
+    }
+    if (filter.signedOnly) {
+      list = list.filter(j => (j.signatures?.length ?? 0) > 0);
     }
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
@@ -355,6 +358,7 @@ export default function LogScreen() {
       onApply={setFilter}
       totalCount={jumps.length}
       filteredCount={filtered.length}
+      allJumps={jumps}
     />
   );
 

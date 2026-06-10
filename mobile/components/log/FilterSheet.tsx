@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { spacing, radii } from '@/constants/tokens';
 import type { ColorSet } from '@/constants/tokens';
 import { useColors } from '@/lib/theme';
+import type { JumpFull } from '@/lib/types';
 
 const SORT_OPTIONS = [
   { key: 'date_desc', label: 'Date · newest' },
@@ -40,6 +41,7 @@ interface FilterSheetProps {
   onApply: (f: FilterState) => void;
   totalCount: number;
   filteredCount: number;
+  allJumps?: JumpFull[];
 }
 
 function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
@@ -55,10 +57,25 @@ function Chip({ label, active, onPress }: { label: string; active: boolean; onPr
   );
 }
 
-export function FilterSheet({ visible, onClose, filter, onApply, totalCount, filteredCount }: FilterSheetProps) {
+export function FilterSheet({ visible, onClose, filter, onApply, totalCount, filteredCount, allJumps }: FilterSheetProps) {
   const [local, setLocal] = useState<FilterState>(filter);
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+
+  const previewCount = useMemo(() => {
+    if (!allJumps) return filteredCount;
+    let list = allJumps;
+    if (local.jumpTypes.length > 0) {
+      list = list.filter(j => local.jumpTypes.includes((j as any).jump_type ?? ''));
+    }
+    if (local.favouritesOnly) {
+      list = list.filter(j => (j as any).is_favourite);
+    }
+    if (local.signedOnly) {
+      list = list.filter(j => ((j as any).signatures?.length ?? 0) > 0);
+    }
+    return list.length;
+  }, [local, allJumps, filteredCount]);
 
   const reset = () => setLocal(DEFAULT_FILTER);
 
@@ -133,7 +150,7 @@ export function FilterSheet({ visible, onClose, filter, onApply, totalCount, fil
             activeOpacity={0.85}
           >
             <Ionicons name="checkmark" size={16} color={colors.onSky} />
-            <Text style={styles.applyBtnText}>Apply · {filteredCount} jumps</Text>
+            <Text style={styles.applyBtnText}>Apply · {previewCount} jumps</Text>
           </TouchableOpacity>
         </View>
       </View>

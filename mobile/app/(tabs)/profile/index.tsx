@@ -68,7 +68,7 @@ export default function ProfileScreen() {
     setEmail(user.email ?? null);
 
     const [profileRes, jumpsRes, subRes, unreadCount] = await Promise.all([
-      supabase.from('users').select('full_name, licence_number, licence_rating, country, date_of_birth, phone, home_dropzone_id, emergency_contact_name, emergency_contact_relationship, emergency_contact_phone').eq('id', user.id).single(),
+      supabase.from('users').select('full_name, licence_number, licence_rating, country, date_of_birth, phone, home_dropzone_id, emergency_contact_name, emergency_contact_relationship, emergency_contact_phone, prior_freefall_seconds').eq('id', user.id).single(),
       supabase.from('jumps').select('freefall_seconds, dropzone_id, jump_number').eq('user_id', user.id).is('deleted_at', null),
       supabase.from('subscriptions').select('status, renews_at').eq('user_id', user.id).order('started_at', { ascending: false }).limit(1).maybeSingle(),
       getUnreadCount(supabase, user.id).catch(() => 0),
@@ -82,11 +82,12 @@ export default function ProfileScreen() {
     setProfile(profileRes.data ?? null);
     const jumps = jumpsRes.data ?? [];
     const totalFF = jumps.reduce((s, j) => s + (j.freefall_seconds ?? 0), 0);
+    const priorFF = (profileRes.data as any)?.prior_freefall_seconds ?? 0;
     const dzCount = new Set(jumps.map(j => j.dropzone_id).filter(Boolean)).size;
     // Use the highest jump number as the career total — correctly reflects
     // users who started logging mid-career (e.g. started at jump #250)
     const maxJumpNum = jumps.reduce((mx, j) => Math.max(mx, (j as any).jump_number ?? 0), 0);
-    setStats({ jumps: maxJumpNum || jumps.length, ff: totalFF, dzs: dzCount });
+    setStats({ jumps: maxJumpNum || jumps.length, ff: totalFF + priorFF, dzs: dzCount });
     setLoading(false);
   }, []);
 

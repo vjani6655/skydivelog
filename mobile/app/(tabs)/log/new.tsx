@@ -369,7 +369,7 @@ export default function NewJumpScreen() {
   const [acRego, setAcRego] = useState('');
 
   // Step 2
-  const [exitAlt, setExitAlt] = useState('14000');
+  const [exitAlt, setExitAlt] = useState('12000');
   const [ffSecs, setFfSecs] = useState('60');
   const [canopyInput, setCanopyInput] = useState('');
   const [pullAlt, setPullAlt] = useState('');
@@ -537,7 +537,7 @@ export default function NewJumpScreen() {
         setDzName((data.dropzones as { name: string } | null)?.name ?? '');
         setAcType(data.aircraft_type ?? '');
         setAcRego(data.aircraft_rego ?? '');
-        setExitAlt(data.exit_altitude_ft ? String(data.exit_altitude_ft) : '14000');
+        setExitAlt(data.exit_altitude_ft ? String(data.exit_altitude_ft) : '12000');
         setFfSecs(data.freefall_seconds ? String(data.freefall_seconds) : '60');
         setCanopyInput(data.canopy_seconds ? String(data.canopy_seconds) : '');
         setPullAlt(data.pull_altitude_ft ? String(data.pull_altitude_ft) : '');
@@ -903,6 +903,10 @@ export default function NewJumpScreen() {
               autoCorrect={false}
             />
             {errors.canopyType && <Text style={styles.fieldError}>{errors.canopyType}</Text>}
+            <Label text="JUMPER CATEGORY" />
+            <View style={styles.chipRow}>
+              {JUMPER_TYPES.map(t => <TypeChip key={t} label={t} active={jumperType === t} onPress={() => { setJumperType(t); setJumpType(''); setErrors(e => ({ ...e, jumpType: '' })); }} />)}
+            </View>
             <Label text="JUMP TYPE" />
             {jumperType === 'Student' ? (
               <>
@@ -925,10 +929,6 @@ export default function NewJumpScreen() {
                 {errors.jumpType && <Text style={styles.fieldError}>{errors.jumpType}</Text>}
               </>
             )}
-            <Label text="JUMPER CATEGORY" />
-            <View style={styles.chipRow}>
-              {JUMPER_TYPES.map(t => <TypeChip key={t} label={t} active={jumperType === t} onPress={() => { setJumperType(t); setJumpType(''); setErrors(e => ({ ...e, jumpType: '' })); }} />)}
-            </View>
             <Label text="LANDING ACCURACY — optional" />
             <View style={[styles.row2, { alignItems: 'flex-start' }]}>
               <View style={{ flex: 1 }}>

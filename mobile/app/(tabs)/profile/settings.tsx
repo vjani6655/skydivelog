@@ -114,6 +114,10 @@ export default function SettingsScreen() {
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
+  // Prior freefall
+  const [priorFFInput, setPriorFFInput] = useState(''); // stored as "Xh Ym" display
+  const [firstJumpNumber, setFirstJumpNumber] = useState<number | null>(null);
+
   // 2FA state
   const [mfaEnabled, setMfaEnabled] = useState(false);
   const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
@@ -132,7 +136,7 @@ export default function SettingsScreen() {
       if (!user) return;
       setNotifUserId(user.id);
       const [{ data }, loadedPrefs] = await Promise.all([
-        supabase.from('users').select('display_layout_jump_list, display_layout_jump_detail, display_layout_stats_overview, currency_alert_months, repack_reminder_days, cert_expiry_warning_days').eq('id', user.id).single(),
+        supabase.from('users').select('display_layout_jump_list, display_layout_jump_detail, display_layout_stats_overview, currency_alert_months, repack_reminder_days, cert_expiry_warning_days, prior_freefall_seconds').eq('id', user.id).single(),
         loadNotifPrefs(supabase, user.id),
         registerPushToken(supabase, user.id),
       ]);
@@ -143,7 +147,25 @@ export default function SettingsScreen() {
         if (data.currency_alert_months != null) setCurrencyMonths(data.currency_alert_months);
         if (data.repack_reminder_days != null) setRepackDays(data.repack_reminder_days);
         if (data.cert_expiry_warning_days != null) setCertDays(data.cert_expiry_warning_days);
+        // Populate prior FF display
+        const secs = data.prior_freefall_seconds ?? 0;
+        if (secs > 0) {
+          const h = Math.floor(secs / 3600);
+          const m = Math.floor((secs % 3600) / 60);
+          setPriorFFInput(h > 0 ? `${h}h ${m}m` : `${m}m`);
+        }
       }
+
+      // Detect whether user started mid-career (first jump number > 1)
+      const { data: firstJump } = await supabase
+        .from('jumps')
+        .select('jump_number')
+        .eq('user_id', user.id)
+        .is('deleted_at', null)
+        .order('jump_number', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      setFirstJumpNumber(firstJump?.jump_number ?? null);
       if (loadedPrefs) setNotifPrefs(loadedPrefs);
 
       // Load MFA status
@@ -168,6 +190,19 @@ export default function SettingsScreen() {
       const { data: { session } } = await supabase.auth.getSession();
       const user = session?.user;
       if (!user) return;
+
+      // Parse prior FF input: accept "Xh Ym", "Xh", "Ym", or plain minutes
+      let priorFFSecs = 0;
+      const ffStr = priorFFInput.trim().toLowerCase();
+      if (ffStr) {
+        const hMatch = ffStr.match(/(\d+)\s*h/);
+        const mMatch = ffStr.match(/(\d+)\s*m/);
+        const plainMin = !hMatch && !mMatch ? parseInt(ffStr, 10) : NaN;
+        const hours = hMatch ? parseInt(hMatch[1], 10) : 0;
+        const mins = mMatch ? parseInt(mMatch[1], 10) : (!isNaN(plainMin) ? plainMin : 0);
+        priorFFSecs = hours * 3600 + mins * 60;
+      }
+
       const { error } = await supabase.from('users').update({
         display_layout_jump_list: layoutList,
         display_layout_jump_detail: layoutDetail,
@@ -175,6 +210,7 @@ export default function SettingsScreen() {
         currency_alert_months: currencyMonths,
         repack_reminder_days: repackDays,
         cert_expiry_warning_days: certDays,
+        prior_freefall_seconds: priorFFSecs,
       }).eq('id', user.id);
       if (error) {
         Alert.alert('Error', error.message);
@@ -344,6 +380,34 @@ export default function SettingsScreen() {
         <SectionTitle text="DATA" />
         <View style={styles.card}>
           <ToggleRow label="Sync to cloud" value={sync} onChange={setSync} />
+        </View>
+
+        {/* Prior freefall — shown for everyone; especially useful for mid-career starters */}
+        <SectionTitle text="CAREER HISTORY" />
+        <View style={styles.card}>
+          <View style={{ paddingHorizontal: spacing[4], paddingVertical: spacing[3] }}>
+            {firstJumpNumber != null && firstJumpNumber > 1 && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.skyBg, borderRadius: radii.md, paddingHorizontal: spacing[3], paddingVertical: spacing[2], marginBottom: spacing[3] }}>
+                <Ionicons name="information-circle-outline" size={14} color={colors.sky} style={{ marginRight: spacing[2] }} />
+                <Text style={{ fontFamily: 'InterTight-Regular', fontSize: 12, color: colors.sky, flex: 1 }}>
+                  Your first logged jump is #{firstJumpNumber}. Enter your pre-app freefall time below to see your true career total.
+                </Text>
+              </View>
+            )}
+            <Text style={[styles.subLabel, { paddingHorizontal: 0, paddingTop: 0 }]}>FREEFALL TIME BEFORE THIS APP</Text>
+            <Text style={{ fontFamily: 'InterTight-Regular', fontSize: 12, color: colors.fg3, marginBottom: spacing[2], marginTop: spacing[1] }}>
+              Enter time as "2h 30m", "45m", or leave blank if you started from jump #1.
+            </Text>
+            <TextInput
+              style={[styles.chip, { borderRadius: radii.md, paddingHorizontal: spacing[3], paddingVertical: spacing[2.5], fontFamily: 'JetBrainsMono-Regular', fontSize: 14, color: colors.fg, minWidth: 120 }]}
+              value={priorFFInput}
+              onChangeText={setPriorFFInput}
+              placeholder="e.g. 1h 20m"
+              placeholderTextColor={colors.fg3}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
         </View>
 
         <SectionTitle text="SECURITY" />

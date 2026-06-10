@@ -112,6 +112,7 @@ function makeProgressStyles(c: ColorSet) {
 
 interface StatsBag {
   totalJumps: number;
+  maxJumpNum: number;
   totalFFSecs: number;
   totalCanopySecs: number;
   avgFFSecs: number;
@@ -145,11 +146,14 @@ function StatsA({ s }: { s: StatsBag }) {
         <View style={styles.rowBetween}>
           <View style={{ flex: 1 }}>
             <Text style={styles.label}>Total jumps</Text>
-            <Text style={styles.heroNum}>{s.totalJumps}</Text>
+            <Text style={styles.heroNum}>{s.maxJumpNum || s.totalJumps}</Text>
             <View style={styles.inlineRow}>
               <Ionicons name="trending-up" size={12} color={colors.ok} />
               <Text style={styles.trendText}>+{s.monthlySparkline[s.monthlySparkline.length - 1] ?? 0} this month</Text>
             </View>
+            {s.maxJumpNum > s.totalJumps && (
+              <Text style={styles.labelSm}>{s.totalJumps} logged on app</Text>
+            )}
           </View>
           <SparklineRN data={s.monthlySparkline} />
         </View>
@@ -228,8 +232,11 @@ function StatsB({ s }: { s: StatsBag }) {
 
       <View style={styles.heroCard}>
         <Text style={styles.heroGaugeLabel}>TOTAL JUMPS</Text>
-        <Text style={styles.heroGaugeNum}>{s.totalJumps}</Text>
-        <Text style={styles.heroGaugeSub}>NEXT: {Math.ceil(s.totalJumps / 100) * 100 - s.totalJumps} TO {Math.ceil(s.totalJumps / 100) * 100}</Text>
+        <Text style={styles.heroGaugeNum}>{s.maxJumpNum || s.totalJumps}</Text>
+        <Text style={styles.heroGaugeSub}>NEXT: {Math.ceil((s.maxJumpNum || s.totalJumps) / 100) * 100 - (s.maxJumpNum || s.totalJumps)} TO {Math.ceil((s.maxJumpNum || s.totalJumps) / 100) * 100}</Text>
+        {s.maxJumpNum > s.totalJumps && (
+          <Text style={styles.heroGaugeSub}>{s.totalJumps} LOGGED ON APP</Text>
+        )}
       </View>
 
       <View style={styles.row2}>
@@ -324,7 +331,7 @@ function StatsC({ s }: { s: StatsBag }) {
       <View style={{ padding: spacing[5] }}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing[4] }}>
           {[
-            { label: 'Total', value: String(s.totalJumps), sub: 'all time' },
+            { label: 'Total', value: String(s.maxJumpNum || s.totalJumps), sub: s.maxJumpNum > s.totalJumps ? `${s.totalJumps} on app` : 'all time' },
             { label: 'Freefall', value: fmtHM(s.totalFFSecs), sub: 'total' },
             { label: 'Avg FF', value: s.avgFFSecs + 's', sub: 'per jump' },
             { label: 'Top DZ', value: s.topDZ || '—', sub: 'most visited' },
@@ -456,7 +463,9 @@ export default function StatsScreen() {
     const thisYearStr = String(now.getFullYear());
     const thisYear = jumps.filter(j => j.date.startsWith(thisYearStr)).length;
 
-    return { totalJumps, totalFFSecs, totalCanopySecs, avgFFSecs, daysSinceLast, currencyDays: currencyMonths * 30, monthlySparkline: monthlyCounts, typeBreakdown, weeklyCounts, topDZ, thisYear };
+    const maxJumpNum = jumps.reduce((mx, j) => Math.max(mx, j.jump_number ?? 0), 0);
+
+    return { totalJumps, maxJumpNum, totalFFSecs, totalCanopySecs, avgFFSecs, daysSinceLast, currencyDays: currencyMonths * 30, monthlySparkline: monthlyCounts, typeBreakdown, weeklyCounts, topDZ, thisYear };
   }, [jumps, currencyMonths]);
 
   if (loading) {
