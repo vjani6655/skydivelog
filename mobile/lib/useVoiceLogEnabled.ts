@@ -67,7 +67,7 @@ export function useVoiceLogEnabled(): boolean {
 
     // Realtime: app_config changes propagate immediately to all clients
     const channel = supabase
-      .channel('voice_log_flag_watch')
+      .channel(`voice_log_flag_watch:${Math.random().toString(36).slice(2)}`)
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'app_config', filter: 'id=eq.singleton' },

@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
       stripe_customer_id: session.customer as string,
       status: STATUS_MAP[subscription.status] ?? 'active',
       plan: product?.name ?? price?.nickname ?? 'Pro',
-      price_at_signup: (price?.unit_amount ?? 0) / 100,
+      price_at_signup: (session.amount_total ?? price?.unit_amount ?? 0) / 100,
       started_at: new Date(item.current_period_start * 1000).toISOString(),
       renews_at: new Date(item.current_period_end * 1000).toISOString(),
       payment_method_brand: card?.brand ?? 'unknown',
