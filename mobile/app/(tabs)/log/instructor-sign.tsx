@@ -136,12 +136,19 @@ function SignaturePad({ onChange, onDrawing }: SigPadProps) {
   );
 }
 
+// Time token — must match the formula in qr.tsx
+const EXPIRES_IN = 5 * 60;
+function currentToken() { return Math.floor(Date.now() / (EXPIRES_IN * 1000)); }
+
 export default function InstructorSignScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const { jumpId, changes: changesParam } = useLocalSearchParams<{ jumpId: string; changes?: string }>();
+  const { jumpId, changes: changesParam, t: tParam } = useLocalSearchParams<{ jumpId: string; changes?: string; t?: string }>();
   const parsedChanges: Array<{ field: string; from: string; to: string }> = changesParam ? JSON.parse(changesParam) : [];
+  // Token: prefer the one from the QR URL param, fall back to current window
+  const token = tParam ? parseInt(tParam, 10) : currentToken();
   const [jump, setJump] = useState<JumpFull | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [edits, setEdits] = useState<JumpEdit[]>([]);
   const [signerName, setSignerName] = useState('');
   const [signerLicence, setSignerLicence] = useState('');
@@ -153,20 +160,19 @@ export default function InstructorSignScreen() {
 
   useEffect(() => {
     (async () => {
-      const [jumpRes, editsRes] = await Promise.all([
-        supabase
-          .from('jumps')
-          .select('*, dropzones(name, region, latitude, longitude)')
-          .eq('id', jumpId)
-          .single(),
-        supabase
-          .from('jump_edits')
-          .select('*')
-          .eq('jump_id', jumpId)
-          .order('edited_at', { ascending: false }),
-      ]);
-      if (jumpRes.data) setJump(jumpRes.data as JumpFull);
-      setEdits((editsRes.data ?? []) as JumpEdit[]);
+      try {
+        const { data, error } = await supabase.functions.invoke('instructor-sign', {
+          body: { action: 'get', jumpId, t: token },
+        });
+        if (error || !data?.jump) {
+          setLoadError(data?.error ?? error?.message ?? 'Could not load jump details.');
+          return;
+        }
+        setJump(data.jump as JumpFull);
+        setEdits((data.edits ?? []) as JumpEdit[]);
+      } catch (e: any) {
+        setLoadError(e?.message ?? 'Network error loading jump.');
+      }
     })();
   }, [jumpId]);
 
@@ -179,22 +185,24 @@ export default function InstructorSignScreen() {
     if (isStudent && !outcome) { Alert.alert('Outcome required', 'Please select Pass or Repeat for this student jump.'); return; }
     setSaving(true);
     try {
-      const { error } = await supabase.from('signatures').insert({
-        jump_id: jumpId,
-        signature_data: sigPaths.join(' '),
-        signer_name: signerName.trim(),
-        signer_licence_number: signerLicence.trim() || '',
-        signer_licence_rating: null,
-        signer_user_id: null,
-        outcome: isStudent ? outcome : null,
-        notes: signerNotes.trim() || null,
+      const { data, error } = await supabase.functions.invoke('instructor-sign', {
+        body: {
+          action: 'sign',
+          jumpId,
+          t: token,
+          signature_data: sigPaths.join(' '),
+          signer_name: signerName.trim(),
+          signer_licence_number: signerLicence.trim() || '',
+          outcome: isStudent ? outcome : null,
+          notes: signerNotes.trim() || null,
+        },
       });
-      if (error) { Alert.alert('Error saving signature', `DB: ${error.message}`); return; }
-      // Clear draft flag now that jump is signed
-      await supabase.from('jumps').update({ is_draft: false }).eq('id', jumpId);
-      Alert.alert('Signed!', `Jump #${jump?.jump_number} has been signed.`, [
-        { text: 'Done', onPress: () => router.replace(`/(tabs)/log/${jumpId}`) },
-      ]);
+      if (error || !data?.ok) {
+        Alert.alert('Error saving signature', data?.error ?? error?.message ?? 'Please try again.');
+        return;
+      }
+      // Navigate to the jump detail
+      router.replace(`/(tabs)/log/${jumpId}` as any);
     } finally {
       setSaving(false);
     }
@@ -303,6 +311,10 @@ export default function InstructorSignScreen() {
                   </View>
                 </>
               ) : null}
+            </View>
+          ) : loadError ? (
+            <View style={{ padding: spacing[4], backgroundColor: 'rgba(255,80,80,0.1)', borderRadius: radii.md, marginBottom: spacing[4] }}>
+              <Text style={{ fontFamily: 'InterTight-Medium', fontSize: 14, color: colors.danger }}>{loadError}</Text>
             </View>
           ) : (
             <ActivityIndicator color={colors.sky} style={{ marginVertical: 20 }} />

@@ -432,7 +432,8 @@ export default function NewJumpScreen() {
     : null;
   // Warning B: fresh account starting above #1 (user has prior jumps not in this app).
   // Suppressed during voice prefill — the AI already confirmed the number with the user.
-  const freshStartWarning = !voicePrefill && lastJumpNum === null && jumpNum.trim() && !isNaN(jumpNumInt) && jumpNumInt > 1
+  // Suppressed when editing a draft — lastJumpNum is intentionally null in that flow.
+  const freshStartWarning = !voicePrefill && !draftId && lastJumpNum === null && jumpNum.trim() && !isNaN(jumpNumInt) && jumpNumInt > 1
     ? `Starting at #${jumpNumInt} means you have ${jumpNumInt - 1} jump${jumpNumInt - 1 === 1 ? '' : 's'} elsewhere not yet in this app. That’s fine — you can still save.`
     : null;
   const activeWarning = jumpNumWarning ?? freshStartWarning;

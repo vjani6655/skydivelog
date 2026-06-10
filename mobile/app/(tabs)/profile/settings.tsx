@@ -250,7 +250,7 @@ export default function SettingsScreen() {
     try {
       // Clean up any existing unverified factors before re-enrolling
       const { data: existing } = await supabase.auth.mfa.listFactors();
-      const unverified = existing?.totp?.filter(f => f.status === 'unverified') ?? [];
+      const unverified = existing?.totp?.filter(f => (f.status as string) === 'unverified') ?? [];
       await Promise.all(unverified.map(f => supabase.auth.mfa.unenroll({ factorId: f.id })));
 
       const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp', issuer: 'SkydiveLog', friendlyName: `Authenticator-${Date.now()}` });
@@ -485,7 +485,7 @@ export default function SettingsScreen() {
                 <Text style={styles.modalStep}>1. Scan this QR code with your authenticator app</Text>
                 {mfaQR ? (
                   <View style={styles.qrWrapper}>
-                    <QRCode value={mfaQR} size={200} backgroundColor="white" color="black" ecLevel="L" />
+                    <QRCode value={mfaQR} size={200} backgroundColor="white" color="black" />
                   </View>
                 ) : null}
                 <Text style={styles.modalStep}>Or enter this key manually:</Text>

@@ -46,7 +46,8 @@ export default function QRScreen() {
   }, [jumpId]);
 
   const expired = secondsLeft === 0;
-  // QR payload: a deep link URL that opens the instructor-sign screen directly
+  // QR payload: a deep link URL that opens the instructor-sign screen directly.
+  // Token is recomputed each render so it stays current as the countdown ticks.
   const token = Math.floor(Date.now() / (EXPIRES_IN * 1000));
   const qrValue = `mobile:///log/instructor-sign?jumpId=${jumpId}&t=${token}`;
 
