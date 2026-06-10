@@ -68,7 +68,7 @@ export const FIELD_ORDER: FieldKey[] = [...REQUIRED_FIELDS, ...OPTIONAL_FIELDS];
 
 export const JUMP_TYPES = [
   'Belly', 'Tracking', 'Wingsuit', 'Freefly', 'CRW',
-  'AFF', 'Tandem', 'Coach', 'Demo', 'Night', 'Camera Flying',
+  'AFF', 'Tandem', 'Coach', 'Demo', 'Night', 'Camera Flying', 'Hop&Pop',
 ];
 
 // ─── Questions ────────────────────────────────────────────────────────────────

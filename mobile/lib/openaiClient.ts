@@ -201,7 +201,7 @@ export async function extractJumpFieldsAI(
       if (totalSecs >= 10) out.canopyTime = ct;
     }
     if (typeof raw.jumpType === 'string' && raw.jumpType.trim()) {
-      const VALID_JUMP_TYPES = ['Belly', 'Tracking', 'Wingsuit', 'Freefly', 'CRW', 'AFF', 'Tandem', 'Coach', 'Demo', 'Night', 'Camera Flying'];
+      const VALID_JUMP_TYPES = ['Belly', 'Tracking', 'Wingsuit', 'Freefly', 'CRW', 'AFF', 'Tandem', 'Coach', 'Demo', 'Night', 'Camera Flying', 'Hop&Pop'];
       const jt = raw.jumpType.trim();
       const exact = VALID_JUMP_TYPES.find(v => v.toLowerCase() === jt.toLowerCase());
       const starts = !exact && VALID_JUMP_TYPES.find(v => jt.toLowerCase().startsWith(v.toLowerCase()));

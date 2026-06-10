@@ -15,7 +15,7 @@ const SORT_OPTIONS = [
   { key: 'freefall',  label: 'Freefall time' },
 ] as const;
 
-const JUMP_TYPES = ['Belly', 'Tracking', 'Wingsuit', 'Freefly', 'CRW', 'AFF', 'Tandem', 'Coach', 'Demo', 'Night', 'Camera Flying'];
+const JUMP_TYPES = ['Belly', 'Tracking', 'Wingsuit', 'Freefly', 'CRW', 'AFF', 'Tandem', 'Coach', 'Demo', 'Night', 'Camera Flying', 'Hop&Pop'];
 
 export type SortKey = typeof SORT_OPTIONS[number]['key'];
 

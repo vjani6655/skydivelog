@@ -12,7 +12,7 @@ import { useColors } from '@/lib/theme';
 import { usePrefs, fmtJumpDateTime } from '@/lib/prefsContext';
 import type { JumpFull } from '@/lib/types';
 
-const JUMP_TYPES = ['Belly', 'Tracking', 'Wingsuit', 'Freefly', 'CRW', 'AFF', 'Tandem', 'Coach', 'Demo', 'Night', 'Camera Flying'];
+const JUMP_TYPES = ['Belly', 'Tracking', 'Wingsuit', 'Freefly', 'CRW', 'AFF', 'Tandem', 'Coach', 'Demo', 'Night', 'Camera Flying', 'Hop&Pop'];
 
 function sanitizeJumpType(text: string): string | null {
   if (!text.trim()) return null;
