@@ -86,7 +86,8 @@ export default function LoginPage() {
       setMfaRequired(true)
       setLoading(false)
     } else {
-      router.push("/dashboard")
+      const next = new URLSearchParams(window.location.search).get('next')
+      router.push(next ?? "/dashboard")
       router.refresh()
     }
   }
@@ -104,7 +105,8 @@ export default function LoginPage() {
       if (chErr || !ch) { setMfaError(chErr?.message ?? 'Challenge failed'); return }
       const { error: verErr } = await supabase.auth.mfa.verify({ factorId: totp.id, challengeId: ch.id, code: mfaCode })
       if (verErr) { setMfaError('Invalid code. Try again.'); return }
-      router.push("/dashboard")
+      const next = new URLSearchParams(window.location.search).get('next')
+      router.push(next ?? "/dashboard")
       router.refresh()
     } finally {
       setMfaLoading(false)

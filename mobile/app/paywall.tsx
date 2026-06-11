@@ -7,6 +7,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Linking,
+  Platform,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -154,24 +155,36 @@ export default function PaywallScreen() {
             <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
-        <TouchableOpacity
-          style={[styles.applePayButton, loading && { opacity: 0.6 }]}
-          onPress={handleSubscribe}
-          disabled={loading}
-          activeOpacity={0.8}
-        >
-          {loading ? (
-            <ActivityIndicator color={colors.bg} size="small" />
-          ) : (
-            <>
+        {Platform.OS === 'ios' ? (
+          <View style={styles.iosSubscribeBox}>
+            <Ionicons name="globe-outline" size={20} color={colors.sky} />
+            <Text style={styles.iosSubscribeText}>
+              To subscribe, visit{' '}
+              <Text style={styles.iosSubscribeLink} onPress={() => Linking.openURL(`${WEB_URL}/subscribe`)}>
+                jumplogs.com/subscribe
+              </Text>
+            </Text>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={[styles.applePayButton, loading && { opacity: 0.6 }]}
+            onPress={handleSubscribe}
+            disabled={loading}
+            activeOpacity={0.8}
+          >
+            {loading ? (
+              <ActivityIndicator color={colors.bg} size="small" />
+            ) : (
               <Text style={styles.applePayText}>Subscribe · $12 / year</Text>
-            </>
-          )}
-        </TouchableOpacity>
+            )}
+          </TouchableOpacity>
+        )}
 
-        <Text style={styles.legalCaption}>
-          $12.00 USD billed today · Stripe · cancel anytime
-        </Text>
+        {Platform.OS !== 'ios' && (
+          <Text style={styles.legalCaption}>
+            $12.00 USD billed today · Stripe · cancel anytime
+          </Text>
+        )}
 
         {/* Skip link — trial limit only */}
         {canSkip && (
@@ -342,6 +355,28 @@ function makeStyles(c: ColorSet) {
     color: c.fg3,
     textAlign: 'center',
     marginBottom: spacing[4],
+  },
+  iosSubscribeBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[3],
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: radii.lg,
+    padding: spacing[4],
+    marginBottom: spacing[4],
+  },
+  iosSubscribeText: {
+    flex: 1,
+    fontFamily: 'InterTight-Regular',
+    fontSize: 14,
+    color: c.fg2,
+    lineHeight: 20,
+  },
+  iosSubscribeLink: {
+    fontFamily: 'InterTight-SemiBold',
+    color: c.sky,
   },
   skipLink: {
     alignItems: 'center',
