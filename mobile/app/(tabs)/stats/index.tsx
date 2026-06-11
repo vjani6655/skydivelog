@@ -194,7 +194,7 @@ function StatsA({ s }: { s: StatsBag }) {
               <Text style={styles.labelSm}>avg {fmtAvg(Math.round(s.totalCanopySecs / Math.max(s.maxJumpNum, 1)))} career</Text>
             </>
           ) : (
-            <Text style={styles.labelSm}>avg {fmtAvg(Math.round(s.appCanopySecs / Math.max(jumps.length, 1)))} per jump</Text>
+            <Text style={styles.labelSm}>avg {fmtAvg(Math.round(s.appCanopySecs / Math.max(s.totalJumps, 1)))} per jump</Text>
           )}
         </View>
       </View>

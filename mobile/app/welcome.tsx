@@ -69,7 +69,6 @@ export default function WelcomeScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.priceCaption}>$12 / year · cancel any time</Text>
         <View style={styles.legalRow}>
           <Text style={styles.legalLink} onPress={() => Linking.openURL('https://jumplogs.com/terms')}>Terms</Text>
           <Text style={styles.legalSep}> · </Text>

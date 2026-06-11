@@ -10,7 +10,7 @@ export default function LogLayout() {
       <Stack.Screen name="favourites" />
       <Stack.Screen name="tags" />
       <Stack.Screen name="qr" />
-      <Stack.Screen name="instructor-sign" />
+      <Stack.Screen name="instructor-sign" options={{ gestureEnabled: false }} />
     </Stack>
   );
 }

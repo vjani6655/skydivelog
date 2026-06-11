@@ -376,6 +376,8 @@ export default function NewJumpScreen() {
   const [saving, setSaving] = useState(false);
   const [draftLoading, setDraftLoading] = useState(!!draftId);
   const [savedJumpId, setSavedJumpId] = useState('');
+  // Tracks the jump row auto-created when the user presses QR before saving
+  const [autoSavedDraftId, setAutoSavedDraftId] = useState<string | null>(null);
   const [savedJumpNum, setSavedJumpNum] = useState(0);
   const [totalJumps, setTotalJumps] = useState(0);
   const [scrollEnabled, setScrollEnabled] = useState(true);
@@ -691,6 +693,70 @@ export default function NewJumpScreen() {
       setSavedJumpNum(actualJumpNum);
       setTotalJumps(count ?? 0);
       setStep('saved');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Called by the QR button in step 4 — auto-saves as draft so the jump has
+  // a DB row (and therefore a real UUID) before we generate the QR code.
+  const handleQRPress = async () => {
+    const existingId = draftId || autoSavedDraftId;
+    if (existingId) {
+      router.push({ pathname: '/(tabs)/log/qr', params: { jumpId: existingId } });
+      return;
+    }
+    if (!jumpNum.trim() || isNaN(jumpNumInt)) {
+      Alert.alert('Jump number required', 'Enter a jump number before showing the QR code.');
+      return;
+    }
+    setSaving(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
+      if (!user) { Alert.alert('Error', 'Not signed in'); return; }
+
+      let dropzoneId: string | null = null;
+      if (dzName.trim()) {
+        const { data: dzRows } = await supabase.from('dropzones').select('id').ilike('name', dzName.trim()).limit(1);
+        if (dzRows?.length) {
+          dropzoneId = dzRows[0].id;
+        } else {
+          const { data: newDz } = await supabase.from('dropzones').insert({ name: dzName.trim(), region: '' }).select('id').single();
+          if (newDz) dropzoneId = newDz.id;
+        }
+      }
+
+      const { data: newJump, error } = await supabase.from('jumps').insert({
+        user_id: user.id,
+        jump_number: jumpNumInt,
+        date: toLocalISOAsUTC(jumpDate),
+        dropzone_id: dropzoneId,
+        aircraft_type: acType.trim() || null,
+        aircraft_rego: acRego.trim() || null,
+        exit_altitude_ft: parseInt(exitAlt, 10) || null,
+        freefall_seconds: parseInt(ffSecs, 10) || null,
+        canopy_seconds: canopyInput ? parseMSS(canopyInput) : null,
+        pull_altitude_ft: parseInt(pullAlt, 10) || null,
+        jump_type: jumperType === 'Student' ? sanitizeJumpType(jumpType) : (jumpType || null),
+        jump_stage: jumperType === 'Student' ? (jumpType.trim() || null) : null,
+        jumper_type: jumperType.toLowerCase(),
+        canopy_type: canopyType.trim() || null,
+        canopy_gear_id: canopyGearId || null,
+        is_favourite: isFav,
+        notes: notes.trim() || null,
+        landing_accuracy_value: landingAccuracyValue.trim() || null,
+        landing_accuracy_unit: landingAccuracyValue.trim() ? landingAccuracyUnit : null,
+        people_on_jump: parseInt(peopleOnJump, 10) || null,
+        is_draft: true,
+      }).select('id').single();
+
+      if (error || !newJump) {
+        Alert.alert('Error', error?.message ?? 'Could not save jump.');
+        return;
+      }
+      setAutoSavedDraftId(newJump.id);
+      router.push({ pathname: '/(tabs)/log/qr', params: { jumpId: newJump.id } });
     } finally {
       setSaving(false);
     }
@@ -1198,7 +1264,7 @@ export default function NewJumpScreen() {
           {step === 4 && (<>
             <View style={styles.step4Row}>
               <TouchableOpacity style={[styles.btn, styles.btnGhost, { flex: 1 }]} onPress={() => setStep(3)} activeOpacity={0.7}><Text style={styles.btnGhostText}>Back</Text></TouchableOpacity>
-              <TouchableOpacity style={[styles.btn, styles.btnGhost, { width: 44, paddingHorizontal: 0 }]} onPress={() => router.push({ pathname: '/(tabs)/log/qr', params: { jumpNum } })} activeOpacity={0.7}>
+              <TouchableOpacity style={[styles.btn, styles.btnGhost, { width: 44, paddingHorizontal: 0 }]} onPress={handleQRPress} activeOpacity={0.7}>
                 <Ionicons name="qr-code-outline" size={20} color={colors.fg2} />
               </TouchableOpacity>
               <TouchableOpacity

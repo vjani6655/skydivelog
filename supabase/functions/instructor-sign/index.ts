@@ -58,10 +58,12 @@ serve(async (req) => {
   }
 
   // ── Token validation ────────────────────────────────────────────────────────
-  // Accept the current window OR the immediately preceding one (handles the
-  // edge case where QR was generated just before a window boundary).
+  // For 'get': accept current window + 1 previous (≈10 min) — prevents stale QR loads.
+  // For 'sign': accept up to 12 previous windows (≈1 hour) — the scan already proved
+  //   possession; we just need to confirm the token was ever valid, not that it's fresh.
   const now = Math.floor(Date.now() / (EXPIRES_IN * 1000));
-  if (t !== now && t !== now - 1) {
+  const maxAge = action === 'sign' ? 12 : 1;
+  if (t > now || t < now - maxAge) {
     return new Response(
       JSON.stringify({ error: 'QR code has expired. Ask the jumper to refresh it.' }),
       { status: 403, headers: { ...CORS, 'Content-Type': 'application/json' } },
@@ -88,6 +90,14 @@ serve(async (req) => {
       );
     }
 
+    // Fetch jump owner's public profile (name + licence) so the instructor
+    // knows whose jump they're signing.
+    const { data: jumper } = await db
+      .from('users')
+      .select('full_name, licence_number, licence_rating')
+      .eq('id', data.user_id)
+      .maybeSingle();
+
     // Also fetch edits
     const { data: edits } = await db
       .from('jump_edits')
@@ -96,7 +106,7 @@ serve(async (req) => {
       .order('edited_at', { ascending: false });
 
     return new Response(
-      JSON.stringify({ jump: data, edits: edits ?? [] }),
+      JSON.stringify({ jump: data, jumper: jumper ?? null, edits: edits ?? [] }),
       { status: 200, headers: { ...CORS, 'Content-Type': 'application/json' } },
     );
   }
@@ -156,8 +166,22 @@ serve(async (req) => {
     // Clear draft flag
     await db.from('jumps').update({ is_draft: false }).eq('id', jumpId);
 
-    // Send push notification to jump owner (best-effort)
+    // Insert in-app notification + send push (best-effort)
     try {
+      const notifId = crypto.randomUUID();
+      const title = `Jump #${jumpRow.jump_number} signed`;
+      const body  = `Signed by ${signer_name.trim()}`;
+
+      // Always write to the inbox
+      await db.from('notifications').insert({
+        id: notifId,
+        user_id: jumpRow.user_id,
+        title,
+        body,
+        data: { url: `/(tabs)/log/${jumpId}`, notification_id: notifId },
+      });
+
+      // Push only if a token is registered
       const { data: pref } = await db
         .from('notification_preferences')
         .select('push_token')
@@ -165,22 +189,13 @@ serve(async (req) => {
         .maybeSingle();
 
       if (pref?.push_token) {
-        const notifId = crypto.randomUUID();
-        await db.from('notifications').insert({
-          id: notifId,
-          user_id: jumpRow.user_id,
-          title: `Jump #${jumpRow.jump_number} signed ✅`,
-          body: `Signed by ${signer_name.trim()}`,
-          data: { url: `/(tabs)/log/${jumpId}`, notification_id: notifId },
-        });
-
         await fetch('https://exp.host/--/api/v2/push/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             to: pref.push_token,
-            title: `Jump #${jumpRow.jump_number} signed ✅`,
-            body: `Signed by ${signer_name.trim()}`,
+            title,
+            body,
             data: { url: `/(tabs)/log/${jumpId}`, notification_id: notifId },
             sound: 'default',
           }),

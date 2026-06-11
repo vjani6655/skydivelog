@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Share } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
@@ -23,9 +23,12 @@ export default function QRScreen() {
   const { jumpId } = useLocalSearchParams<{ jumpId: string }>();
   const [jump, setJump] = useState<JumpFull | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(EXPIRES_IN);
+  const [signed, setSigned] = useState(false);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
+    // Load jump details
     (async () => {
       const { data } = await supabase
         .from('jumps')
@@ -35,6 +38,7 @@ export default function QRScreen() {
       if (data) setJump(data as JumpFull);
     })();
 
+    // QR expiry countdown
     tickRef.current = setInterval(() => {
       setSecondsLeft(s => {
         if (s <= 1) { clearInterval(tickRef.current!); return 0; }
@@ -42,19 +46,80 @@ export default function QRScreen() {
       });
     }, 1000);
 
-    return () => { if (tickRef.current) clearInterval(tickRef.current); };
+    // Poll every 4s to detect when the instructor has signed
+    pollRef.current = setInterval(async () => {
+      const { data } = await supabase
+        .from('signatures')
+        .select('id')
+        .eq('jump_id', jumpId)
+        .limit(1)
+        .maybeSingle();
+      if (data) {
+        setSigned(true);
+        clearInterval(pollRef.current!);
+        clearInterval(tickRef.current!);
+      }
+    }, 4000);
+
+    return () => {
+      if (tickRef.current) clearInterval(tickRef.current);
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
   }, [jumpId]);
 
   const expired = secondsLeft === 0;
-  // QR payload: a deep link URL that opens the instructor-sign screen directly.
-  // Token is recomputed each render so it stays current as the countdown ticks.
   const token = Math.floor(Date.now() / (EXPIRES_IN * 1000));
   const qrValue = `mobile:///log/instructor-sign?jumpId=${jumpId}&t=${token}`;
 
+  // ── Signed success state ───────────────────────────────────────────────────
+  if (signed) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <View style={styles.header}>
+          <View style={{ width: 36 }} />
+          <Text style={styles.headerTitle}>Jump signed</Text>
+          <View style={{ width: 36 }} />
+        </View>
+        <View style={styles.successBody}>
+          <View style={styles.successCircle}>
+            <Ionicons name="checkmark" size={48} color={colors.ok} />
+          </View>
+          <Text style={styles.successTitle}>Signed!</Text>
+          <Text style={styles.successSub}>
+            {jump ? `Jump #${jump.jump_number} has been signed by your instructor.` : 'Your jump has been signed by your instructor.'}
+          </Text>
+          <TouchableOpacity
+            style={styles.successBtn}
+            onPress={() => {
+              router.dismissAll();
+              router.push(`/(tabs)/log/${jumpId}` as any);
+            }}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="eye-outline" size={16} color={colors.onSky} />
+            <Text style={styles.successBtnText}>View signed jump</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.successBtnGhost}
+            onPress={() => router.dismissAll()}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.successBtnGhostText}>Back to logbook</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // ── Normal QR state ────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.close} onPress={() => router.back()} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={styles.close}
+          onPress={() => router.dismissAll()}
+          activeOpacity={0.7}
+        >
           <Ionicons name="close" size={22} color={colors.fg} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Hand to instructor</Text>
@@ -91,7 +156,16 @@ export default function QRScreen() {
             <Ionicons name="refresh" size={16} color={colors.onSky} />
             <Text style={styles.refreshBtnText}>Refresh code</Text>
           </TouchableOpacity>
-        ) : null}
+        ) : (
+          <TouchableOpacity
+            style={styles.shareBtn}
+            onPress={() => Share.share({ url: qrValue, message: qrValue })}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="share-outline" size={16} color={colors.fg2} />
+            <Text style={styles.shareBtnText}>Share link with instructor</Text>
+          </TouchableOpacity>
+        )}
 
         {jump ? (
           <View style={styles.card}>
@@ -128,6 +202,16 @@ function makeStyles(c: ColorSet) {
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing[5], paddingVertical: spacing[3], borderBottomWidth: 1, borderBottomColor: c.border },
   close: { width: 36, height: 36, justifyContent: 'center' },
   headerTitle: { flex: 1, textAlign: 'center', fontFamily: 'InterTight-SemiBold', fontSize: 17, color: c.fg },
+  // Signed success state
+  successBody: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing[8], gap: spacing[4] },
+  successCircle: { width: 88, height: 88, borderRadius: 44, backgroundColor: 'rgba(74,222,128,0.12)', borderWidth: 2, borderColor: 'rgba(74,222,128,0.35)', justifyContent: 'center', alignItems: 'center' },
+  successTitle: { fontFamily: 'InterTight-Bold', fontSize: 28, letterSpacing: -0.5, color: c.fg },
+  successSub: { fontFamily: 'InterTight-Regular', fontSize: 15, color: c.fg2, textAlign: 'center', lineHeight: 22 },
+  successBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], backgroundColor: c.sky, paddingHorizontal: spacing[6], paddingVertical: spacing[4], borderRadius: radii.md, marginTop: spacing[2] },
+  successBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: c.onSky },
+  successBtnGhost: { paddingVertical: spacing[3] },
+  successBtnGhostText: { fontFamily: 'InterTight-Regular', fontSize: 14, color: c.fg3 },
+  // QR state
   body: { flex: 1, alignItems: 'center', paddingHorizontal: spacing[5], paddingTop: spacing[8] },
   bodyText: { fontFamily: 'InterTight-Regular', fontSize: 14, color: c.fg2, textAlign: 'center', marginBottom: spacing[8] },
   qrBox: { width: 268, height: 268, borderRadius: radii.lg, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', padding: 19 },
@@ -138,6 +222,8 @@ function makeStyles(c: ColorSet) {
   countdown: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, letterSpacing: 0.8, color: c.fg3 },
   refreshBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], backgroundColor: c.sky, paddingHorizontal: spacing[5], paddingVertical: spacing[3], borderRadius: radii.md, marginTop: spacing[5] },
   refreshBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 14, color: c.onSky },
+  shareBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, paddingHorizontal: spacing[5], paddingVertical: spacing[3], borderRadius: radii.md, marginTop: spacing[5] },
+  shareBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 14, color: c.fg2 },
   card: { width: '100%', backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, padding: spacing[4], marginTop: spacing[6] },
   cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing[2] },
   cardMono: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, letterSpacing: 0.8, color: c.fg3 },

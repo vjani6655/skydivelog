@@ -29,6 +29,7 @@ interface TopBarProps {
   title?:            string;
   isFavourite:       boolean;
   overlay?:          boolean;
+  readOnly?:         boolean;
   onBack:            () => void;
   onToggleFavourite: () => void;
   onMenu:            () => void;
@@ -36,7 +37,7 @@ interface TopBarProps {
 }
 
 function TopBar({
-  layout, title, isFavourite, overlay = false,
+  layout, title, isFavourite, overlay = false, readOnly = false,
   onBack, onToggleFavourite, onMenu, onShare,
 }: TopBarProps) {
   const colors = useColors();
@@ -64,13 +65,17 @@ function TopBar({
         ) : null}
       </View>
       <View style={styles.topBarRight}>
-        <IconButton
-          name={isFavourite ? 'star-fill' : 'star'}
-          onPress={onToggleFavourite}
-          style={buttonStyle}
-          iconColor={isFavourite ? colors.warn : iconColor}
-        />
-        <IconButton name="dots" onPress={onMenu} style={buttonStyle} iconColor={iconColor} />
+        {!readOnly && (
+          <IconButton
+            name={isFavourite ? 'star-fill' : 'star'}
+            onPress={onToggleFavourite}
+            style={buttonStyle}
+            iconColor={isFavourite ? colors.warn : iconColor}
+          />
+        )}
+        {!readOnly && (
+          <IconButton name="dots" onPress={onMenu} style={buttonStyle} iconColor={iconColor} />
+        )}
       </View>
     </View>
   );
@@ -80,7 +85,8 @@ function TopBar({
 
 export default function JumpDetailScreen() {
   const colors = useColors();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, readOnly: readOnlyParam } = useLocalSearchParams<{ id: string; readOnly?: string }>();
+  const readOnly = readOnlyParam === 'true';
 
   const [jump,       setJump]       = useState<JumpFull | null>(null);
   const [signatures, setSignatures] = useState<JumpSignature[]>([]);
@@ -204,6 +210,7 @@ export default function JumpDetailScreen() {
             layout={layout}
             title={topBarTitle}
             isFavourite={jump.is_favourite}
+            readOnly={readOnly}
             onBack={() => router.back()}
             onToggleFavourite={toggleFavourite}
             onMenu={handleMenu}
@@ -227,6 +234,7 @@ export default function JumpDetailScreen() {
             overlay
             title={undefined}
             isFavourite={jump.is_favourite}
+            readOnly={readOnly}
             onBack={() => router.back()}
             onToggleFavourite={toggleFavourite}
             onMenu={handleMenu}

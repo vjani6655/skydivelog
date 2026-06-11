@@ -6,7 +6,7 @@ import type { AnnouncementItem } from '@/components/ui/AnnouncementBanner';
 
 const DISMISSED_KEY = '@jumplogs/dismissed_banners';
 
-async function getDismissed(): Promise<Set<string>> {
+async function getLocalDismissed(): Promise<Set<string>> {
   try {
     const raw = await AsyncStorage.getItem(DISMISSED_KEY);
     return new Set(raw ? JSON.parse(raw) : []);
@@ -15,7 +15,7 @@ async function getDismissed(): Promise<Set<string>> {
   }
 }
 
-async function saveDismissed(ids: Set<string>): Promise<void> {
+async function saveLocalDismissed(ids: Set<string>): Promise<void> {
   try {
     // Cap stored set at 100 entries to avoid unbounded growth
     const trimmed = Array.from(ids).slice(-100);
@@ -27,31 +27,55 @@ async function saveDismissed(ids: Set<string>): Promise<void> {
  * Returns the oldest unseen in-app banner for the current user, plus a
  * dismiss callback. Returns null when there's nothing to show.
  *
- * Fetches once on mount. The RLS policy on `announcements` already filters
- * to `status = 'sent' AND 'in_app_banner' = any(channels)`.
+ * Dismissals are persisted in:
+ *   1. AsyncStorage (instant, device-local)
+ *   2. notification_preferences.dismissed_announcement_ids (synced cross-device)
+ *
+ * Banners sent before the user's account creation date are never shown
+ * (prevents new users from seeing stale historical announcements).
  */
 export function useAnnouncementBanner(): {
   announcement: AnnouncementItem | null;
   dismiss: (id: string) => void;
 } {
-  const [queue,        setQueue]        = useState<AnnouncementItem[]>([]);
-  const [dismissed,    setDismissed]    = useState<Set<string>>(new Set());
-  const [ready,        setReady]        = useState(false);
+  const [queue,     setQueue]     = useState<AnnouncementItem[]>([]);
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const [ready,     setReady]     = useState(false);
   const dismissedRef = useRef<Set<string>>(new Set());
 
   const fetchBanners = useCallback(async () => {
-    const [seenIds, { data, error: _err }] = await Promise.all([
-      getDismissed(),
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
+
+    // Run all fetches in parallel
+    const [localDismissed, announcementsResult, prefResult] = await Promise.all([
+      getLocalDismissed(),
       supabase
         .from('announcements')
         .select('id, title, body, deep_link')
         .eq('status', 'sent')
         .contains('channels', ['in_app_banner'])
+        // Only show banners created on or after the user's signup date so that
+        // new users / re-installs don't see historical announcements.
+        .gte('sent_at', user?.created_at ?? '1970-01-01T00:00:00Z')
         .order('sent_at', { ascending: true }),
+      user
+        ? supabase
+            .from('notification_preferences')
+            .select('dismissed_announcement_ids')
+            .eq('user_id', user.id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
     ]);
-    dismissedRef.current = seenIds;
-    setDismissed(seenIds);
-    setQueue((data ?? []) as AnnouncementItem[]);
+
+    // Merge local + server dismissed sets so either source wins
+    const serverIds: string[] =
+      (prefResult?.data as any)?.dismissed_announcement_ids ?? [];
+    const merged = new Set([...localDismissed, ...serverIds]);
+
+    dismissedRef.current = merged;
+    setDismissed(merged);
+    setQueue((announcementsResult.data ?? []) as AnnouncementItem[]);
     setReady(true);
   }, []);
 
@@ -71,7 +95,21 @@ export function useAnnouncementBanner(): {
   const dismiss = useCallback((id: string) => {
     setDismissed(prev => {
       const next = new Set(prev).add(id);
-      saveDismissed(next);
+      dismissedRef.current = next;
+
+      // 1. Persist locally (instant)
+      saveLocalDismissed(next);
+
+      // 2. Sync to DB so other devices see the dismissal
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (!session?.user) return;
+        supabase
+          .from('notification_preferences')
+          .update({ dismissed_announcement_ids: Array.from(next) })
+          .eq('user_id', session.user.id)
+          .then(null, () => null); // best-effort, ignore errors
+      });
+
       return next;
     });
   }, []);
@@ -81,3 +119,4 @@ export function useAnnouncementBanner(): {
   const next = queue.find(a => !dismissed.has(a.id)) ?? null;
   return { announcement: next, dismiss };
 }
+
