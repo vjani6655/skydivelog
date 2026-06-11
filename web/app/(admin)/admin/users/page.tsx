@@ -103,6 +103,17 @@ export default async function AdminUsersPage({
   const signupRankMap: Record<string, number> = {}
   allUserMeta?.forEach((u, i) => { signupRankMap[u.id] = i + 1 })
 
+  // Fetch auth user_metadata for the current page of users to respect admin-extended trial dates
+  const userIds2 = users?.map(u => u.id) ?? []
+  const trialEndsAtMap: Record<string, string | undefined> = {}
+  if (userIds2.length > 0) {
+    await Promise.all(userIds2.map(async (uid) => {
+      const { data } = await db.auth.admin.getUserById(uid)
+      const ext = data?.user?.user_metadata?.trial_ends_at as string | undefined
+      if (ext) trialEndsAtMap[uid] = ext
+    }))
+  }
+
   const userIds = users?.map(u => u.id) ?? []
   const { data: jumpCounts } = await db
     .from('jumps')
@@ -118,8 +129,10 @@ export default async function AdminUsersPage({
     // Pick the most recently started subscription to reflect current status
     const allUserSubs: Sub[] = Array.isArray(u.subscriptions) ? u.subscriptions as Sub[] : (u.subscriptions ? [u.subscriptions as Sub] : [])
     const sub = allUserSubs.sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())[0] ?? null
-    const trialEnd = new Date(u.created_at)
-    trialEnd.setDate(trialEnd.getDate() + 14)
+    const customTrialEnd = trialEndsAtMap[u.id]
+    const trialEnd = customTrialEnd
+      ? new Date(customTrialEnd)
+      : new Date(new Date(u.created_at).getTime() + 14 * 86400000)
     const inTrial = !sub && Date.now() < trialEnd.getTime()
     const trialExpired = !sub && Date.now() >= trialEnd.getTime()
     const trialDaysLeft = Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / 86400000))

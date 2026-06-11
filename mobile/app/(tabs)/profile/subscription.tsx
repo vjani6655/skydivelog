@@ -1,7 +1,7 @@
 import { useCallback, useState, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView, StyleSheet, SafeAreaView,
-  ActivityIndicator, Linking, Alert,
+  ActivityIndicator, Linking, Alert, Platform,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -320,19 +320,31 @@ export default function SubscriptionScreen() {
 
         {/* CTA for non-active users */}
         {!hasAccess && (
-          <TouchableOpacity
-            style={[styles.subscribeBtn, subscribing && { opacity: 0.6 }]}
-            onPress={handleSubscribe}
-            disabled={subscribing}
-            activeOpacity={0.8}
-          >
-            {subscribing
-              ? <ActivityIndicator color="#fff" size="small" />
-              : <Text style={styles.subscribeBtnText}>
-                  {trialExpired || sub?.status === 'cancelled' ? 'Reactivate · $12/yr' : 'Subscribe · $12/yr'}
+          Platform.OS === 'ios' ? (
+            <View style={styles.iosSubscribeBox}>
+              <Ionicons name="globe-outline" size={20} color={colors.sky} />
+              <Text style={styles.iosSubscribeText}>
+                To subscribe, visit{' '}
+                <Text style={styles.iosSubscribeLink} onPress={() => Linking.openURL(`${WEB_URL}/subscribe`)}>
+                  jumplogs.com/subscribe
                 </Text>
-            }
-          </TouchableOpacity>
+              </Text>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={[styles.subscribeBtn, subscribing && { opacity: 0.6 }]}
+              onPress={handleSubscribe}
+              disabled={subscribing}
+              activeOpacity={0.8}
+            >
+              {subscribing
+                ? <ActivityIndicator color="#fff" size="small" />
+                : <Text style={styles.subscribeBtnText}>
+                    {trialExpired || sub?.status === 'cancelled' ? 'Reactivate · $12/yr' : 'Subscribe · $12/yr'}
+                  </Text>
+              }
+            </TouchableOpacity>
+          )
         )}
 
         {/* Undo cancellation for grace-period users — they already paid, no new charge */}
@@ -451,6 +463,9 @@ function makeStyles(c: ColorSet) {
   featureText: { fontFamily: 'InterTight-Regular', fontSize: 14, color: c.fg2 },
   subscribeBtn: { backgroundColor: c.sky, borderRadius: radii.md, paddingVertical: spacing[3], alignItems: 'center', justifyContent: 'center', minHeight: 46 },
   subscribeBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: '#fff' },
+  iosSubscribeBox: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], backgroundColor: c.surface2, borderRadius: radii.md, padding: spacing[4] },
+  iosSubscribeText: { flex: 1, fontFamily: 'InterTight-Regular', fontSize: 14, color: c.fg2 },
+  iosSubscribeLink: { fontFamily: 'InterTight-SemiBold', color: c.sky, textDecorationLine: 'underline' },
   cancelBtn: { borderWidth: 1, borderColor: c.danger, borderRadius: radii.md, paddingVertical: spacing[3], alignItems: 'center', justifyContent: 'center', minHeight: 46 },
   cancelBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: c.danger },
   manageBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing[1], paddingVertical: spacing[2] },
