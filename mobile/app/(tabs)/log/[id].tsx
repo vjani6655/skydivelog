@@ -94,6 +94,7 @@ export default function JumpDetailScreen() {
   const [layout,     setLayout]     = useState<LayoutPref>('Standard');
   const [edits,      setEdits]      = useState<JumpEdit[]>([]);
   const [loading,    setLoading]    = useState(true);
+  const [hasAccess,  setHasAccess]  = useState(true); // optimistic until loaded
 
   useEffect(() => { fetchAll(); }, [id]);
 
@@ -102,7 +103,7 @@ export default function JumpDetailScreen() {
     const user = session?.user;
     if (!user) return;
 
-    const [jumpRes, userRes, sigsRes, tagsRes, editsRes] = await Promise.all([
+    const [jumpRes, userRes, sigsRes, tagsRes, editsRes, subRes] = await Promise.all([
       supabase
         .from('jumps')
         .select('*, dropzones(name, region, latitude, longitude)')
@@ -116,12 +117,26 @@ export default function JumpDetailScreen() {
       supabase.from('signatures').select('*').eq('jump_id', id),
       supabase.from('jump_tags').select('tags(id, name, color)').eq('jump_id', id),
       supabase.from('jump_edits').select('*').eq('jump_id', id).order('edited_at', { ascending: true }),
+      supabase.from('subscriptions').select('status, renews_at').eq('user_id', user.id).order('started_at', { ascending: false }).limit(1).maybeSingle(),
     ]);
 
     if (jumpRes.data) setJump(jumpRes.data as JumpFull);
     if (userRes.data?.display_layout_jump_detail) {
       setLayout(userRes.data.display_layout_jump_detail as LayoutPref);
     }
+
+    // Derive access: active, overdue, or cancelled-in-grace
+    const sub = subRes.data;
+    const cancelledInGrace = sub?.status === 'cancelled' && !!sub?.renews_at && new Date(sub.renews_at) > new Date();
+    const subActive = sub?.status === 'active' || sub?.status === 'overdue' || cancelledInGrace;
+    const trialEndsAt = user.user_metadata?.trial_ends_at as string | undefined;
+    const trialEnd = (() => {
+      if (trialEndsAt) { const d = new Date(trialEndsAt); if (!isNaN(d.getTime())) return d; }
+      return new Date(new Date(user.created_at).getTime() + 14 * 86400000);
+    })();
+    const noActiveSub = !sub || sub.status === 'trial';
+    const inTrial = noActiveSub && Date.now() < trialEnd.getTime();
+    setHasAccess(subActive || inTrial);
     setSignatures((sigsRes.data ?? []) as JumpSignature[]);
     const flatTags = ((tagsRes.data ?? []) as unknown as Array<{ tags: TagData | null }>)
       .map(row => row.tags)
@@ -139,6 +154,10 @@ export default function JumpDetailScreen() {
   };
 
   const handleMenu = () => {
+    if (!hasAccess) {
+      router.push({ pathname: '/paywall', params: { reason: 'trial_expired' } } as any);
+      return;
+    }
     const isSigned = signatures.length > 0;
     Alert.alert(`Jump #${jump?.jump_number}`, undefined, [
       { text: 'Edit jump', onPress: () => router.push({ pathname: '/(tabs)/log/edit', params: { id } }) },

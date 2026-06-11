@@ -147,9 +147,10 @@ export default function LogScreen() {
   useFocusEffect(useCallback(() => { fetchAll(); }, []));
 
   // ── subscription gate ─────────────────────────────────────────────────────
-  const trialEnd = trialEndsAt
-    ? new Date(trialEndsAt)
-    : userCreatedAt ? new Date(new Date(userCreatedAt).getTime() + 14 * 86400000) : null;
+  const trialEnd = (() => {
+    if (trialEndsAt) { const d = new Date(trialEndsAt); if (!isNaN(d.getTime())) return d; }
+    return userCreatedAt ? new Date(new Date(userCreatedAt).getTime() + 14 * 86400000) : null;
+  })();
   const inTrial = !subActive && !!trialEnd && Date.now() < trialEnd.getTime();
   const trialExpired = !subActive && !!trialEnd && Date.now() >= trialEnd.getTime();
 

@@ -116,11 +116,13 @@ export default function ProfileScreen() {
   const ini = initials(name, email);
 
   // Subscription / trial status
-  const trialEnd = trialEndsAt
-    ? new Date(trialEndsAt)
-    : userCreatedAt ? new Date(new Date(userCreatedAt).getTime() + 14 * 86400000) : null;
-  const inTrial = !sub && !!trialEnd && Date.now() < trialEnd.getTime();
-  const trialExpired = !sub && !!trialEnd && Date.now() >= trialEnd.getTime();
+  const trialEnd = (() => {
+    if (trialEndsAt) { const d = new Date(trialEndsAt); if (!isNaN(d.getTime())) return d; }
+    return userCreatedAt ? new Date(new Date(userCreatedAt).getTime() + 14 * 86400000) : null;
+  })();
+  const noActiveSub = !sub || sub.status === 'trial';
+  const inTrial = noActiveSub && !!trialEnd && Date.now() < trialEnd.getTime();
+  const trialExpired = noActiveSub && !!trialEnd && Date.now() >= trialEnd.getTime();
   const trialDaysLeft = trialEnd ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / 86400000)) : 0;
   const incompleteCount = profile ? [
     profile.full_name,
@@ -202,7 +204,13 @@ export default function ProfileScreen() {
             <TouchableOpacity
               key={item.route}
               style={[styles.menuRow, i === MENU_ITEMS.length - 1 && styles.menuRowLast]}
-              onPress={() => router.push(item.route as any)}
+              onPress={() => {
+                if (item.label === 'Export logbook' && (trialExpired || (sub && sub.status !== 'active' && sub.status !== 'overdue' && !cancelledInGrace))) {
+                  router.push({ pathname: '/paywall', params: { reason: 'trial_expired' } } as any);
+                  return;
+                }
+                router.push(item.route as any);
+              }}
               activeOpacity={0.7}
             >
               <Ionicons name={item.icon as any} size={20} color={colors.fg2} />

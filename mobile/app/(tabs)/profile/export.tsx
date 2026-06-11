@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
 import Constants from 'expo-constants';
 import { supabase } from '@/lib/supabase';
+import { checkAccess } from '@/lib/checkAccess';
 import { spacing, radii } from '@/constants/tokens';
 import type { ColorSet } from '@/constants/tokens';
 import { useColors } from '@/lib/theme';
@@ -55,6 +56,10 @@ export default function ExportScreen() {
 
   // ── CSV export ────────────────────────────────────────────────────────────
   const handleCsvExport = async () => {
+    if (!await checkAccess()) {
+      router.push({ pathname: '/paywall', params: { reason: 'trial_expired' } } as any);
+      return;
+    }
     setLoading('csv');
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -135,6 +140,10 @@ export default function ExportScreen() {
 
   // ── PDF export ─────────────────────────────────────────────────────────────
   const handlePdfExport = async (layout: 'single' | 'ten') => {
+    if (!await checkAccess()) {
+      router.push({ pathname: '/paywall', params: { reason: 'trial_expired' } } as any);
+      return;
+    }
     setLoading(layout);
     try {
       const { data: { session } } = await supabase.auth.getSession();

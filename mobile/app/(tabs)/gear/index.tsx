@@ -7,6 +7,7 @@ import { useFocusEffect, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Svg, Path, Line, Rect } from 'react-native-svg';
 import { supabase } from '@/lib/supabase';
+import { checkAccess } from '@/lib/checkAccess';
 import { spacing, radii } from '@/constants/tokens';
 import type { ColorSet } from '@/constants/tokens';
 import { useColors } from '@/lib/theme';
@@ -109,7 +110,13 @@ export default function GearScreen() {
         </View>
         <TouchableOpacity
           style={[styles.iconBtn, styles.addBtn]}
-          onPress={() => router.push('/(tabs)/gear/new')}
+          onPress={async () => {
+            if (!await checkAccess()) {
+              router.push({ pathname: '/paywall', params: { reason: 'trial_expired' } } as any);
+              return;
+            }
+            router.push('/(tabs)/gear/new');
+          }}
           activeOpacity={0.8}
         >
           <Ionicons name="add" size={22} color={colors.onSky} />

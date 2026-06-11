@@ -226,11 +226,13 @@ export default function SubscriptionScreen() {
     );
   }
 
-  const trialEnd = trialEndsAt
-    ? new Date(trialEndsAt)
-    : userCreatedAt ? new Date(new Date(userCreatedAt).getTime() + 14 * 86400000) : null;
-  const inTrial = !sub && !!trialEnd && Date.now() < trialEnd.getTime();
-  const trialExpired = !sub && !!trialEnd && Date.now() >= trialEnd.getTime();
+  const trialEnd = (() => {
+    if (trialEndsAt) { const d = new Date(trialEndsAt); if (!isNaN(d.getTime())) return d; }
+    return userCreatedAt ? new Date(new Date(userCreatedAt).getTime() + 14 * 86400000) : null;
+  })();
+  const noActiveSub = !sub || sub.status === 'trial';
+  const inTrial = noActiveSub && !!trialEnd && Date.now() < trialEnd.getTime();
+  const trialExpired = noActiveSub && !!trialEnd && Date.now() >= trialEnd.getTime();
   const trialDaysLeft = trialEnd
     ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / 86400000))
     : 0;
