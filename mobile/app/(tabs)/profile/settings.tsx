@@ -20,6 +20,8 @@ import {
   type NotifPrefs,
 } from '@/lib/notifications';
 
+const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'https://jumplogs.com';
+
 const LAYOUT_JUMP_LIST = ['Timeline', 'Compact', 'Cards'];
 const LAYOUT_JUMP_DETAIL = ['Standard', 'Cockpit', 'Photo-led'];
 const LAYOUT_STATS = ['Cards', 'Cockpit', 'Story'];
@@ -118,6 +120,12 @@ export default function SettingsScreen() {
   const [priorFFInput, setPriorFFInput] = useState(''); // stored as "Xh Ym" display
   const [priorCanopyInput, setPriorCanopyInput] = useState('');
   const [firstJumpNumber, setFirstJumpNumber] = useState<number | null>(null);
+
+  // Delete account state
+  const [deleteModal, setDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   // 2FA state
   const [mfaEnabled, setMfaEnabled] = useState(false);
@@ -280,6 +288,34 @@ export default function SettingsScreen() {
       setMfaCode('');
     } finally {
       setMfaWorking(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!deletePassword.trim()) { setDeleteError('Password is required.'); return; }
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.email) { setDeleteError('Not signed in.'); setDeleting(false); return; }
+
+      // Verify password by re-authenticating
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: deletePassword,
+      });
+      if (signInError) { setDeleteError('Incorrect password.'); setDeleting(false); return; }
+
+      // Delete account via security-definer RPC (no admin key needed on client)
+      const { error: rpcError } = await supabase.rpc('delete_own_account');
+      if (rpcError) { setDeleteError(rpcError.message ?? 'Could not delete account. Try again.'); setDeleting(false); return; }
+
+      await supabase.auth.signOut();
+      router.replace('/welcome');
+    } catch {
+      setDeleteError('Something went wrong. Try again.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -470,6 +506,16 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        <SectionTitle text="DANGER ZONE" />
+        <TouchableOpacity
+          style={styles.deleteBtn}
+          onPress={() => { setDeletePassword(''); setDeleteError(''); setDeleteModal(true); }}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="trash-outline" size={16} color={colors.danger} style={{ marginRight: spacing[2] }} />
+          <Text style={styles.deleteBtnText}>Delete Account</Text>
+        </TouchableOpacity>
+
         {/* 2FA enroll modal */}
         <Modal visible={mfaModal === 'enroll'} animationType="slide" transparent onRequestClose={() => setMfaModal(null)}>
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
@@ -526,6 +572,54 @@ export default function SettingsScreen() {
             </View>
           </KeyboardAvoidingView>
         </Modal>
+
+        {/* Delete account modal */}
+        <Modal visible={deleteModal} animationType="slide" transparent onRequestClose={() => setDeleteModal(false)}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
+            <View style={styles.modalSheet}>
+              <View style={styles.modalHeader}>
+                <TouchableOpacity onPress={() => setDeleteModal(false)} style={styles.modalCancelBtn}>
+                  <Text style={styles.modalCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <Text style={styles.modalTitle}>Delete Account</Text>
+                <View style={{ width: 60 }} />
+              </View>
+              <ScrollView contentContainerStyle={styles.modalBody} keyboardShouldPersistTaps="handled">
+                <Text style={{ fontFamily: 'InterTight-Regular', fontSize: 14, color: colors.fg2, marginBottom: spacing[4], lineHeight: 20 }}>
+                  This will permanently delete your account and all your jump data. This action cannot be undone.
+                </Text>
+                <Text style={styles.modalStep}>Enter your password to confirm</Text>
+                <TextInput
+                  style={[styles.codeInput, { letterSpacing: 0, fontSize: 16, height: 48, marginBottom: spacing[3], paddingHorizontal: spacing[3], textAlign: 'left' }]}
+                  value={deletePassword}
+                  onChangeText={setDeletePassword}
+                  placeholder="Password"
+                  placeholderTextColor={colors.fg3}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                {!!deleteError && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing[3] }}>
+                    <Ionicons name="alert-circle-outline" size={14} color={colors.danger} style={{ marginRight: spacing[1] }} />
+                    <Text style={{ fontFamily: 'InterTight-Regular', fontSize: 13, color: colors.danger }}>{deleteError}</Text>
+                  </View>
+                )}
+                <TouchableOpacity
+                  style={[styles.confirmBtn, { backgroundColor: colors.danger }, (!deletePassword.trim() || deleting) && styles.confirmBtnDisabled]}
+                  onPress={handleDeleteAccount}
+                  disabled={!deletePassword.trim() || deleting}
+                  activeOpacity={0.8}
+                >
+                  {deleting
+                    ? <ActivityIndicator color="white" />
+                    : <Text style={styles.confirmBtnText}>Delete My Account</Text>
+                  }
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
       </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -575,5 +669,7 @@ function makeStyles(c: ColorSet) {
   confirmBtn: { backgroundColor: c.sky, borderRadius: radii.md, height: 50, alignItems: 'center', justifyContent: 'center' },
   confirmBtnDisabled: { opacity: 0.4 },
   confirmBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 16, color: 'white' },
+  deleteBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: spacing[3.5], borderRadius: radii.md, borderWidth: 1, borderColor: c.danger + '40', backgroundColor: c.dangerBg, marginBottom: spacing[4] },
+  deleteBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: c.danger },
   });
 }
