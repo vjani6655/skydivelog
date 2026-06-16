@@ -202,6 +202,17 @@ export default function PaywallScreen() {
             >
               <Text style={styles.restoreLinkText}>Restore purchases</Text>
             </TouchableOpacity>
+
+            {/* Privacy Policy & Terms of Use — required by Apple */}
+            <View style={styles.legalLinks}>
+              <TouchableOpacity onPress={() => Linking.openURL(`${WEB_URL}/privacy`)} activeOpacity={0.7}>
+                <Text style={styles.legalLinkText}>Privacy Policy</Text>
+              </TouchableOpacity>
+              <Text style={styles.legalLinkSep}>·</Text>
+              <TouchableOpacity onPress={() => Linking.openURL(`${WEB_URL}/terms`)} activeOpacity={0.7}>
+                <Text style={styles.legalLinkText}>Terms of Use</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         ) : (
           <TouchableOpacity
@@ -397,24 +408,6 @@ function makeStyles(c: ColorSet) {
   iosCtaArea: {
     marginBottom: spacing[5],
   },
-  errorBox: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing[2],
-    backgroundColor: c.danger + '18',
-    borderWidth: 1,
-    borderColor: c.danger + '44',
-    borderRadius: radii.md,
-    padding: spacing[3],
-    marginBottom: spacing[3],
-  },
-  errorText: {
-    flex: 1,
-    fontFamily: 'InterTight-Regular',
-    fontSize: 13,
-    color: c.danger,
-    lineHeight: 18,
-  },
   restoreLink: {
     alignItems: 'center',
     paddingVertical: spacing[2],
@@ -425,6 +418,24 @@ function makeStyles(c: ColorSet) {
     fontSize: 13,
     color: c.fg3,
     textDecorationLine: 'underline',
+  },
+  legalLinks: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing[2],
+    marginTop: spacing[2],
+  },
+  legalLinkText: {
+    fontFamily: 'InterTight-Regular',
+    fontSize: 12,
+    color: c.fg3,
+    textDecorationLine: 'underline',
+  },
+  legalLinkSep: {
+    fontFamily: 'InterTight-Regular',
+    fontSize: 12,
+    color: c.fg3,
   },
   skipLink: {
     alignItems: 'center',

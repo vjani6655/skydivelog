@@ -21,7 +21,9 @@ const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'https://jumplogs.com';
 export type IAPStatus = 'loading' | 'ready' | 'purchasing' | 'validating' | 'success' | 'error' | 'unavailable';
 
 export function useIAP() {
-  const [status, setStatus]           = useState<IAPStatus>('loading');
+  const [status, setStatus]           = useState<IAPStatus>(
+    Platform.OS !== 'ios' ? 'ready' : !iapModule ? 'unavailable' : 'loading'
+  );
   const [error, setError]             = useState('');
   const [localizedPrice, setLocalizedPrice] = useState<string | null>(null);
 
@@ -77,14 +79,7 @@ export function useIAP() {
   };
 
   useEffect(() => {
-    if (Platform.OS !== 'ios') {
-      setStatus('ready');
-      return;
-    }
-
-    if (!iapModule) {
-      // expo-iap native module not linked — dev build without IAP support
-      setStatus('unavailable');
+    if (Platform.OS !== 'ios' || !iapModule) {
       return;
     }
 
@@ -120,7 +115,7 @@ export function useIAP() {
       } catch (err: unknown) {
         console.log('[IAP] initConnection failed:', String(err));
         if (mountedRef.current) {
-          setError(`StoreKit init failed: ${(err as Record<string, string>)?.message ?? String(err)}`);
+          setError('Could not connect to the App Store. Please try again.');
           setStatus('error');
         }
         return;
@@ -133,10 +128,8 @@ export function useIAP() {
         console.log('[IAP] matched product:', JSON.stringify(product));
         if (!product) {
           if (mountedRef.current) {
-            const returned = products?.length
-              ? `Returned ${products.length} product(s): ${products.map((p) => p.id).join(', ')}`
-              : 'StoreKit returned 0 products';
-            setError(`Subscription not available. ${returned}. Looking for: ${APPLE_PRODUCT_ID}`);
+            console.log('[IAP] product not found, returned:', products?.length, products?.map((p) => p.id).join(', '), 'looking for:', APPLE_PRODUCT_ID);
+            setError('Subscription not available. Please try again later or contact support.');
             setStatus('error');
           }
           return;
@@ -147,7 +140,7 @@ export function useIAP() {
       } catch (err: unknown) {
         console.log('[IAP] fetchProducts error:', String(err));
         if (mountedRef.current) {
-          setError(`Product fetch failed (${APPLE_PRODUCT_ID}): ${(err as Record<string, string>)?.message ?? String(err)}`);
+          setError('Could not load subscription details. Please try again.');
           setStatus('error');
         }
       }
@@ -159,7 +152,6 @@ export function useIAP() {
       errorListenerRef.current?.remove();
       iapModule?.endConnection().catch(() => {});
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const startPurchase = async () => {
@@ -210,10 +202,8 @@ export function useIAP() {
       console.log('[IAP] fetchProducts result:', JSON.stringify(products));
       const product = products?.find((p) => p.id === APPLE_PRODUCT_ID);
       if (!product) {
-        const returned = products?.length
-          ? `Returned ${products.length} product(s): ${products.map((p) => p.id).join(', ')}`
-          : 'StoreKit returned 0 products';
-        setError(`Subscription not available. ${returned}. Looking for: ${APPLE_PRODUCT_ID}`);
+        console.log('[IAP] reset: product not found, returned:', products?.length, products?.map((p) => p.id).join(', '), 'looking for:', APPLE_PRODUCT_ID);
+        setError('Subscription not available. Please try again later or contact support.');
         setStatus('error');
         return;
       }
@@ -221,7 +211,7 @@ export function useIAP() {
       setStatus('ready');
     } catch (err: unknown) {
       console.log('[IAP] fetchProducts error:', String(err));
-      setError(`Product fetch failed: ${(err as Record<string, string>)?.message ?? String(err)}`);
+      setError('Could not load subscription details. Please try again.');
       setStatus('error');
     }
   };

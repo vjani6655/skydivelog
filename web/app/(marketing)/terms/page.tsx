@@ -9,6 +9,13 @@ export const metadata: Metadata = {
 
 const sections = [
   {
+    id: "license",
+    title: "License",
+    content: `The Jump Logs app ("Licensed Application") is licensed, not sold, to you. Subject to your compliance with these Terms, the developer grants you a limited, non-exclusive, non-transferable, revocable licence to use the Licensed Application on Apple-branded devices that you own or control, solely for your personal, non-commercial purposes.
+
+You may not copy (except as permitted by this licence), reverse-engineer, disassemble, attempt to derive the source code of, modify, or create derivative works of the Licensed Application or any part of it. You may not distribute or make the Licensed Application available over a network where it could be used by multiple devices simultaneously. You may not transfer, sublicense, or resell the Licensed Application.`,
+  },
+  {
     id: "acceptance",
     title: "Acceptance of terms",
     content: `By creating an account, downloading the Jump Logs app, or using the Jump Logs website (jumplogs.com), you agree to be bound by these Terms of Service. If you do not agree, do not use the service. These terms apply to all users of the mobile app and website.`,
@@ -51,13 +58,41 @@ You may not share your account with others or create accounts on behalf of third
   {
     id: "subscription",
     title: "Subscription & payments",
-    content: `Jump Logs Pro is an annual subscription billed in USD. Your subscription renews automatically at the end of each billing period. You can cancel at any time from your account settings — access continues until the end of the paid period.
+    content: `Jump Logs Pro is an auto-renewable annual subscription ("Jump Logs Pro Annual") priced at USD $11.99 per year (or the equivalent in your local currency as displayed at time of purchase).
 
-Payments are processed by Stripe. We do not store your payment card details. Pricing may change with reasonable notice.
+iOS (App Store purchases):
+• Payment is charged to your Apple ID at confirmation of purchase.
+• Your subscription automatically renews unless auto-renewal is turned off at least 24 hours before the end of the current period.
+• Your Apple ID account will be charged for renewal within 24 hours prior to the end of the current period, at the same price as the initial subscription.
+• You can manage your subscription and turn off auto-renewal at any time by going to your Account Settings in the App Store after purchase.
+• Cancellation takes effect at the end of the current billing period; access continues until that date.
+• Any unused portion of a free trial period (if offered) will be forfeited when you purchase a subscription.
+• Prices are in USD unless otherwise stated. Prices may vary by country and are subject to change.
 
-No refunds are issued for change of mind. Australian Consumer Law does not require refunds for change of mind on digital services.
+Web (jumplogs.com purchases):
+• Payments are processed by Stripe. We do not store your payment card details.
+• Your subscription renews automatically at the end of each billing period. You can cancel at any time from your account settings — access continues until the end of the paid period.
+• Pricing may change with reasonable notice.
+
+Refunds:
+No refunds are issued for change of mind. For iOS purchases, refund requests are handled by Apple in accordance with App Store policies. For web purchases, no refunds are issued for change of mind under Australian Consumer Law.
 
 Where a remedy is available under the Australian Consumer Law because the service fails to meet a consumer guarantee, any refund or remedy will be proportional to the period of the subscription that has not yet been used. If you have used the service for 30 days or more of a 12-month subscription period, you have received substantial benefit from the service and no refund of the used portion will be provided. Any remedy will apply only to the remaining unused subscription period.`,
+  },
+  {
+    id: "data-consent",
+    title: "Consent to use of data",
+    content: `By using Jump Logs, you agree that we may collect and use technical data and related information — including technical information about your device, system and application software, and peripherals — that is gathered periodically to facilitate the provision of software updates, product support, and other services related to the Licensed Application. This information is used only in a form that does not personally identify you, to improve our products or to provide services or technologies to you. Please refer to our Privacy Policy for full details on data collection and use.`,
+  },
+  {
+    id: "external-services",
+    title: "External services",
+    content: `The app may enable access to third-party services (including authentication providers, cloud storage, and payment processors). You agree to use these external services at your sole risk. We are not responsible for examining or evaluating the content or accuracy of any third-party services and shall not be liable for them. External services may not be available in all regions or languages. We reserve the right to change, suspend, or disable access to any external service at any time without notice.`,
+  },
+  {
+    id: "export",
+    title: "Export compliance",
+    content: `You may not use or export the Licensed Application except as authorised by the laws of Australia, the United States, and the jurisdiction in which you obtained it. In particular, the Licensed Application may not be exported or re-exported into any country subject to U.S. export embargo, or to anyone on the U.S. Treasury Department's Specially Designated Nationals List or the U.S. Department of Commerce Denied Persons List. By using the app, you represent that you are not located in any such country or on any such list.`,
   },
   {
     id: "conduct",
