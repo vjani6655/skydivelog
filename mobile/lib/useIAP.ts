@@ -99,13 +99,21 @@ export function useIAP() {
     (async () => {
       try {
         await iapModule!.initConnection();
+      } catch (err: unknown) {
+        if (mountedRef.current) {
+          setError(`StoreKit init failed: ${(err as Record<string, string>)?.message ?? String(err)}`);
+          setStatus('error');
+        }
+        return;
+      }
+      try {
         const products = await iapModule!.fetchProducts([APPLE_PRODUCT_ID]);
         const product = products.find((p) => p.productId === APPLE_PRODUCT_ID);
         if (mountedRef.current && product?.localizedPrice) setLocalizedPrice(product.localizedPrice);
         if (mountedRef.current) setStatus('ready');
-      } catch {
+      } catch (err: unknown) {
         if (mountedRef.current) {
-          setError('Could not connect to the App Store.');
+          setError(`Product fetch failed (${APPLE_PRODUCT_ID}): ${(err as Record<string, string>)?.message ?? String(err)}`);
           setStatus('error');
         }
       }
