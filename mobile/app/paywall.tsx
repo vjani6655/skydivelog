@@ -139,15 +139,6 @@ export default function PaywallScreen() {
           ))}
         </View>
 
-        {/* Pricing card */}
-        <View style={styles.pricingCard}>
-          <View style={styles.pricingRow}>
-            <Text style={styles.pricingLabel}>Annual</Text>
-            <Text style={styles.pricingAmount}>$12<Text style={styles.pricingPer}>/yr</Text></Text>
-          </View>
-          <Text style={styles.pricingNote}>Billed once, renews yearly.</Text>
-        </View>
-
         {/* CTA */}
         {!!error && (
           <View style={styles.errorBox}>
@@ -156,14 +147,17 @@ export default function PaywallScreen() {
           </View>
         )}
         {Platform.OS === 'ios' ? (
-          <View style={styles.iosSubscribeBox}>
-            <Ionicons name="globe-outline" size={20} color={colors.sky} />
-            <Text style={styles.iosSubscribeText}>
-              To subscribe, visit{' '}
-              <Text style={styles.iosSubscribeLink} onPress={() => Linking.openURL(`${WEB_URL}/subscribe`)}>
-                jumplogs.com/subscribe
+          <View style={styles.iosInfoBox}>
+            <Ionicons name="information-circle-outline" size={20} color={colors.sky} style={{ marginTop: 1 }} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.iosInfoText}>
+                Subscription changes happen outside the app. All subscription changes are handled through your account on our website.
               </Text>
-            </Text>
+              <Text style={styles.iosInfoUrl}>jumplogs.com/subscribe</Text>
+              <Text style={[styles.iosInfoText, { marginTop: spacing[2] }]}>
+                Or login to your account on jumplogs.com
+              </Text>
+            </View>
           </View>
         ) : (
           <TouchableOpacity
@@ -186,12 +180,16 @@ export default function PaywallScreen() {
           </Text>
         )}
 
-        {/* Skip link — trial limit only */}
-        {canSkip && (
+        {/* Got it / Skip */}
+        {Platform.OS === 'ios' ? (
+          <TouchableOpacity onPress={handleDismiss} activeOpacity={0.8} style={styles.gotItBtn}>
+            <Text style={styles.gotItText}>Got it</Text>
+          </TouchableOpacity>
+        ) : canSkip ? (
           <TouchableOpacity onPress={handleSkip} activeOpacity={0.7} style={styles.skipLink}>
             <Text style={styles.skipLinkText}>Not now · continue with trial</Text>
           </TouchableOpacity>
-        )}
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -356,27 +354,41 @@ function makeStyles(c: ColorSet) {
     textAlign: 'center',
     marginBottom: spacing[4],
   },
-  iosSubscribeBox: {
+  iosInfoBox: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: spacing[3],
     backgroundColor: c.surface,
     borderWidth: 1,
     borderColor: c.border,
     borderRadius: radii.lg,
     padding: spacing[4],
-    marginBottom: spacing[4],
+    marginBottom: spacing[5],
   },
-  iosSubscribeText: {
-    flex: 1,
+  iosInfoText: {
     fontFamily: 'InterTight-Regular',
     fontSize: 14,
     color: c.fg2,
     lineHeight: 20,
+    marginBottom: spacing[1.5],
   },
-  iosSubscribeLink: {
+  iosInfoUrl: {
+    fontFamily: 'JetBrainsMono-Regular',
+    fontSize: 12,
+    color: c.fg3,
+    letterSpacing: 0.3,
+  },
+  gotItBtn: {
+    backgroundColor: c.sky,
+    borderRadius: radii.lg,
+    paddingVertical: spacing[4],
+    alignItems: 'center',
+    marginBottom: spacing[4],
+  },
+  gotItText: {
     fontFamily: 'InterTight-SemiBold',
-    color: c.sky,
+    fontSize: 17,
+    color: 'white',
   },
   skipLink: {
     alignItems: 'center',

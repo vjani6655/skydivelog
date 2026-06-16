@@ -323,14 +323,17 @@ export default function SubscriptionScreen() {
         {/* CTA for non-active users */}
         {!hasAccess && (
           Platform.OS === 'ios' ? (
-            <View style={styles.iosSubscribeBox}>
-              <Ionicons name="globe-outline" size={20} color={colors.sky} />
-              <Text style={styles.iosSubscribeText}>
-                To subscribe, visit{' '}
-                <Text style={styles.iosSubscribeLink} onPress={() => Linking.openURL(`${WEB_URL}/subscribe`)}>
-                  jumplogs.com/subscribe
+            <View style={styles.iosInfoBox}>
+              <Ionicons name="information-circle-outline" size={20} color={colors.sky} style={{ marginTop: 1 }} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.iosInfoText}>
+                  Subscription changes happen outside the app. All subscription changes are handled through your account on our website.
                 </Text>
-              </Text>
+                <Text style={styles.iosInfoUrl}>jumplogs.com/subscribe</Text>
+                <Text style={[styles.iosInfoText, { marginTop: spacing[2] }]}>
+                  Or login to your account on jumplogs.com
+                </Text>
+              </View>
             </View>
           ) : (
             <TouchableOpacity
@@ -342,7 +345,7 @@ export default function SubscriptionScreen() {
               {subscribing
                 ? <ActivityIndicator color="#fff" size="small" />
                 : <Text style={styles.subscribeBtnText}>
-                    {trialExpired || sub?.status === 'cancelled' ? 'Reactivate · $12/yr' : 'Subscribe · $12/yr'}
+                    {trialExpired || sub?.status === 'cancelled' ? 'Reactivate' : 'Subscribe'}
                   </Text>
               }
             </TouchableOpacity>
@@ -465,9 +468,9 @@ function makeStyles(c: ColorSet) {
   featureText: { fontFamily: 'InterTight-Regular', fontSize: 14, color: c.fg2 },
   subscribeBtn: { backgroundColor: c.sky, borderRadius: radii.md, paddingVertical: spacing[3], alignItems: 'center', justifyContent: 'center', minHeight: 46 },
   subscribeBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: '#fff' },
-  iosSubscribeBox: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], backgroundColor: c.surface2, borderRadius: radii.md, padding: spacing[4] },
-  iosSubscribeText: { flex: 1, fontFamily: 'InterTight-Regular', fontSize: 14, color: c.fg2 },
-  iosSubscribeLink: { fontFamily: 'InterTight-SemiBold', color: c.sky, textDecorationLine: 'underline' },
+  iosInfoBox: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing[3], backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.lg, padding: spacing[4] },
+  iosInfoText: { fontFamily: 'InterTight-Regular', fontSize: 14, color: c.fg2, lineHeight: 20, marginBottom: spacing[1.5] },
+  iosInfoUrl: { fontFamily: 'JetBrainsMono-Regular', fontSize: 12, color: c.fg3, letterSpacing: 0.3 },
   cancelBtn: { borderWidth: 1, borderColor: c.danger, borderRadius: radii.md, paddingVertical: spacing[3], alignItems: 'center', justifyContent: 'center', minHeight: 46 },
   cancelBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: c.danger },
   manageBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing[1], paddingVertical: spacing[2] },
