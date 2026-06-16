@@ -108,10 +108,14 @@ export function useIAP() {
       }
       try {
         const products = await iapModule!.fetchProducts({ skus: [APPLE_PRODUCT_ID], type: 'subs' });
+        console.log('[IAP] fetchProducts result:', JSON.stringify(products));
         const product = products?.find((p) => p.id === APPLE_PRODUCT_ID);
         if (!product) {
           if (mountedRef.current) {
-            setError('Subscription not available. Make sure a Sandbox account is signed in (Settings → App Store → Sandbox Account).');
+            const returned = products?.length
+              ? `Returned ${products.length} product(s): ${products.map((p) => p.id).join(', ')}`
+              : 'StoreKit returned 0 products';
+            setError(`Subscription not available. ${returned}. Looking for: ${APPLE_PRODUCT_ID}`);
             setStatus('error');
           }
           return;
