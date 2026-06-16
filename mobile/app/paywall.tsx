@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { spacing, radii } from '@/constants/tokens';
 import type { ColorSet } from '@/constants/tokens';
 import { useColors } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
+import { useIAP } from '@/lib/useIAP';
 
 const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'https://jumplogs.com';
 
@@ -47,6 +48,14 @@ export default function PaywallScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const iap = useIAP();
+
+  // Navigate to success screen once IAP purchase is validated
+  useEffect(() => {
+    if (iap.status === 'success') {
+      router.replace('/subscription-success');
+    }
+  }, [iap.status]);
 
   const { skippable, reason } = useLocalSearchParams<{ skippable?: string; reason?: string }>();
   const canSkip = skippable === '1';
@@ -147,17 +156,52 @@ export default function PaywallScreen() {
           </View>
         )}
         {Platform.OS === 'ios' ? (
-          <View style={styles.iosInfoBox}>
-            <Ionicons name="information-circle-outline" size={20} color={colors.sky} style={{ marginTop: 1 }} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.iosInfoText}>
-                Subscription changes happen outside the app. All subscription changes are handled through your account on our website.
-              </Text>
-              <Text style={styles.iosInfoUrl}>jumplogs.com/subscribe</Text>
-              <Text style={[styles.iosInfoText, { marginTop: spacing[2] }]}>
-                Or login to your account on jumplogs.com
-              </Text>
-            </View>
+          <View style={styles.iosCtaArea}>
+            {/* IAP error */}
+            {iap.status === 'error' && !!iap.error && (
+              <View style={styles.errorBox}>
+                <Ionicons name="alert-circle-outline" size={15} color={colors.danger} />
+                <Text style={styles.errorText}>{iap.error}</Text>
+              </View>
+            )}
+
+            {/* Subscribe button */}
+            {iap.status === 'unavailable' ? (
+              // expo-iap not linked in this dev build — show info only
+              <View style={[styles.applePayButton, { opacity: 0.5 }]}>
+                <Text style={styles.applePayText}>Subscribe · $12 / year</Text>
+              </View>
+            ) : (iap.status === 'loading' || iap.status === 'purchasing' || iap.status === 'validating') ? (
+              <View style={[styles.applePayButton, { opacity: 0.7 }]}>
+                <ActivityIndicator color={colors.bg} size="small" />
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[styles.applePayButton, iap.status === 'error' && { opacity: 0.5 }]}
+                onPress={iap.status === 'error' ? iap.reset : iap.startPurchase}
+                disabled={iap.status === 'success'}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.applePayText}>
+                  {iap.status === 'error' ? 'Try again' : `Subscribe · ${iap.localizedPrice ?? '$12'} / year`}
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Required Apple subscription disclosure */}
+            <Text style={styles.legalCaption}>
+              Payment will be charged to your Apple ID at confirmation. Subscription renews automatically unless cancelled at least 24 hours before the end of the current period. Manage or cancel in your App Store account settings.
+            </Text>
+
+            {/* Restore purchases — required by Apple */}
+            <TouchableOpacity
+              onPress={iap.restorePurchases}
+              activeOpacity={0.7}
+              style={styles.restoreLink}
+              disabled={iap.status === 'purchasing' || iap.status === 'validating'}
+            >
+              <Text style={styles.restoreLinkText}>Restore purchases</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <TouchableOpacity
@@ -180,16 +224,12 @@ export default function PaywallScreen() {
           </Text>
         )}
 
-        {/* Got it / Skip */}
-        {Platform.OS === 'ios' ? (
-          <TouchableOpacity onPress={handleDismiss} activeOpacity={0.8} style={styles.gotItBtn}>
-            <Text style={styles.gotItText}>Got it</Text>
-          </TouchableOpacity>
-        ) : canSkip ? (
+        {/* Skip link (iOS: canSkip only; Android: canSkip only) */}
+        {canSkip && (
           <TouchableOpacity onPress={handleSkip} activeOpacity={0.7} style={styles.skipLink}>
             <Text style={styles.skipLinkText}>Not now · continue with trial</Text>
           </TouchableOpacity>
-        ) : null}
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -354,41 +394,37 @@ function makeStyles(c: ColorSet) {
     textAlign: 'center',
     marginBottom: spacing[4],
   },
-  iosInfoBox: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing[3],
-    backgroundColor: c.surface,
-    borderWidth: 1,
-    borderColor: c.border,
-    borderRadius: radii.lg,
-    padding: spacing[4],
+  iosCtaArea: {
     marginBottom: spacing[5],
   },
-  iosInfoText: {
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing[2],
+    backgroundColor: c.danger + '18',
+    borderWidth: 1,
+    borderColor: c.danger + '44',
+    borderRadius: radii.md,
+    padding: spacing[3],
+    marginBottom: spacing[3],
+  },
+  errorText: {
+    flex: 1,
     fontFamily: 'InterTight-Regular',
-    fontSize: 14,
-    color: c.fg2,
-    lineHeight: 20,
-    marginBottom: spacing[1.5],
+    fontSize: 13,
+    color: c.danger,
+    lineHeight: 18,
   },
-  iosInfoUrl: {
-    fontFamily: 'JetBrainsMono-Regular',
-    fontSize: 12,
-    color: c.fg3,
-    letterSpacing: 0.3,
-  },
-  gotItBtn: {
-    backgroundColor: c.sky,
-    borderRadius: radii.lg,
-    paddingVertical: spacing[4],
+  restoreLink: {
     alignItems: 'center',
-    marginBottom: spacing[4],
+    paddingVertical: spacing[2],
+    marginTop: spacing[1],
   },
-  gotItText: {
-    fontFamily: 'InterTight-SemiBold',
-    fontSize: 17,
-    color: 'white',
+  restoreLinkText: {
+    fontFamily: 'InterTight-Regular',
+    fontSize: 13,
+    color: c.fg3,
+    textDecorationLine: 'underline',
   },
   skipLink: {
     alignItems: 'center',

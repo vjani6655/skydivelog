@@ -58,7 +58,8 @@
       "@react-native-community/datetimepicker",
       "expo-sharing",
       "expo-speech-recognition",
-      "expo-audio"
+      "expo-audio",
+      "expo-iap"
     ],
     "experiments": {
       "typedRoutes": true

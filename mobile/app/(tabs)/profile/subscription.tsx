@@ -5,6 +5,15 @@ import {
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+// expo-iap native module is excluded from local dev builds — load lazily
+const showManageSubscriptionsIOS: (() => void) | null = (() => {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return require('expo-iap').showManageSubscriptionsIOS ?? null;
+  } catch {
+    return null;
+  }
+})();
 import { supabase } from '@/lib/supabase';
 import { spacing, radii } from '@/constants/tokens';
 import type { ColorSet } from '@/constants/tokens';
@@ -52,7 +61,7 @@ export default function SubscriptionScreen() {
   const [subscribing, setSubscribing] = useState(false);
   const [undoCancelling, setUndoCancelling] = useState(false);
   const [cancelling, setCancelling] = useState(false);
-  const [sub, setSub] = useState<{ status: string; renews_at: string | null } | null>(null);
+  const [sub, setSub] = useState<{ status: string; renews_at: string | null; source: string | null } | null>(null);
   const [userCreatedAt, setUserCreatedAt] = useState<string | null>(null);
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -69,7 +78,7 @@ export default function SubscriptionScreen() {
       setTrialEndsAt((user.user_metadata?.trial_ends_at as string) ?? null);
       const { data } = await supabase
         .from('subscriptions')
-        .select('status, renews_at')
+        .select('status, renews_at, source')
         .eq('user_id', user.id)
         .order('started_at', { ascending: false })
         .limit(1)
@@ -77,23 +86,26 @@ export default function SubscriptionScreen() {
       setSub(data ?? null);
       setLoading(false);
 
-      // Fetch invoice history for all users — they may have past invoices regardless of current status
-      setInvoicesLoading(true);
-      try {
-        const { data: { session: freshSession } } = await supabase.auth.refreshSession();
-        if (freshSession) {
-          const res = await fetch(`${WEB_URL}/api/stripe/invoices`, {
-            headers: { Authorization: `Bearer ${freshSession.access_token}` },
-          });
-          if (res.ok) {
-            const json = await res.json();
-            setInvoices(json.invoices ?? []);
+      // Fetch invoice history only for Stripe subscribers (Apple subscribers use App Store)
+      const isApple = (data as { source?: string } | null)?.source === 'apple';
+      if (!isApple) {
+        setInvoicesLoading(true);
+        try {
+          const { data: { session: freshSession } } = await supabase.auth.refreshSession();
+          if (freshSession) {
+            const res = await fetch(`${WEB_URL}/api/stripe/invoices`, {
+              headers: { Authorization: `Bearer ${freshSession.access_token}` },
+            });
+            if (res.ok) {
+              const json = await res.json();
+              setInvoices(json.invoices ?? []);
+            }
           }
+        } catch {
+          // silently ignore — invoices are supplementary info
+        } finally {
+          setInvoicesLoading(false);
         }
-      } catch {
-        // silently ignore — invoices are supplementary info
-      } finally {
-        setInvoicesLoading(false);
       }
     })();
   }, []));
@@ -156,7 +168,7 @@ export default function SubscriptionScreen() {
               if (json.ok) {
                 const { data } = await supabase
                   .from('subscriptions')
-                  .select('status, renews_at')
+                  .select('status, renews_at, source')
                   .eq('user_id', session.user.id)
                   .order('started_at', { ascending: false })
                   .limit(1)
@@ -194,7 +206,7 @@ export default function SubscriptionScreen() {
         // Refresh subscription data
         const { data } = await supabase
           .from('subscriptions')
-          .select('status, renews_at')
+          .select('status, renews_at, source')
           .eq('user_id', session.user.id)
           .order('started_at', { ascending: false })
           .limit(1)
@@ -236,6 +248,7 @@ export default function SubscriptionScreen() {
   const trialDaysLeft = trialEnd
     ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / 86400000))
     : 0;
+  const isApple = sub?.source === 'apple';
   const isActive = sub?.status === 'active';
   const isOverdue = sub?.status === 'overdue';
   const isCancelledInGrace =
@@ -323,18 +336,16 @@ export default function SubscriptionScreen() {
         {/* CTA for non-active users */}
         {!hasAccess && (
           Platform.OS === 'ios' ? (
-            <View style={styles.iosInfoBox}>
-              <Ionicons name="information-circle-outline" size={20} color={colors.sky} style={{ marginTop: 1 }} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.iosInfoText}>
-                  Subscription changes happen outside the app. All subscription changes are handled through your account on our website.
-                </Text>
-                <Text style={styles.iosInfoUrl}>jumplogs.com/subscribe</Text>
-                <Text style={[styles.iosInfoText, { marginTop: spacing[2] }]}>
-                  Or login to your account on jumplogs.com
-                </Text>
-              </View>
-            </View>
+            // On iOS, send user to paywall to subscribe via StoreKit
+            <TouchableOpacity
+              style={styles.subscribeBtn}
+              onPress={() => router.push('/paywall')}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.subscribeBtnText}>
+                {trialExpired || sub?.status === 'cancelled' ? 'Reactivate' : 'Subscribe'}
+              </Text>
+            </TouchableOpacity>
           ) : (
             <TouchableOpacity
               style={[styles.subscribeBtn, subscribing && { opacity: 0.6 }]}
@@ -352,8 +363,8 @@ export default function SubscriptionScreen() {
           )
         )}
 
-        {/* Undo cancellation for grace-period users — they already paid, no new charge */}
-        {isCancelledInGrace && (
+        {/* Undo cancellation — only for Stripe users in grace period */}
+        {isCancelledInGrace && !isApple && (
           <View style={styles.undoCancelBox}>
             <TouchableOpacity
               style={[styles.subscribeBtn, undoCancelling && { opacity: 0.6 }]}
@@ -370,8 +381,8 @@ export default function SubscriptionScreen() {
           </View>
         )}
 
-        {/* Cancel subscription for active users */}
-        {isActive && (
+        {/* Cancel subscription — only for active Stripe users (Apple manages cancellation) */}
+        {isActive && !isApple && (
           <View style={styles.undoCancelBox}>
             <TouchableOpacity
               style={[styles.cancelBtn, cancelling && { opacity: 0.5 }]}
@@ -387,16 +398,29 @@ export default function SubscriptionScreen() {
           </View>
         )}
 
-        {/* Manage billing for active/overdue/grace */}
+        {/* Manage billing: Stripe users get Stripe portal; Apple users get iOS Settings */}
         {(isActive || isOverdue || isCancelledInGrace) && (
-          <TouchableOpacity style={styles.manageBtn} onPress={handleManageBilling} activeOpacity={0.7}>
-            <Text style={styles.manageBtnText}>Manage billing</Text>
-            <Ionicons name="open-outline" size={13} color={colors.sky} />
-          </TouchableOpacity>
+          isApple ? (
+            Platform.OS === 'ios' && (
+              <TouchableOpacity
+                style={styles.manageBtn}
+                onPress={() => showManageSubscriptionsIOS?.()}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.manageBtnText}>Manage in Settings</Text>
+                <Ionicons name="settings-outline" size={13} color={colors.sky} />
+              </TouchableOpacity>
+            )
+          ) : (
+            <TouchableOpacity style={styles.manageBtn} onPress={handleManageBilling} activeOpacity={0.7}>
+              <Text style={styles.manageBtnText}>Manage billing</Text>
+              <Ionicons name="open-outline" size={13} color={colors.sky} />
+            </TouchableOpacity>
+          )
         )}
 
-        {/* Invoice history — shown for all users with past invoices */}
-        {(invoicesLoading || invoices.length > 0) && (
+        {/* Invoice history — only for Stripe subscribers */}
+        {!isApple && (invoicesLoading || invoices.length > 0) && (
           <View style={styles.invoiceSection}>
             <Text style={styles.invoiceSectionTitle}>Invoice History</Text>
 
@@ -468,9 +492,6 @@ function makeStyles(c: ColorSet) {
   featureText: { fontFamily: 'InterTight-Regular', fontSize: 14, color: c.fg2 },
   subscribeBtn: { backgroundColor: c.sky, borderRadius: radii.md, paddingVertical: spacing[3], alignItems: 'center', justifyContent: 'center', minHeight: 46 },
   subscribeBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: '#fff' },
-  iosInfoBox: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing[3], backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.lg, padding: spacing[4] },
-  iosInfoText: { fontFamily: 'InterTight-Regular', fontSize: 14, color: c.fg2, lineHeight: 20, marginBottom: spacing[1.5] },
-  iosInfoUrl: { fontFamily: 'JetBrainsMono-Regular', fontSize: 12, color: c.fg3, letterSpacing: 0.3 },
   cancelBtn: { borderWidth: 1, borderColor: c.danger, borderRadius: radii.md, paddingVertical: spacing[3], alignItems: 'center', justifyContent: 'center', minHeight: 46 },
   cancelBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: c.danger },
   manageBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing[1], paddingVertical: spacing[2] },
