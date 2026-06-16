@@ -96,13 +96,15 @@ export async function POST(req: NextRequest) {
       subId = inserted?.id
     }
 
-    // Log subscription event
-    await admin.from('subscription_events').insert({
-      user_id: user.id,
-      sub_id: subId ?? null,
-      event: existing ? 'iap_revalidated' : 'iap_subscribed',
-      metadata: { original_transaction_id: originalTransactionId, product_id: productId },
-    }).catch(() => {}) // Non-fatal: events table may have enum constraints
+    // Log subscription event (non-fatal)
+    try {
+      await admin.from('subscription_events').insert({
+        user_id: user.id,
+        sub_id: subId ?? null,
+        event: existing ? 'iap_revalidated' : 'iap_subscribed',
+        metadata: { original_transaction_id: originalTransactionId, product_id: productId },
+      })
+    } catch { /* ignore — events table may have enum constraints */ }
 
     console.log(`[apple/validate] ${existing ? 'updated' : 'created'} sub for user`, user.id)
     return NextResponse.json({ success: true })
