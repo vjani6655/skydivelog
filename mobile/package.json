@@ -47,11 +47,6 @@
     "expo-module-scripts": "^56.0.2",
     "typescript": "~6.0.3"
   },
-  "expo": {
-    "autolinking": {
-      "exclude": ["expo-iap"]
-    }
-  },
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
