@@ -133,7 +133,7 @@ export function useIAP() {
     setError('');
     setStatus('purchasing');
     try {
-      await iapModule.requestPurchase({ sku: APPLE_PRODUCT_ID });
+      await iapModule.requestPurchase({ request: { sku: APPLE_PRODUCT_ID }, type: 'subs' });
     } catch (err: unknown) {
       const code = (err as Record<string, string>)?.code;
       if (code === 'E_USER_CANCELLED') { setStatus('ready'); }
