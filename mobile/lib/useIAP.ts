@@ -108,7 +108,7 @@ export function useIAP() {
       }
       try {
         const products = await iapModule!.fetchProducts({ skus: [APPLE_PRODUCT_ID], type: 'subs' });
-        const product = products?.find((p) => p.productId === APPLE_PRODUCT_ID);
+        const product = products?.find((p) => p.id === APPLE_PRODUCT_ID);
         if (!product) {
           if (mountedRef.current) {
             setError('Subscription not available. Make sure a Sandbox account is signed in (Settings → App Store → Sandbox Account).');
@@ -116,7 +116,7 @@ export function useIAP() {
           }
           return;
         }
-        if (mountedRef.current) setLocalizedPrice((product as Record<string, unknown>).displayPrice as string ?? null);
+        if (mountedRef.current) setLocalizedPrice((product as unknown as Record<string, unknown>).displayPrice as string ?? null);
         if (mountedRef.current) setStatus('ready');
       } catch (err: unknown) {
         if (mountedRef.current) {
