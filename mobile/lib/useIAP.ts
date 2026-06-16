@@ -107,7 +107,7 @@ export function useIAP() {
         return;
       }
       try {
-        const products = await iapModule!.fetchProducts([APPLE_PRODUCT_ID]);
+        const products = await iapModule!.fetchProducts({ skus: [APPLE_PRODUCT_ID], type: 'subs' });
         const product = products.find((p) => p.productId === APPLE_PRODUCT_ID);
         if (mountedRef.current && product?.localizedPrice) setLocalizedPrice(product.localizedPrice);
         if (mountedRef.current) setStatus('ready');
