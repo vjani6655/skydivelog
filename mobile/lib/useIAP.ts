@@ -30,14 +30,17 @@ export function useIAP() {
   const errorListenerRef    = useRef<{ remove: () => void } | null>(null);
 
   const validateReceipt = async (purchase: { receiptData?: string; jwsRepresentation?: string; productId: string }) => {
+    console.log('[IAP] validateReceipt start, productId:', purchase.productId);
+    console.log('[IAP] receipt present:', !!(purchase.receiptData ?? purchase.jwsRepresentation));
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
+        console.log('[IAP] validateReceipt: no session');
         setError('Not signed in. Please restart the app.');
         if (mountedRef.current) setStatus('error');
         return;
       }
-
+      console.log('[IAP] validateReceipt: posting to', `${WEB_URL}/api/apple/validate`);
       const res = await fetch(`${WEB_URL}/api/apple/validate`, {
         method: 'POST',
         headers: {
@@ -47,18 +50,24 @@ export function useIAP() {
         body: JSON.stringify({ receipt: purchase.receiptData ?? purchase.jwsRepresentation }),
       });
       const json = await res.json();
+      console.log('[IAP] validateReceipt response:', JSON.stringify(json));
 
-      await iapModule?.finishTransaction({ purchase: purchase as never, isConsumable: false }).catch(() => {});
+      await iapModule?.finishTransaction({ purchase: purchase as never, isConsumable: false }).catch((e) => {
+        console.log('[IAP] finishTransaction error:', String(e));
+      });
 
       if (json.success) {
+        console.log('[IAP] validateReceipt: success');
         if (mountedRef.current) setStatus('success');
       } else {
+        console.log('[IAP] validateReceipt: failed', json.error);
         if (mountedRef.current) {
           setError(json.error ?? 'Validation failed. Please contact support.');
           setStatus('error');
         }
       }
-    } catch {
+    } catch (e) {
+      console.log('[IAP] validateReceipt exception:', String(e));
       await iapModule?.finishTransaction({ purchase: purchase as never, isConsumable: false }).catch(() => {});
       if (mountedRef.current) {
         setError('Could not validate purchase. Please contact support.');
@@ -80,15 +89,22 @@ export function useIAP() {
     }
 
     mountedRef.current = true;
+    console.log('[IAP] useEffect mount, iapModule:', !!iapModule, 'platform:', Platform.OS);
+    console.log('[IAP] product ID:', APPLE_PRODUCT_ID);
 
     purchaseListenerRef.current = iapModule.purchaseUpdatedListener(async (purchase) => {
+      console.log('[IAP] purchaseUpdatedListener fired, productId:', purchase.productId, 'keys:', Object.keys(purchase).join(','));
       if (!mountedRef.current) return;
-      if (purchase.productId !== APPLE_PRODUCT_ID) return;
+      if (purchase.productId !== APPLE_PRODUCT_ID) {
+        console.log('[IAP] ignoring purchase for different product:', purchase.productId);
+        return;
+      }
       if (mountedRef.current) setStatus('validating');
       await validateReceipt(purchase);
     });
 
     errorListenerRef.current = iapModule.purchaseErrorListener((err: unknown) => {
+      console.log('[IAP] purchaseErrorListener fired:', JSON.stringify(err));
       if (!mountedRef.current) return;
       const code = (err as Record<string, string>)?.code;
       if (code === 'E_USER_CANCELLED') { setStatus('ready'); return; }
@@ -98,8 +114,11 @@ export function useIAP() {
 
     (async () => {
       try {
+        console.log('[IAP] initConnection start');
         await iapModule!.initConnection();
+        console.log('[IAP] initConnection OK');
       } catch (err: unknown) {
+        console.log('[IAP] initConnection failed:', String(err));
         if (mountedRef.current) {
           setError(`StoreKit init failed: ${(err as Record<string, string>)?.message ?? String(err)}`);
           setStatus('error');
@@ -107,8 +126,11 @@ export function useIAP() {
         return;
       }
       try {
+        console.log('[IAP] fetchProducts start, sku:', APPLE_PRODUCT_ID);
         const products = await iapModule!.fetchProducts({ skus: [APPLE_PRODUCT_ID], type: 'subs' });
+        console.log('[IAP] fetchProducts result count:', products?.length, 'raw:', JSON.stringify(products));
         const product = products?.find((p) => p.id === APPLE_PRODUCT_ID);
+        console.log('[IAP] matched product:', JSON.stringify(product));
         if (!product) {
           if (mountedRef.current) {
             const returned = products?.length
@@ -121,7 +143,9 @@ export function useIAP() {
         }
         if (mountedRef.current) setLocalizedPrice((product as unknown as Record<string, unknown>).displayPrice as string ?? null);
         if (mountedRef.current) setStatus('ready');
+        console.log('[IAP] ready, price:', (product as unknown as Record<string, unknown>).displayPrice);
       } catch (err: unknown) {
+        console.log('[IAP] fetchProducts error:', String(err));
         if (mountedRef.current) {
           setError(`Product fetch failed (${APPLE_PRODUCT_ID}): ${(err as Record<string, string>)?.message ?? String(err)}`);
           setStatus('error');
@@ -139,13 +163,17 @@ export function useIAP() {
   }, []);
 
   const startPurchase = async () => {
+    console.log('[IAP] startPurchase called, status:', status, 'iapModule:', !!iapModule);
     if (status !== 'ready' || !iapModule) return;
     setError('');
     setStatus('purchasing');
     try {
+      console.log('[IAP] requestPurchase start, sku:', APPLE_PRODUCT_ID);
       await iapModule.requestPurchase({ request: { apple: { sku: APPLE_PRODUCT_ID } }, type: 'subs' });
+      console.log('[IAP] requestPurchase returned (waiting for purchaseUpdatedListener)');
     } catch (err: unknown) {
       const code = (err as Record<string, string>)?.code;
+      console.log('[IAP] requestPurchase error, code:', code, 'message:', (err as Record<string, string>)?.message);
       if (code === 'E_USER_CANCELLED') { setStatus('ready'); }
       else { setError((err as Record<string, string>)?.message ?? 'Could not start purchase.'); setStatus('error'); }
     }
@@ -172,9 +200,14 @@ export function useIAP() {
     setStatus('loading');
     try {
       await iapModule.initConnection();
-    } catch { /* already connected */ }
+      console.log('[IAP] initConnection OK');
+    } catch (err: unknown) {
+      console.log('[IAP] initConnection error (may already be connected):', String(err));
+    }
     try {
+      console.log('[IAP] fetchProducts start, sku:', APPLE_PRODUCT_ID);
       const products = await iapModule.fetchProducts({ skus: [APPLE_PRODUCT_ID], type: 'subs' });
+      console.log('[IAP] fetchProducts result:', JSON.stringify(products));
       const product = products?.find((p) => p.id === APPLE_PRODUCT_ID);
       if (!product) {
         const returned = products?.length
@@ -187,6 +220,7 @@ export function useIAP() {
       setLocalizedPrice((product as unknown as Record<string, unknown>).displayPrice as string ?? null);
       setStatus('ready');
     } catch (err: unknown) {
+      console.log('[IAP] fetchProducts error:', String(err));
       setError(`Product fetch failed: ${(err as Record<string, string>)?.message ?? String(err)}`);
       setStatus('error');
     }
