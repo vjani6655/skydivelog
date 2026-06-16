@@ -1,18 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
-import { Platform, NativeModules } from 'react-native';
+import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 
 // expo-iap is excluded from native autolinking in local dev builds.
-// We check NativeModules.ExpoIap first — if the native side isn't registered,
-// skip the require entirely so the JS module never tries to access it.
+// Expo modules use their own registry (not NativeModules), so we detect
+// availability by attempting require and catching the native module error.
 let iapModule: typeof import('expo-iap') | null = null;
-if (NativeModules.ExpoIap) {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    iapModule = require('expo-iap');
-  } catch {
-    iapModule = null;
-  }
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  iapModule = require('expo-iap');
+} catch {
+  iapModule = null;
 }
 
 export const APPLE_PRODUCT_ID =
