@@ -29,7 +29,7 @@ export function useIAP() {
   const purchaseListenerRef = useRef<{ remove: () => void } | null>(null);
   const errorListenerRef    = useRef<{ remove: () => void } | null>(null);
 
-  const validateReceipt = async (purchase: { transactionReceipt?: string; productId: string }) => {
+  const validateReceipt = async (purchase: { receiptData?: string; jwsRepresentation?: string; productId: string }) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -44,7 +44,7 @@ export function useIAP() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ receipt: purchase.transactionReceipt }),
+        body: JSON.stringify({ receipt: purchase.receiptData ?? purchase.jwsRepresentation }),
       });
       const json = await res.json();
 
@@ -108,8 +108,15 @@ export function useIAP() {
       }
       try {
         const products = await iapModule!.fetchProducts({ skus: [APPLE_PRODUCT_ID], type: 'subs' });
-        const product = products.find((p) => p.productId === APPLE_PRODUCT_ID);
-        if (mountedRef.current && product?.localizedPrice) setLocalizedPrice(product.localizedPrice);
+        const product = products?.find((p) => p.productId === APPLE_PRODUCT_ID);
+        if (!product) {
+          if (mountedRef.current) {
+            setError('Subscription not available. Make sure a Sandbox account is signed in (Settings → App Store → Sandbox Account).');
+            setStatus('error');
+          }
+          return;
+        }
+        if (mountedRef.current) setLocalizedPrice((product as Record<string, unknown>).displayPrice as string ?? null);
         if (mountedRef.current) setStatus('ready');
       } catch (err: unknown) {
         if (mountedRef.current) {
