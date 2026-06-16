@@ -103,7 +103,7 @@ export function useIAP() {
       if (!mountedRef.current) return;
       const code = (err as Record<string, string>)?.code;
       if (code === 'E_USER_CANCELLED') { setStatus('ready'); return; }
-      setError((err as Record<string, string>)?.message ?? 'Purchase failed.');
+      setError('Purchase could not be completed. Please try again.');
       setStatus('error');
     });
 
