@@ -31,10 +31,32 @@ export function useIAP() {
   const purchaseListenerRef = useRef<{ remove: () => void } | null>(null);
   const errorListenerRef    = useRef<{ remove: () => void } | null>(null);
 
-  const validateReceipt = async (purchase: { receiptData?: string; jwsRepresentation?: string; productId: string }) => {
+  const validateReceipt = async (purchase: { productId: string }) => {
     console.log('[IAP] validateReceipt start, productId:', purchase.productId);
-    console.log('[IAP] receipt present:', !!(purchase.receiptData ?? purchase.jwsRepresentation));
     try {
+      // PurchaseIOS does not carry receiptData/jwsRepresentation directly.
+      // We must explicitly fetch the app receipt via getReceiptDataIOS().
+      // If it returns empty (can happen immediately after first purchase),
+      // fall back to requestReceiptRefreshIOS() which calls AppStore.sync() first.
+      let receipt: string | null = null;
+      try {
+        receipt = (await iapModule!.getReceiptDataIOS?.()) ?? null;
+        console.log('[IAP] getReceiptDataIOS length:', receipt?.length ?? 0);
+        if (!receipt) {
+          console.log('[IAP] receipt empty, refreshing...');
+          receipt = await (iapModule as unknown as { requestReceiptRefreshIOS: () => Promise<string> }).requestReceiptRefreshIOS?.() ?? null;
+          console.log('[IAP] requestReceiptRefreshIOS length:', receipt?.length ?? 0);
+        }
+      } catch (receiptErr) {
+        console.log('[IAP] receipt fetch error:', String(receiptErr));
+      }
+      if (!receipt) {
+        if (mountedRef.current) {
+          setError('Could not retrieve purchase receipt. Please contact support.');
+          setStatus('error');
+        }
+        return;
+      }
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         console.log('[IAP] validateReceipt: no session');
@@ -49,7 +71,7 @@ export function useIAP() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ receipt: purchase.receiptData ?? purchase.jwsRepresentation }),
+        body: JSON.stringify({ receipt }),
       });
       const json = await res.json();
       console.log('[IAP] validateReceipt response:', JSON.stringify(json));
