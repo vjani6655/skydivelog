@@ -24,17 +24,26 @@ type RecipientCounts = {
 
 type UserRow = { id: string; full_name: string; email: string; licence_number: string | null }
 
+type PushTokenHolder = {
+  userId: string
+  email: string
+  fullName: string | null
+  token: string
+  announcements: boolean
+}
+
 type Props = {
   recentSends: RecentSend[]
   segments: Segment[]
   recipientCounts: RecipientCounts
   adminId: string
+  pushTokenHolders?: PushTokenHolder[]
 }
 
 type Channel  = 'Push' | 'In-app banner' | 'Email'
 type Schedule = 'Send now' | 'Schedule' | 'Draft'
 
-export default function AnnouncementsCompose({ recentSends, segments, recipientCounts }: Omit<Props, 'adminId'> & { adminId?: string }) {
+export default function AnnouncementsCompose({ recentSends, segments, recipientCounts, pushTokenHolders = [] }: Omit<Props, 'adminId'> & { adminId?: string }) {
   const [channels,       setChannels]       = useState<Channel[]>(['Push'])
   const [title,          setTitle]          = useState('')
   const [body,           setBody]           = useState('')
@@ -488,6 +497,33 @@ export default function AnnouncementsCompose({ recentSends, segments, recipientC
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Push token holders */}
+          <div className="bg-surface border border-border rounded-md p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="font-mono text-[10px] text-fg-3 uppercase tracking-widest">PUSH TOKEN HOLDERS</div>
+              <span className="font-mono text-[10px] text-fg-3">{pushTokenHolders.length} device{pushTokenHolders.length !== 1 ? 's' : ''}</span>
+            </div>
+            {pushTokenHolders.length === 0 ? (
+              <div className="text-xs text-fg-3 italic py-2">No push tokens registered. Users need to open the app and allow notifications.</div>
+            ) : (
+              <div className="divide-y divide-dashed divide-border">
+                {pushTokenHolders.map(h => (
+                  <div key={h.userId} className="py-2.5 flex items-start gap-2">
+                    <div className={`mt-0.5 w-2 h-2 rounded-full shrink-0 ${h.announcements ? 'bg-ok' : 'bg-fg-3'}`} title={h.announcements ? 'Opted in to announcements' : 'Opted out of announcements'} />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-medium text-fg truncate">{h.fullName || h.email}</div>
+                      {h.fullName && <div className="font-mono text-[10px] text-fg-3 truncate">{h.email}</div>}
+                      <div className="font-mono text-[10px] text-fg-4 truncate mt-0.5">{h.token}</div>
+                    </div>
+                    <span className={`shrink-0 font-mono text-[9px] px-1.5 py-0.5 rounded-sm ${h.announcements ? 'bg-ok/10 text-ok' : 'bg-surface-2 text-fg-3'}`}>
+                      {h.announcements ? 'opted in' : 'opted out'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Recent sends */}

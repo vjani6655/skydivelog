@@ -11,6 +11,7 @@ export default async function AdminAnnouncementsPage() {
     { count: trialUsers },
     { count: overdueUsers },
     { data: adminRows },
+    { data: tokenRows },
   ] = await Promise.all([
     db.from('announcements')
       .select('id, title, sent_at, segment_key, segments(name)')
@@ -23,12 +24,28 @@ export default async function AdminAnnouncementsPage() {
     db.from('subscriptions').select('*', { count: 'exact', head: true }).eq('status', 'trial'),
     db.from('subscriptions').select('*', { count: 'exact', head: true }).eq('status', 'overdue'),
     db.from('admins').select('id, email').limit(100),
+    db.from('notification_preferences')
+      .select('user_id, push_token, announcements, users(email, full_name)')
+      .not('push_token', 'is', null),
   ])
 
-  // We pass the full list of admin IDs so the client can pick the current one by email
-  // (The client calls auth.getUser() then matches email)
-  // For simplicity, pass the first admin id as fallback — client will resolve from email
   const adminId = adminRows?.[0]?.id ?? ''
+
+  const pushTokenHolders = (tokenRows ?? []).map((r: {
+    user_id: string
+    push_token: string
+    announcements: boolean
+    users: { email: string; full_name: string | null } | { email: string; full_name: string | null }[] | null
+  }) => {
+    const u = Array.isArray(r.users) ? r.users[0] : r.users
+    return {
+      userId:        r.user_id,
+      email:         u?.email ?? r.user_id,
+      fullName:      u?.full_name ?? null,
+      token:         r.push_token,
+      announcements: r.announcements,
+    }
+  })
 
   return (
     <AnnouncementsCompose
@@ -41,6 +58,7 @@ export default async function AdminAnnouncementsPage() {
         overdue: overdueUsers ?? 0,
       }}
       adminId={adminId}
+      pushTokenHolders={pushTokenHolders}
     />
   )
 }
