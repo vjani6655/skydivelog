@@ -63,10 +63,15 @@ export function useIAP() {
       }
       // getSession() returns a cached (possibly expired) token from AsyncStorage.
       // Force-refresh so the server's verifyBearerToken call succeeds.
-      let { data: { session } } = await supabase.auth.refreshSession();
+      let { data: { session }, error: refreshErr } = await supabase.auth.refreshSession();
+      console.log('[IAP] refreshSession result - session:', !!session, 'error:', refreshErr?.message ?? 'none');
       if (!session) {
         // refreshSession failed (e.g. network error) — fall back to cached session
-        ({ data: { session } } = await supabase.auth.getSession());
+        const fallback = await supabase.auth.getSession();
+        session = fallback.data.session;
+        console.log('[IAP] getSession fallback - session:', !!session, 'expires_at:', session?.expires_at);
+      } else {
+        console.log('[IAP] refreshSession OK, token expires_at:', session.expires_at, 'user:', session.user?.id);
       }
       if (!session) {
         console.log('[IAP] validateReceipt: no session');
