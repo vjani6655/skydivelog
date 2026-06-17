@@ -24,8 +24,12 @@ export async function POST(req: NextRequest) {
     if (!receipt) return NextResponse.json({ error: 'Receipt required.' }, { status: 400 })
 
     const authHeader = req.headers.get('authorization')
+    console.log('[apple/validate] authHeader present:', !!authHeader, 'length:', authHeader?.length ?? 0, 'prefix:', authHeader?.substring(0, 14) ?? 'none')
     const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null
-    if (!token) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+    if (!token) {
+      console.error('[apple/validate] token missing — authHeader was:', authHeader ?? 'null')
+      return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+    }
 
     const { data: { user }, error: authErr } = await verifyBearerToken(token)
     if (authErr || !user) {
