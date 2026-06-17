@@ -105,8 +105,11 @@ export default function AnnouncementsCompose({ recentSends, segments, recipientC
   const toggleChannel = (c: Channel) =>
     setChannels(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c])
 
-  // Set of user IDs that have a push token — for green dots in the user picker
-  const tokenUserIds = useMemo(() => new Set(pushTokenHolders.map(h => h.userId)), [pushTokenHolders])
+  // Set of user IDs that have a push token AND are opted in — for green dots in the user picker
+  const tokenUserIds = useMemo(
+    () => new Set(pushTokenHolders.filter(h => h.announcements).map(h => h.userId)),
+    [pushTokenHolders]
+  )
 
   // Filtered token holders for the bottom panel
   const filteredTokenHolders = useMemo(() => {
