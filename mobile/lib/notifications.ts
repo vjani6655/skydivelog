@@ -104,13 +104,13 @@ export async function registerPushToken(
       .neq('user_id', userId);
 
     // Check if a preferences row already exists for this user
-    const { data: existing } = await supabase
+    const { data: existingRow } = await supabase
       .from('notification_preferences')
       .select('user_id')
       .eq('user_id', userId)
       .maybeSingle();
 
-    if (existing) {
+    if (existingRow) {
       // Row exists — only update the token, preserve all preference choices
       await supabase
         .from('notification_preferences')
