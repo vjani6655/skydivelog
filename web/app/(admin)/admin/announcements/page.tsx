@@ -17,7 +17,7 @@ export default async function AdminAnnouncementsPage() {
       .select('id, title, sent_at, segment_key, segments(name)')
       .eq('status', 'sent')
       .order('sent_at', { ascending: false })
-      .limit(8),
+      .limit(100),
     db.from('segments').select('id, name').order('name'),
     db.from('users').select('*', { count: 'exact', head: true }),
     db.from('subscriptions').select('*', { count: 'exact', head: true }).eq('status', 'active'),

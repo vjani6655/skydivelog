@@ -42,6 +42,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
     { data: adminNotes },
     { data: authUserData },
     { data: subEvents },
+    { data: notifPrefs },
   ] = await Promise.all([
     db.from('users').select('*, dropzones!home_dropzone_id(name)').eq('id', id).single(),
     db.from('subscriptions').select('*').eq('user_id', id).order('started_at', { ascending: false }).limit(1).maybeSingle(),
@@ -60,6 +61,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
     db.from('audit_log').select('id, reason, created_at').eq('action', 'admin_note').eq('target', `user:${id}`).order('created_at', { ascending: false }),
     db.auth.admin.getUserById(id),
     db.from('subscription_events').select('id, event, metadata, created_at').eq('user_id', id).order('created_at', { ascending: false }),
+    db.from('notification_preferences').select('push_token, announcements').eq('user_id', id).maybeSingle(),
   ])
 
   if (!user) notFound()
@@ -203,6 +205,28 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
                   <div className={`text-sm mt-0.5 ${mono ? 'font-mono' : ''}`}>{v as string}</div>
                 </div>
               ))}
+            </div>
+            {/* Push notification row — full width below the grid */}
+            <div className="mt-4 pt-4 border-t border-border grid grid-cols-2 gap-x-6 gap-y-3">
+              <div>
+                <div className="font-mono text-[10px] text-fg-3 tracking-widest uppercase mb-0.5">Push Token</div>
+                {notifPrefs?.push_token ? (
+                  <div className="font-mono text-xs text-fg-2 break-all">{notifPrefs.push_token}</div>
+                ) : (
+                  <div className="text-sm text-fg-3 italic">Not registered</div>
+                )}
+              </div>
+              <div>
+                <div className="font-mono text-[10px] text-fg-3 tracking-widest uppercase mb-1">Announcements</div>
+                {notifPrefs?.push_token ? (
+                  <span className={`inline-flex items-center gap-1.5 font-mono text-xs px-2 py-0.5 rounded-sm ${notifPrefs.announcements ? 'bg-ok/10 text-ok' : 'bg-surface-2 text-fg-3 border border-border'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${notifPrefs.announcements ? 'bg-ok' : 'bg-fg-3'}`} />
+                    {notifPrefs.announcements ? 'Opted in' : 'Opted out'}
+                  </span>
+                ) : (
+                  <div className="text-sm text-fg-3 italic">—</div>
+                )}
+              </div>
             </div>
           </AdminCard>
 

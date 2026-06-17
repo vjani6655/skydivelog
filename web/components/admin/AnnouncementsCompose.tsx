@@ -57,6 +57,11 @@ export default function AnnouncementsCompose({ recentSends, segments, recipientC
   const [sends,          setSends]          = useState<RecentSend[]>(recentSends)
   const [bottomTab,      setBottomTab]      = useState<'tokens' | 'sends'>('tokens')
   const [tokenFilter,    setTokenFilter]    = useState('')
+  const [tokenPage,      setTokenPage]      = useState(1)
+  const [sendsPage,      setSendsPage]      = useState(1)
+
+  const TOKENS_PER_PAGE = 10
+  const SENDS_PER_PAGE  = 5
 
   // Specific user picker state
   const [userQuery,      setUserQuery]      = useState('')
@@ -113,6 +118,15 @@ export default function AnnouncementsCompose({ recentSends, segments, recipientC
       h.token.toLowerCase().includes(q)
     )
   }, [pushTokenHolders, tokenFilter])
+
+  // Reset to page 1 when filter changes
+  useEffect(() => { setTokenPage(1) }, [tokenFilter])
+
+  const tokenTotalPages = Math.max(1, Math.ceil(filteredTokenHolders.length / TOKENS_PER_PAGE))
+  const pagedTokens = filteredTokenHolders.slice((tokenPage - 1) * TOKENS_PER_PAGE, tokenPage * TOKENS_PER_PAGE)
+
+  const sendsTotalPages = Math.max(1, Math.ceil(sends.length / SENDS_PER_PAGE))
+  const pagedSends = sends.slice((sendsPage - 1) * SENDS_PER_PAGE, sendsPage * SENDS_PER_PAGE)
 
   const SEGMENT_COUNTS: Record<string, number> = {
     all:      recipientCounts.all,
@@ -547,9 +561,12 @@ export default function AnnouncementsCompose({ recentSends, segments, recipientC
             </span>
           </button>
           <div className="flex-1" />
-          {bottomTab === 'sends' && (
-            <a href="/admin/announcements/all" className="self-center mr-4 font-mono text-[10px] text-sky hover:underline">View all →</a>
-          )}
+          <a
+            href={bottomTab === 'tokens' ? '/admin/announcements/tokens' : '/admin/announcements/all'}
+            className="self-center mr-4 font-mono text-[10px] text-sky hover:underline"
+          >
+            View all →
+          </a>
         </div>
 
         {/* Push Token Holders tab */}
@@ -577,24 +594,39 @@ export default function AnnouncementsCompose({ recentSends, segments, recipientC
             ) : filteredTokenHolders.length === 0 ? (
               <div className="py-6 text-center text-xs text-fg-3 italic">No matches for &quot;{tokenFilter}&quot;</div>
             ) : (
-              <div className="divide-y divide-dashed divide-border">
-                {filteredTokenHolders.map(h => (
-                  <div key={h.userId} className="py-2.5 flex items-center gap-3">
-                    <div
-                      className={`w-2 h-2 rounded-full shrink-0 ${h.announcements ? 'bg-ok' : 'bg-fg-3'}`}
-                      title={h.announcements ? 'Opted in to announcements' : 'Opted out of announcements'}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-medium text-fg truncate">{h.fullName || h.email}</div>
-                      {h.fullName && <div className="font-mono text-[10px] text-fg-3 truncate">{h.email}</div>}
+              <>
+                <div className="divide-y divide-dashed divide-border">
+                  {pagedTokens.map(h => (
+                    <div key={h.userId} className="py-2.5 flex items-center gap-3">
+                      <div
+                        className={`w-2 h-2 rounded-full shrink-0 ${h.announcements ? 'bg-ok' : 'bg-fg-3'}`}
+                        title={h.announcements ? 'Opted in to announcements' : 'Opted out of announcements'}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium text-fg truncate">{h.fullName || h.email}</div>
+                        {h.fullName && <div className="font-mono text-[10px] text-fg-3 truncate">{h.email}</div>}
+                      </div>
+                      <div className="font-mono text-[10px] text-fg-4 truncate max-w-[260px] hidden md:block">{h.token}</div>
+                      <span className={`shrink-0 font-mono text-[9px] px-1.5 py-0.5 rounded-sm ${h.announcements ? 'bg-ok/10 text-ok' : 'bg-surface-2 text-fg-3'}`}>
+                        {h.announcements ? 'opted in' : 'opted out'}
+                      </span>
                     </div>
-                    <div className="font-mono text-[10px] text-fg-4 truncate max-w-[260px] hidden md:block">{h.token}</div>
-                    <span className={`shrink-0 font-mono text-[9px] px-1.5 py-0.5 rounded-sm ${h.announcements ? 'bg-ok/10 text-ok' : 'bg-surface-2 text-fg-3'}`}>
-                      {h.announcements ? 'opted in' : 'opted out'}
+                  ))}
+                </div>
+                {tokenTotalPages > 1 && (
+                  <div className="flex items-center justify-between pt-3 mt-1 border-t border-border">
+                    <span className="font-mono text-[10px] text-fg-3">
+                      {(tokenPage - 1) * TOKENS_PER_PAGE + 1}–{Math.min(tokenPage * TOKENS_PER_PAGE, filteredTokenHolders.length)} of {filteredTokenHolders.length}
                     </span>
+                    <div className="flex gap-1">
+                      <button onClick={() => setTokenPage(p => Math.max(1, p - 1))} disabled={tokenPage === 1}
+                        className="px-2 py-1 text-[10px] font-mono border border-border rounded-sm disabled:opacity-30 hover:bg-surface-2 transition-colors">← Prev</button>
+                      <button onClick={() => setTokenPage(p => Math.min(tokenTotalPages, p + 1))} disabled={tokenPage === tokenTotalPages}
+                        className="px-2 py-1 text-[10px] font-mono border border-border rounded-sm disabled:opacity-30 hover:bg-surface-2 transition-colors">Next →</button>
+                    </div>
                   </div>
-                ))}
-              </div>
+                )}
+              </>
             )}
           </div>
         )}
@@ -605,27 +637,42 @@ export default function AnnouncementsCompose({ recentSends, segments, recipientC
             {sends.length === 0 ? (
               <div className="py-6 text-center text-xs text-fg-3 italic">No announcements sent yet.</div>
             ) : (
-              <div className="divide-y divide-dashed divide-border">
-                {sends.map((s, i) => (
-                  <div key={s.id ?? i} className="py-2.5 flex items-center gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-medium text-fg truncate">{s.title}</div>
-                      <div className="font-mono text-[10px] text-fg-3 mt-0.5">
-                        {s.segments?.name ?? (
-                          s.segment_key === 'active'   ? 'Active subs' :
-                          s.segment_key === 'trial'    ? 'Trial users' :
-                          s.segment_key === 'overdue'  ? 'Overdue' :
-                          s.segment_key === 'specific' ? 'Specific users' :
-                          'All users'
-                        )}
+              <>
+                <div className="divide-y divide-dashed divide-border">
+                  {pagedSends.map((s, i) => (
+                    <div key={s.id ?? i} className="py-2.5 flex items-center gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium text-fg truncate">{s.title}</div>
+                        <div className="font-mono text-[10px] text-fg-3 mt-0.5">
+                          {s.segments?.name ?? (
+                            s.segment_key === 'active'   ? 'Active subs' :
+                            s.segment_key === 'trial'    ? 'Trial users' :
+                            s.segment_key === 'overdue'  ? 'Overdue' :
+                            s.segment_key === 'specific' ? 'Specific users' :
+                            'All users'
+                          )}
+                        </div>
                       </div>
+                      <span className="font-mono text-[10px] text-fg-3 shrink-0">
+                        {s.sent_at ? new Date(s.sent_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                      </span>
                     </div>
-                    <span className="font-mono text-[10px] text-fg-3 shrink-0">
-                      {s.sent_at ? new Date(s.sent_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                  ))}
+                </div>
+                {sendsTotalPages > 1 && (
+                  <div className="flex items-center justify-between pt-3 mt-1 border-t border-border">
+                    <span className="font-mono text-[10px] text-fg-3">
+                      {(sendsPage - 1) * SENDS_PER_PAGE + 1}–{Math.min(sendsPage * SENDS_PER_PAGE, sends.length)} of {sends.length}
                     </span>
+                    <div className="flex gap-1">
+                      <button onClick={() => setSendsPage(p => Math.max(1, p - 1))} disabled={sendsPage === 1}
+                        className="px-2 py-1 text-[10px] font-mono border border-border rounded-sm disabled:opacity-30 hover:bg-surface-2 transition-colors">← Prev</button>
+                      <button onClick={() => setSendsPage(p => Math.min(sendsTotalPages, p + 1))} disabled={sendsPage === sendsTotalPages}
+                        className="px-2 py-1 text-[10px] font-mono border border-border rounded-sm disabled:opacity-30 hover:bg-surface-2 transition-colors">Next →</button>
+                    </div>
                   </div>
-                ))}
-              </div>
+                )}
+              </>
             )}
           </div>
         )}
