@@ -100,15 +100,16 @@ export default function LoginPage() {
     try {
       const { data: factors } = await supabase.auth.mfa.listFactors()
       const totp = factors?.totp?.find((f: { status: string }) => f.status === 'verified')
-      if (!totp) { setMfaError('No authenticator found.'); return }
+      if (!totp) { setMfaError('No authenticator found.'); setMfaLoading(false); return }
       const { data: ch, error: chErr } = await supabase.auth.mfa.challenge({ factorId: totp.id })
-      if (chErr || !ch) { setMfaError(chErr?.message ?? 'Challenge failed'); return }
+      if (chErr || !ch) { setMfaError(chErr?.message ?? 'Challenge failed'); setMfaLoading(false); return }
       const { error: verErr } = await supabase.auth.mfa.verify({ factorId: totp.id, challengeId: ch.id, code: mfaCode })
-      if (verErr) { setMfaError('Invalid code. Try again.'); return }
+      if (verErr) { setMfaError('Invalid code. Try again.'); setMfaLoading(false); return }
       const next = new URLSearchParams(window.location.search).get('next')
       router.push(next ?? "/dashboard")
       router.refresh()
-    } finally {
+      // intentionally leave mfaLoading=true — button stays disabled until navigation completes
+    } catch {
       setMfaLoading(false)
     }
   }
