@@ -54,6 +54,8 @@ export default function AnnouncementsCompose({ recentSends, segments, recipientC
   const [sent,           setSent]           = useState(false)
   const [sentCount,      setSentCount]      = useState(0)
   const [sentHasPush,    setSentHasPush]    = useState(true)
+  const [sentTokenCount, setSentTokenCount] = useState(0)
+  const [sentErrors,     setSentErrors]     = useState(0)
   const [sends,          setSends]          = useState<RecentSend[]>(recentSends)
   const [bottomTab,      setBottomTab]      = useState<'tokens' | 'sends'>('tokens')
   const [tokenFilter,    setTokenFilter]    = useState('')
@@ -178,6 +180,8 @@ export default function AnnouncementsCompose({ recentSends, segments, recipientC
       const result = await res.json()
       setSentCount(result.sent ?? 0)
       setSentHasPush(result.hasPush !== false)
+      setSentTokenCount(result.tokenCount ?? -1)
+      setSentErrors(result.errors ?? 0)
 
       // Refresh recent sends list
       const sb = createClient()
@@ -379,12 +383,14 @@ export default function AnnouncementsCompose({ recentSends, segments, recipientC
 
           {/* Action buttons */}
           {sent ? (
-            <div className="px-4 py-3 bg-ok/10 border border-ok/20 rounded-md text-xs text-ok font-medium text-center">
+            <div className={`px-4 py-3 border rounded-md text-xs font-medium text-center ${sentCount > 0 ? 'bg-ok/10 border-ok/20 text-ok' : sentErrors > 0 ? 'bg-danger/10 border-danger/20 text-danger' : 'bg-warn/10 border-warn/20 text-warn'}`}>
               {sentCount > 0
-                ? `Push sent to ${sentCount.toLocaleString()} device${sentCount === 1 ? '' : 's'}.`
-                : sentHasPush
-                  ? 'Announcement saved. No push tokens matched the selected segment.'
-                  : 'Announcement saved.'}
+                ? `Push sent to ${sentCount.toLocaleString()} device${sentCount === 1 ? '' : 's'}.${sentErrors > 0 ? ` (${sentErrors} failed)` : ''}`
+                : sentErrors > 0
+                  ? `Announcement saved. Found ${sentTokenCount} token${sentTokenCount === 1 ? '' : 's'} but delivery failed — check Vercel logs for details.`
+                  : sentHasPush
+                    ? 'Announcement saved. No push tokens found for the selected segment.'
+                    : 'Announcement saved.'}
             </div>
           ) : (
             <div className="flex gap-2.5">

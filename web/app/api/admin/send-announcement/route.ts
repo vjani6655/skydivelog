@@ -99,13 +99,17 @@ export async function POST(request: Request) {
   if (segment !== 'specific') q = q.eq('announcements', true)
   if (userIds) q = q.in('user_id', userIds)
 
-  const { data: prefs } = await q
+  const { data: prefs, error: prefsErr } = await q
+  console.log('[send-announcement] prefs query rows:', prefs?.length ?? 0, 'error:', prefsErr?.message ?? null, 'userIds:', userIds)
+
   const tokens = (prefs ?? [])
     .map((p: { push_token: string }) => p.push_token)
     .filter((t: string) => t?.startsWith('ExponentPushToken['))
 
+  console.log('[send-announcement] valid tokens found:', tokens.length)
+
   if (tokens.length === 0) {
-    return NextResponse.json({ ok: true, sent: 0, hasPush: true, announcementId: ann.id })
+    return NextResponse.json({ ok: true, sent: 0, tokenCount: 0, hasPush: true, announcementId: ann.id })
   }
 
   // 7. Batch-send via send-push Supabase Edge Function (100 tokens per call)
@@ -133,12 +137,19 @@ export async function POST(request: Request) {
           data:  deepLink?.trim() ? { url: deepLink.trim() } : {},
         }),
       })
-      if (res.ok) sent += batch.length
-      else errors += batch.length
-    } catch {
+      if (res.ok) {
+        sent += batch.length
+      } else {
+        const errBody = await res.text().catch(() => '')
+        console.error('[send-announcement] edge function error:', res.status, errBody)
+        errors += batch.length
+      }
+    } catch (e) {
+      console.error('[send-announcement] edge function threw:', e)
       errors += batch.length
     }
   }
 
-  return NextResponse.json({ ok: true, sent, errors, announcementId: ann.id })
+  console.log('[send-announcement] sent:', sent, 'errors:', errors)
+  return NextResponse.json({ ok: true, sent, errors, tokenCount: tokens.length, announcementId: ann.id })
 }
