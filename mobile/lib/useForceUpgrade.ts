@@ -11,6 +11,7 @@
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
+import * as Application from 'expo-application';
 import { supabase } from './supabase';
 
 // ─── semver helpers ───────────────────────────────────────────────────────────
@@ -66,10 +67,10 @@ const DEFAULT_CONFIG: UpgradeConfig = {
  */
 export function getAppVersion(): string {
   const semver = Constants.expoConfig?.version ?? '0.0.0';
-  // nativeBuildVersion is set by the native layer in real builds (iOS buildNumber / Android versionCode).
-  // Falls back to expoConfig values. Returns null in Expo Go dev mode.
+  // Application.nativeBuildVersion reads CFBundleVersion (iOS) / versionCode (Android)
+  // directly from the native layer — works reliably in EAS production builds.
   const buildNum: string | null =
-    Constants.nativeBuildVersion ??
+    Application.nativeBuildVersion ??
     (Platform.OS === 'ios'
       ? (Constants.expoConfig?.ios?.buildNumber ?? null)
       : (Constants.expoConfig?.android?.versionCode != null
