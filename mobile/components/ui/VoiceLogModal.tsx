@@ -166,6 +166,10 @@ export default function VoiceLogModal({ visible, onClose, onComplete, suggestedJ
   const askedJumpTimeRef  = useRef(false);
   // Guards against duplicate 'end' events fired by iOS for a single STT session.
   const sttEndHandledRef  = useRef(false);
+  // True while TTS is fetching/playing; prevents startListening from stealing the AVAudioSession.
+  const ttsInProgressRef  = useRef(false);
+  // The field the agent most recently asked for, so GPT knows which field to map the response to.
+  const currentlyAskingFieldRef = useRef<FieldKey | null>(null);
 
   // Keep refs in sync
   useEffect(() => { statusRef.current = status; },       [status]);
@@ -233,23 +237,28 @@ export default function VoiceLogModal({ visible, onClose, onComplete, suggestedJ
   }, []);
 
   const speakAgent = useCallback((text: string, onDone?: () => void) => {
+    clearSilence();
+
     setAgentText(text);
     setStatus('speaking');
     statusRef.current = 'speaking';
-    setIsAudioReady(false); // reset — audio isn't playing yet
+    setIsAudioReady(false);
+    ttsInProgressRef.current = true;
 
     const t0 = Date.now();
     console.log(`[VOICE] speakAgent called t=0 text="${text.slice(0, 40)}"`);
 
-    // 30-second absolute safety net — in case of network issues or any other
-    // failure that prevents speakAI's onDone from firing.
     const safetyTimer = setTimeout(() => {
-      if (isActiveRef.current && statusRef.current === 'speaking') onDone?.();
+      if (isActiveRef.current && statusRef.current === 'speaking') {
+        ttsInProgressRef.current = false;
+        onDone?.();
+      }
     }, 30_000);
 
     speakAI(
       text,
       () => {
+        ttsInProgressRef.current = false;
         console.log(`[VOICE] TTS done t+${Date.now() - t0}ms`);
         clearTimeout(safetyTimer);
         if (isActiveRef.current) onDone?.();
@@ -259,7 +268,7 @@ export default function VoiceLogModal({ visible, onClose, onComplete, suggestedJ
         if (isActiveRef.current) setIsAudioReady(true);
       },
     );
-  }, []);
+  }, [clearSilence]);
 
   const startListening = useCallback(async (silenceMs: number) => {
     if (!sttModule) return;
@@ -270,11 +279,27 @@ export default function VoiceLogModal({ visible, onClose, onComplete, suggestedJ
     setTranscript('');
     startPulse();
 
-    // Grace period: let iOS release the AVAudioSession after TTS before starting STT.
-    // IMPORTANT: do NOT set statusRef = 'listening' until after this delay — stale
-    // SpeechRecognizer 'end' events fire during this window and must be ignored.
+    // Snapshot status before the grace period so we can detect if speakAgent fired
+    // during the wait (e.g. 'error: no-speech' racing with the 'end' handler).
+    // NOTE: do NOT reset ttsInProgressRef here — that would cancel the guard if the
+    // error handler fires after the end handler already set ttsInProgressRef=true.
+    const statusAtStart = statusRef.current;
+
+    // Grace period: let iOS commit the AVAudioSession release from TTS before STT claims it.
     await new Promise<void>(r => setTimeout(r, 350));
-    if (!isActiveRef.current) return; // modal closed while waiting
+    if (!isActiveRef.current) return;
+
+    // Primary guard: speakAgent was called during the grace period — abort.
+    if (ttsInProgressRef.current) {
+      stopPulse();
+      console.log('[STT] startListening aborted — TTS started during grace period');
+      return;
+    }
+    // Secondary guard: same condition detected via status transition.
+    if (statusAtStart === 'listening' && (statusRef.current === 'speaking' || statusRef.current === 'processing')) {
+      stopPulse();
+      return;
+    }
 
     setStatus('listening');
     statusRef.current = 'listening';
@@ -287,7 +312,7 @@ export default function VoiceLogModal({ visible, onClose, onComplete, suggestedJ
     silenceRef.current = setTimeout(() => {
       if (statusRef.current === 'listening') sttModule?.stop();
     }, silenceMs);
-  }, [startPulse, clearSilence]);
+  }, [startPulse, clearSilence, stopPulse]);
 
   const stopListening = useCallback(() => {
     clearSilence();
@@ -406,7 +431,9 @@ export default function VoiceLogModal({ visible, onClose, onComplete, suggestedJ
       extracted = await extractJumpFieldsAI(text, {
         suggestedJumpNumber: hintRef.current,
         lastGear: dynamicGear,
+        expectedField: isDumpRef.current ? undefined : (currentlyAskingFieldRef.current ?? undefined),
       });
+      currentlyAskingFieldRef.current = null; // consumed
     } catch {
       for (const field of FIELD_ORDER) {
         const r = parseFieldValue(field, text);
@@ -559,6 +586,7 @@ export default function VoiceLogModal({ visible, onClose, onComplete, suggestedJ
       return;
     }
     retryCountRef.current[field] = retries + 1;
+    currentlyAskingFieldRef.current = field;
     // Prewarm the next likely question while asking this one
     const otherMissing = REQUIRED_FIELDS.filter(f => f !== field && collectedRef.current[f] === undefined);
     if (otherMissing.length > 0) prewarmTTS(getQuestion(otherMissing[0]));
@@ -594,16 +622,15 @@ export default function VoiceLogModal({ visible, onClose, onComplete, suggestedJ
   useSafeRecognitionEvent('end', () => {
     const sttEndAt = Date.now();
     stopPulse();
-    // Start transitioning the AVAudioSession from recording (earpiece) back to
-    // playback (speaker) immediately — the earlier this fires the less likely
-    // TTS will be routed to the earpiece when it plays.
-    resetAudioForPlayback().then(() =>
-      console.log(`[VOICE] resetAudioForPlayback resolved t+${Date.now() - sttEndAt}ms after STT end`)
-    );
     console.log('[STT] end, status:', statusRef.current, 'transcript:', JSON.stringify(transcriptRef.current));
     if (!isActiveRef.current) return; // modal closed
     if (sttEndHandledRef.current) { console.log('[STT] duplicate end event — ignored'); return; }
     sttEndHandledRef.current = true;
+    // Start transitioning the AVAudioSession from recording (earpiece) back to
+    // playback (speaker) immediately — only once per session, after the dedup guard.
+    resetAudioForPlayback().then(() =>
+      console.log(`[VOICE] resetAudioForPlayback resolved t+${Date.now() - sttEndAt}ms after STT end`)
+    );
     // Summary correction window: user spoke after "Does this look right?"
     if (summaryListeningRef.current) {
       summaryListeningRef.current = false;

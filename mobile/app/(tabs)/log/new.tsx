@@ -571,15 +571,17 @@ export default function NewJumpScreen() {
         setFfSecs(data.freefall_seconds ? String(data.freefall_seconds) : '60');
         setCanopyInput(data.canopy_seconds ? String(data.canopy_seconds) : '');
         setPullAlt(data.pull_altitude_ft ? String(data.pull_altitude_ft) : '');
-        setJumpType(data.jump_type ?? '');
         const jt = data.jumper_type ?? 'licensed';
         setJumperType(jt.charAt(0).toUpperCase() + jt.slice(1));
+        // Students store free-text stage in jump_stage; jump_type is the sanitized enum
+        setJumpType(jt.toLowerCase() === 'student' ? (data.jump_stage ?? data.jump_type ?? '') : (data.jump_type ?? ''));
         setCanopyType((data as any).canopy_type ?? '');
         setCanopyGearId((data as any).canopy_gear_id ?? null);
         setIsFav(data.is_favourite ?? false);
         setNotes(data.notes ?? '');
         setLandingAccuracyValue(data.landing_accuracy_value ?? '');
         setLandingAccuracyUnit(data.landing_accuracy_unit ?? 'M');
+        setPeopleOnJump(data.people_on_jump != null ? String(data.people_on_jump) : '');
       }
       setDraftLoading(false);
     })();

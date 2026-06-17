@@ -105,12 +105,13 @@ Rules:
 • Convert time phrases ("4 and a half minutes" → "4:30", "five minutes" → "5:00", "4 thirty" → "4:30", "two minutes 30 seconds" → "2:30", "one minute 20 seconds" → "1:20")
 • "fourteen grand" = 14000 feet
 • If the user says "AFF stage 1" or "AFF 3" → jumpType is "AFF"
-• If the user says "same canopy", "same aircraft", "same as last time", "same plane", "same chute", "as usual", "previous", "use the previous", or similar — use the values provided in the context note below (if present). Do NOT invent values if no context is provided.
-• IMPORTANT: The "Last jump gear" context note is ONLY to resolve "same as last" phrases. Do NOT use it as a default value for acType, acRego, or canopyType when the user mentions a different aircraft or canopy. If the user says any aircraft name (even an unusual one), extract that name — do NOT substitute the hint value.`;
+• If the user says "same aircraft", "same plane", "same as last time", "same", "as usual", "previous", or similar for aircraft — return acType and acRego each as the literal string "same as last". Do NOT apply this to canopyType unless the user also references the canopy.
+• If the user says "same canopy", "same chute", "same parachute", or similar for canopy — return canopyType as the literal string "same as last". Do NOT apply this to acType or acRego unless the user also references the aircraft.
+• CRITICAL: Do NOT include acType, acRego, or canopyType in your response at all if the user does not explicitly mention aircraft, rego, or canopy. Never auto-fill gear fields from context — only extract what the user actually said.`;
 
 export async function extractJumpFieldsAI(
   transcript: string,
-  hint?: { suggestedJumpNumber?: number; lastGear?: { acType: string; acRego: string; canopyType?: string } },
+  hint?: { suggestedJumpNumber?: number; lastGear?: { acType: string; acRego: string; canopyType?: string }; expectedField?: string },
 ): Promise<Partial<CollectedFields>> {
   const key = getKey();
   if (!key || !transcript.trim()) return {};
@@ -121,8 +122,14 @@ export async function extractJumpFieldsAI(
 
   const todayNote = ` Today's date is ${new Date().toISOString().slice(0, 10)} — use this to resolve relative dates like "yesterday" or "last Saturday".`;
 
+  // Intentionally omit actual gear values — GPT must return "same as last" for JS to resolve.
+  // Revealing values caused GPT to auto-fill gear even when the user said nothing about it.
   const gearNote = hint?.lastGear
-    ? ` Last jump gear — aircraft: ${hint.lastGear.acType} rego ${hint.lastGear.acRego}${hint.lastGear.canopyType ? `, canopy: ${hint.lastGear.canopyType}` : ''}. If the user says "same", "as last time", "same aircraft", "same canopy", or similar, use these values.`
+    ? ` (Previous jump gear is on file. If the user references it with "same aircraft", "same canopy", "same as last", etc., return "same as last" for that specific field only — do not apply to other gear fields.)`
+    : '';
+
+  const fieldNote = hint?.expectedField
+    ? ` The agent just asked specifically for the field "${hint.expectedField}" — map this response to that field.`
     : '';
 
   try {
@@ -141,7 +148,7 @@ export async function extractJumpFieldsAI(
           { role: 'system', content: SYSTEM_PROMPT },
           {
             role: 'user',
-            content: `Extract jump fields from this transcript${hintNote}${gearNote}${todayNote}: "${transcript}"`,
+            content: `Extract jump fields from this transcript${hintNote}${gearNote}${fieldNote}${todayNote}: "${transcript}"`,
           },
         ],
       }),

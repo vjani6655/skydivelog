@@ -189,23 +189,23 @@ export async function speakAI(text: string, onDone?: () => void, onStarted?: () 
     }
 
     // ── 3. Restore audio session to speaker/playback before every TTS call ───
-    // STT (expo-speech-recognition) reconfigures the iOS audio session to
-    // recording mode (earpiece, ducked volume) between turns. Without this
-    // reset the second and subsequent TTS calls play at very low volume.
-    // Retry once in case the first call races with the STT session teardown.
-    for (let attempt = 0; attempt < 2; attempt++) {
+    // speakAgent calls sttModule.abort() before us, but the AVAudioSession
+    // teardown is async on the native side — retry until it releases.
+    let audioModeSet = false;
+    for (let attempt = 0; attempt < 3; attempt++) {
       try {
         await _setAudioModeAsync?.(PLAYBACK_MODE);
         console.log('[TTS] audio mode restored to playback');
+        audioModeSet = true;
         break;
       } catch (e) {
         console.warn(`[TTS] setAudioModeAsync failed (attempt ${attempt + 1}):`, e);
-        if (attempt === 0) await new Promise<void>(r => setTimeout(r, 300));
+        if (attempt < 2) await new Promise<void>(r => setTimeout(r, 500));
       }
     }
-    // Give iOS time to fully switch the AVAudioSession from recording (earpiece)
-    // to playback (speaker) before the player is created.
-    await new Promise<void>(r => setTimeout(r, 500));
+    if (ttsGen !== myGen) return;
+    // Shorter settle time when mode set cleanly; longer when retries were needed.
+    await new Promise<void>(r => setTimeout(r, audioModeSet ? 100 : 600));
     if (ttsGen !== myGen) return;
 
     // ── 4. Create player with fast status interval ────────────────────────────
