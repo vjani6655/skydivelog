@@ -244,9 +244,9 @@ export default function UserActionsClient({
                 <Badge kind="sky">{sub.plan?.toUpperCase() ?? 'PRO'}</Badge>
                 <Badge kind={STATUS_BADGE[sub.status] ?? 'muted'}>{sub.status.toUpperCase()}</Badge>
               </div>
-              <span className="font-mono text-lg font-semibold">${sub.price_at_signup}/yr</span>
+              <span className="font-mono text-lg font-semibold">{sub.price_at_signup ? `$${sub.price_at_signup}/yr` : sub.source === 'apple' ? 'Apple IAP' : '—'}</span>
             </div>
-            <div className="font-mono text-[10px] text-fg-3 mb-3">BILLED ANNUALLY · STRIPE</div>
+            <div className="font-mono text-[10px] text-fg-3 mb-3">BILLED ANNUALLY · {sub.source === 'apple' ? 'APPLE' : 'STRIPE'}</div>
             <Divider />
             {([
               ['Started',   fmtDateShort(sub.started_at)],

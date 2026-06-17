@@ -99,6 +99,7 @@ export async function POST(req: NextRequest) {
           plan: 'Pro',
           started_at: startedAt,
           renews_at: renewsAt,
+          ...(process.env.APPLE_IAP_PRICE ? { price_at_signup: Number(process.env.APPLE_IAP_PRICE) } : {}),
         })
         .select('id')
         .single()
