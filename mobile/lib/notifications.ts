@@ -39,7 +39,7 @@ export const DEFAULT_PREFS: NotifPrefs = {
   cert_expiry: true,
   repack_due: true,
   currency_alert: true,
-  announcements: false,
+  announcements: true,
 };
 
 // Maps NotifPrefs keys → DB column names
@@ -103,9 +103,25 @@ export async function registerPushToken(
       .eq('push_token', token)
       .neq('user_id', userId);
 
-    await supabase
+    // Check if a preferences row already exists for this user
+    const { data: existing } = await supabase
       .from('notification_preferences')
-      .upsert({ user_id: userId, push_token: token }, { onConflict: 'user_id' });
+      .select('user_id')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (existing) {
+      // Row exists — only update the token, preserve all preference choices
+      await supabase
+        .from('notification_preferences')
+        .update({ push_token: token })
+        .eq('user_id', userId);
+    } else {
+      // New row — default announcements to true (opted in)
+      await supabase
+        .from('notification_preferences')
+        .insert({ user_id: userId, push_token: token, announcements: true });
+    }
 
     return token;
   } catch {
