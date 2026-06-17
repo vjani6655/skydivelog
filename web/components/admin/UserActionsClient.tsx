@@ -29,7 +29,7 @@ type NoteItem = {
   created_at: string
 }
 
-type ActionKey = 'reset-password' | 'force-signout' | 'revoke-subscription' | 'refund' | 'lock' | 'delete' | 'set-password'
+type ActionKey = 'reset-password' | 'force-signout' | 'revoke-subscription' | 'refund' | 'lock' | 'delete' | 'set-password' | 'reset-subscription'
 
 export type UserActionsProps = {
   userId: string
@@ -351,6 +351,29 @@ export default function UserActionsClient({
               {errors['refund'] && (
                 <div className="mt-1 font-mono text-[10px] text-danger">{errors['refund']}</div>
               )}
+
+              {/* Reset for Apple Review */}
+              <div className="mt-3 pt-3 border-t border-border">
+                {done.has('reset-subscription') ? (
+                  <div className="text-center text-xs text-ok font-mono">✓ Subscription wiped — user will see paywall</div>
+                ) : confirm === 'reset-subscription' ? (
+                  <div className="flex gap-2">
+                    <button onClick={() => callAction('reset-subscription')} disabled={loading === 'reset-subscription'}
+                      className="flex-1 py-1.5 bg-danger text-white rounded-sm text-xs font-medium disabled:opacity-40">
+                      {loading === 'reset-subscription' ? 'Resetting…' : 'Yes, wipe subscription'}
+                    </button>
+                    <button onClick={() => setConfirm(null)} className="px-3 py-1.5 border border-border rounded-sm text-xs text-fg-2">Cancel</button>
+                  </div>
+                ) : (
+                  <button onClick={() => setConfirm('reset-subscription')}
+                    className="w-full py-1.5 border border-border rounded-sm text-xs text-fg-3 hover:text-danger hover:border-danger/40 transition-colors">
+                    Reset for Apple Review
+                  </button>
+                )}
+                {errors['reset-subscription'] && (
+                  <div className="mt-1 font-mono text-[10px] text-danger">{errors['reset-subscription']}</div>
+                )}
+              </div>
             </div>
           </>
         ) : inTrial ? (
