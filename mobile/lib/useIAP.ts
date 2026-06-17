@@ -35,16 +35,20 @@ export function useIAP() {
     console.log('[IAP] validateReceipt start, productId:', purchase.productId);
     try {
       // PurchaseIOS does not carry receiptData/jwsRepresentation directly.
-      // We must explicitly fetch the app receipt via getReceiptDataIOS().
-      // If it returns empty (can happen immediately after first purchase),
-      // fall back to requestReceiptRefreshIOS() which calls AppStore.sync() first.
+      // getReceiptIOS() reads the on-disk receipt file (plain async fn, most reliable).
+      // If empty, requestReceiptRefreshIOS() forces Apple to rewrite the file via
+      // SKReceiptRefreshRequest — necessary immediately after a first-ever purchase.
       let receipt: string | null = null;
+      const iosModule = iapModule as unknown as {
+        getReceiptIOS: () => Promise<string | null>;
+        requestReceiptRefreshIOS: () => Promise<string>;
+      };
       try {
-        receipt = (await iapModule!.getReceiptDataIOS?.()) ?? null;
-        console.log('[IAP] getReceiptDataIOS length:', receipt?.length ?? 0);
+        receipt = (await iosModule.getReceiptIOS?.()) ?? null;
+        console.log('[IAP] getReceiptIOS length:', receipt?.length ?? 0);
         if (!receipt) {
-          console.log('[IAP] receipt empty, refreshing...');
-          receipt = await (iapModule as unknown as { requestReceiptRefreshIOS: () => Promise<string> }).requestReceiptRefreshIOS?.() ?? null;
+          console.log('[IAP] receipt empty, calling requestReceiptRefreshIOS...');
+          receipt = (await iosModule.requestReceiptRefreshIOS?.()) ?? null;
           console.log('[IAP] requestReceiptRefreshIOS length:', receipt?.length ?? 0);
         }
       } catch (receiptErr) {
@@ -57,7 +61,13 @@ export function useIAP() {
         }
         return;
       }
-      const { data: { session } } = await supabase.auth.getSession();
+      // getSession() returns a cached (possibly expired) token from AsyncStorage.
+      // Force-refresh so the server's verifyBearerToken call succeeds.
+      let { data: { session } } = await supabase.auth.refreshSession();
+      if (!session) {
+        // refreshSession failed (e.g. network error) — fall back to cached session
+        ({ data: { session } } = await supabase.auth.getSession());
+      }
       if (!session) {
         console.log('[IAP] validateReceipt: no session');
         setError('Not signed in. Please restart the app.');

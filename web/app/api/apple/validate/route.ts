@@ -28,7 +28,10 @@ export async function POST(req: NextRequest) {
     if (!token) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
 
     const { data: { user }, error: authErr } = await verifyBearerToken(token)
-    if (authErr || !user) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+    if (authErr || !user) {
+      console.error('[apple/validate] Auth failed:', authErr?.message ?? 'no user returned')
+      return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+    }
 
     // Try production first; status 21007 means sandbox receipt sent to production
     let apple = await callVerifyReceipt(receipt, false)
