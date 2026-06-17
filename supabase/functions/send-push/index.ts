@@ -57,8 +57,21 @@ serve(async (req) => {
   // ── Auth ────────────────────────────────────────────────────────────────────
   let callerUserId: string | null = null;
 
-  if (authHeader === `Bearer ${serviceKey}`) {
-    // Service-role call — full access
+  // Decode JWT payload to check role claim.
+  // The Supabase gateway validates the JWT signature before the function runs,
+  // so decoding without re-verifying is safe here.
+  function jwtRole(header: string): string | null {
+    try {
+      const token = header.replace(/^Bearer\s+/i, '');
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload?.role ?? null;
+    } catch { return null; }
+  }
+
+  const role = jwtRole(authHeader);
+
+  if (role === 'service_role' || authHeader === `Bearer ${serviceKey}`) {
+    // Service-role call — full access, `to` must be supplied
   } else {
     // Try to validate as a user JWT
     const userClient = createClient(supabaseUrl, serviceKey, {

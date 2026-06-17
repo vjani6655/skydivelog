@@ -112,40 +112,63 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, sent: 0, tokenCount: 0, hasPush: true, announcementId: ann.id })
   }
 
-  // 7. Batch-send via send-push Supabase Edge Function (100 tokens per call)
-  // SUPABASE_EDGE_KEY must be the JWT-format service role key (eyJ…) from the
-  // Supabase dashboard — the newer sb_secret_* key is not accepted by the
-  // Edge Functions gateway which requires a valid JWT.
-  const sendPushUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-push`
-  const serviceKey = process.env.SUPABASE_EDGE_KEY ?? process.env.SUPABASE_SECRET_KEY!
+  // 7. Look up user_ids for notification inbox rows
+  const { data: tokenPrefs } = await db
+    .from('notification_preferences')
+    .select('user_id, push_token')
+    .in('push_token', tokens)
+
+  const tokenToUser = new Map<string, string>()
+  ;(tokenPrefs ?? []).forEach((p: { user_id: string; push_token: string }) => {
+    tokenToUser.set(p.push_token, p.user_id)
+  })
+
+  // 8. Insert notification inbox rows
+  const inboxRows = tokens
+    .filter(t => tokenToUser.has(t))
+    .map(t => ({
+      user_id: tokenToUser.get(t)!,
+      title:   title.trim(),
+      body:    body.trim(),
+      data:    deepLink?.trim() ? { url: deepLink.trim() } : {},
+    }))
+
+  if (inboxRows.length > 0) {
+    await db.from('notifications').insert(inboxRows)
+  }
+
+  // 9. Send directly to Expo Push API in batches
+  const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send'
   let sent = 0
   let errors = 0
 
   for (let i = 0; i < tokens.length; i += EXPO_PUSH_BATCH) {
     const batch = tokens.slice(i, i + EXPO_PUSH_BATCH)
+    const messages = batch.map(to => ({
+      to,
+      title: title.trim(),
+      body:  body.trim(),
+      sound: 'default',
+      data:  deepLink?.trim() ? { url: deepLink.trim() } : {},
+    }))
     try {
-      const res = await fetch(sendPushUrl, {
+      const res = await fetch(EXPO_PUSH_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${serviceKey}`,
+          'Accept':        'application/json',
         },
-        body: JSON.stringify({
-          to:    batch,
-          title: title.trim(),
-          body:  body.trim(),
-          data:  deepLink?.trim() ? { url: deepLink.trim() } : {},
-        }),
+        body: JSON.stringify(messages),
       })
       if (res.ok) {
         sent += batch.length
       } else {
         const errBody = await res.text().catch(() => '')
-        console.error('[send-announcement] edge function error:', res.status, errBody)
+        console.error('[send-announcement] expo error:', res.status, errBody)
         errors += batch.length
       }
     } catch (e) {
-      console.error('[send-announcement] edge function threw:', e)
+      console.error('[send-announcement] expo threw:', e)
       errors += batch.length
     }
   }
