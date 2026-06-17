@@ -5,15 +5,7 @@ import {
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-// expo-iap native module is excluded from local dev builds — load lazily
-const showManageSubscriptionsIOS: (() => void) | null = (() => {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    return require('expo-iap').showManageSubscriptionsIOS ?? null;
-  } catch {
-    return null;
-  }
-})();
+
 import { supabase } from '@/lib/supabase';
 import { spacing, radii } from '@/constants/tokens';
 import type { ColorSet } from '@/constants/tokens';
@@ -404,7 +396,7 @@ export default function SubscriptionScreen() {
             Platform.OS === 'ios' && (
               <TouchableOpacity
                 style={styles.manageBtn}
-                onPress={() => showManageSubscriptionsIOS?.()}
+                onPress={() => Linking.openURL('https://apps.apple.com/account/subscriptions')}
                 activeOpacity={0.7}
               >
                 <Text style={styles.manageBtnText}>Manage in Settings</Text>
