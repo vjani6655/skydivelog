@@ -58,7 +58,8 @@
       "expo-sharing",
       "expo-speech-recognition",
       "expo-audio",
-      "expo-iap"
+      "expo-iap",
+      "./plugins/removeBackgroundAudio"
     ],
     "experiments": {
       "typedRoutes": true
