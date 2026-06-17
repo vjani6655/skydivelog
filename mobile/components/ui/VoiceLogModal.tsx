@@ -164,6 +164,8 @@ export default function VoiceLogModal({ visible, onClose, onComplete, suggestedJ
   const summaryCorrectRef = useRef(false);
   // True after we've already asked for jumpTime following a jumpDate extraction — ask only once.
   const askedJumpTimeRef  = useRef(false);
+  // Guards against duplicate 'end' events fired by iOS for a single STT session.
+  const sttEndHandledRef  = useRef(false);
 
   // Keep refs in sync
   useEffect(() => { statusRef.current = status; },       [status]);
@@ -236,6 +238,9 @@ export default function VoiceLogModal({ visible, onClose, onComplete, suggestedJ
     statusRef.current = 'speaking';
     setIsAudioReady(false); // reset — audio isn't playing yet
 
+    const t0 = Date.now();
+    console.log(`[VOICE] speakAgent called t=0 text="${text.slice(0, 40)}"`);
+
     // 30-second absolute safety net — in case of network issues or any other
     // failure that prevents speakAI's onDone from firing.
     const safetyTimer = setTimeout(() => {
@@ -244,8 +249,15 @@ export default function VoiceLogModal({ visible, onClose, onComplete, suggestedJ
 
     speakAI(
       text,
-      () => { clearTimeout(safetyTimer); if (isActiveRef.current) onDone?.(); },
-      () => { if (isActiveRef.current) setIsAudioReady(true); },
+      () => {
+        console.log(`[VOICE] TTS done t+${Date.now() - t0}ms`);
+        clearTimeout(safetyTimer);
+        if (isActiveRef.current) onDone?.();
+      },
+      () => {
+        console.log(`[VOICE] TTS audio started (onStarted) t+${Date.now() - t0}ms`);
+        if (isActiveRef.current) setIsAudioReady(true);
+      },
     );
   }, []);
 
@@ -266,6 +278,7 @@ export default function VoiceLogModal({ visible, onClose, onComplete, suggestedJ
 
     setStatus('listening');
     statusRef.current = 'listening';
+    sttEndHandledRef.current = false;
     console.log('[STT] starting recognition...');
     sttModule.start({ lang: 'en-AU', interimResults: true, maxAlternatives: 1, continuous: true });
 
@@ -296,6 +309,7 @@ export default function VoiceLogModal({ visible, onClose, onComplete, suggestedJ
     if (!isActiveRef.current) return;
     summaryListeningRef.current = true;
     setSummaryListening(true);
+    sttEndHandledRef.current = false;
     sttModule.start({ lang: 'en-AU', interimResults: true, maxAlternatives: 1, continuous: true });
     clearSilence();
     silenceRef.current = setTimeout(() => {
@@ -578,13 +592,18 @@ export default function VoiceLogModal({ visible, onClose, onComplete, suggestedJ
   });
 
   useSafeRecognitionEvent('end', () => {
+    const sttEndAt = Date.now();
     stopPulse();
     // Start transitioning the AVAudioSession from recording (earpiece) back to
     // playback (speaker) immediately — the earlier this fires the less likely
     // TTS will be routed to the earpiece when it plays.
-    resetAudioForPlayback();
+    resetAudioForPlayback().then(() =>
+      console.log(`[VOICE] resetAudioForPlayback resolved t+${Date.now() - sttEndAt}ms after STT end`)
+    );
     console.log('[STT] end, status:', statusRef.current, 'transcript:', JSON.stringify(transcriptRef.current));
     if (!isActiveRef.current) return; // modal closed
+    if (sttEndHandledRef.current) { console.log('[STT] duplicate end event — ignored'); return; }
+    sttEndHandledRef.current = true;
     // Summary correction window: user spoke after "Does this look right?"
     if (summaryListeningRef.current) {
       summaryListeningRef.current = false;
