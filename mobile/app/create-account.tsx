@@ -95,7 +95,7 @@ export default function CreateAccountScreen() {
       email: email.trim(),
       password,
       options: {
-        emailRedirectTo: `${process.env.EXPO_PUBLIC_WEB_URL ?? 'https://jumplogs.com'}/api/auth/callback`,
+        emailRedirectTo: `${process.env.EXPO_PUBLIC_WEB_URL ?? 'https://www.jumplogs.com'}/api/auth/callback`,
         data: {
           full_name: fullName.trim(),
           licence_number: licence.trim(),

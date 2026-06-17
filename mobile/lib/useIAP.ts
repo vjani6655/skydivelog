@@ -16,7 +16,7 @@ try {
 export const APPLE_PRODUCT_ID =
   process.env.EXPO_PUBLIC_APPLE_PRODUCT_ID ?? 'com.skydivelog.app.pro_annual';
 
-const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'https://jumplogs.com';
+const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'https://www.jumplogs.com';
 
 export type IAPStatus = 'loading' | 'ready' | 'purchasing' | 'validating' | 'success' | 'error' | 'unavailable';
 

@@ -20,7 +20,7 @@ import {
   type NotifPrefs,
 } from '@/lib/notifications';
 
-const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'https://jumplogs.com';
+const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'https://www.jumplogs.com';
 
 const LAYOUT_JUMP_LIST = ['Timeline', 'Compact', 'Cards'];
 const LAYOUT_JUMP_DETAIL = ['Standard', 'Cockpit', 'Photo-led'];

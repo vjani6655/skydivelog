@@ -18,7 +18,7 @@ import { useColors } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
 import { useIAP } from '@/lib/useIAP';
 
-const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'https://jumplogs.com';
+const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'https://www.jumplogs.com';
 
 const FEATURES = [
   {
