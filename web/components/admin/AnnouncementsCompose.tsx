@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { Bell, Search, X, Check } from 'lucide-react'
+import { useState, useEffect, useRef, useMemo } from 'react'
+import { Bell, Search, X, Check, Smartphone } from 'lucide-react'
 import { Badge } from '@/components/admin/ui'
 import { createClient } from '@/lib/supabase/client'
 
@@ -55,6 +55,8 @@ export default function AnnouncementsCompose({ recentSends, segments, recipientC
   const [sentCount,      setSentCount]      = useState(0)
   const [sentHasPush,    setSentHasPush]    = useState(true)
   const [sends,          setSends]          = useState<RecentSend[]>(recentSends)
+  const [bottomTab,      setBottomTab]      = useState<'tokens' | 'sends'>('tokens')
+  const [tokenFilter,    setTokenFilter]    = useState('')
 
   // Specific user picker state
   const [userQuery,      setUserQuery]      = useState('')
@@ -97,6 +99,20 @@ export default function AnnouncementsCompose({ recentSends, segments, recipientC
 
   const toggleChannel = (c: Channel) =>
     setChannels(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c])
+
+  // Set of user IDs that have a push token — for green dots in the user picker
+  const tokenUserIds = useMemo(() => new Set(pushTokenHolders.map(h => h.userId)), [pushTokenHolders])
+
+  // Filtered token holders for the bottom panel
+  const filteredTokenHolders = useMemo(() => {
+    const q = tokenFilter.toLowerCase().trim()
+    if (!q) return pushTokenHolders
+    return pushTokenHolders.filter(h =>
+      h.email.toLowerCase().includes(q) ||
+      (h.fullName ?? '').toLowerCase().includes(q) ||
+      h.token.toLowerCase().includes(q)
+    )
+  }, [pushTokenHolders, tokenFilter])
 
   const SEGMENT_COUNTS: Record<string, number> = {
     all:      recipientCounts.all,
@@ -302,6 +318,7 @@ export default function AnnouncementsCompose({ recentSends, segments, recipientC
                     )}
                     {userResults.map(u => {
                       const isSelected = selectedUsers.some(x => x.id === u.id)
+                      const hasToken = tokenUserIds.has(u.id)
                       return (
                         <button
                           key={u.id}
@@ -312,7 +329,10 @@ export default function AnnouncementsCompose({ recentSends, segments, recipientC
                             {isSelected && <Check size={10} className="text-on-sky" />}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs font-medium text-fg truncate">{u.full_name || '(no name)'}</p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-xs font-medium text-fg truncate">{u.full_name || '(no name)'}</p>
+                              {hasToken && <span className="w-1.5 h-1.5 rounded-full bg-ok shrink-0" title="Has push token" />}
+                            </div>
                             <p className="font-mono text-[10px] text-fg-3 truncate">
                               {u.email}{u.licence_number ? ` · ${u.licence_number}` : ''}
                             </p>
@@ -368,7 +388,7 @@ export default function AnnouncementsCompose({ recentSends, segments, recipientC
           )}
         </div>
 
-        {/* Right: preview + recent sends */}
+        {/* Right: iOS preview only */}
         <div className="flex flex-col gap-3.5">
           {/* iOS preview — switches between push (lock screen) and in-app banner */}
           <div className="bg-surface border border-border rounded-md p-4">
@@ -499,24 +519,76 @@ export default function AnnouncementsCompose({ recentSends, segments, recipientC
             </div>
           </div>
 
-          {/* Push token holders */}
-          <div className="bg-surface border border-border rounded-md p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="font-mono text-[10px] text-fg-3 uppercase tracking-widest">PUSH TOKEN HOLDERS</div>
-              <span className="font-mono text-[10px] text-fg-3">{pushTokenHolders.length} device{pushTokenHolders.length !== 1 ? 's' : ''}</span>
+        </div>
+      </div>
+
+      {/* Full-width tabbed panel: Push Token Holders | Recent Sends */}
+      <div className="mt-3.5 bg-surface border border-border rounded-md overflow-hidden">
+        {/* Tab bar */}
+        <div className="flex border-b border-border">
+          <button
+            onClick={() => setBottomTab('tokens')}
+            className={`flex items-center gap-2 px-5 py-3 text-xs font-medium transition-colors border-r border-border ${bottomTab === 'tokens' ? 'bg-surface text-fg border-b-2 border-b-sky -mb-px' : 'bg-surface-2 text-fg-3 hover:text-fg-2'}`}
+          >
+            <Smartphone size={12} />
+            Push Token Holders
+            <span className={`font-mono text-[10px] px-1.5 py-0.5 rounded-sm ${bottomTab === 'tokens' ? 'bg-sky/10 text-sky' : 'bg-border text-fg-3'}`}>
+              {pushTokenHolders.length}
+            </span>
+          </button>
+          <button
+            onClick={() => setBottomTab('sends')}
+            className={`flex items-center gap-2 px-5 py-3 text-xs font-medium transition-colors ${bottomTab === 'sends' ? 'bg-surface text-fg border-b-2 border-b-sky -mb-px' : 'bg-surface-2 text-fg-3 hover:text-fg-2'}`}
+          >
+            <Bell size={12} />
+            Recent Sends
+            <span className={`font-mono text-[10px] px-1.5 py-0.5 rounded-sm ${bottomTab === 'sends' ? 'bg-sky/10 text-sky' : 'bg-border text-fg-3'}`}>
+              {sends.length}
+            </span>
+          </button>
+          <div className="flex-1" />
+          {bottomTab === 'sends' && (
+            <a href="/admin/announcements/all" className="self-center mr-4 font-mono text-[10px] text-sky hover:underline">View all →</a>
+          )}
+        </div>
+
+        {/* Push Token Holders tab */}
+        {bottomTab === 'tokens' && (
+          <div className="p-4">
+            {/* Filter input */}
+            <div className="flex items-center gap-2 px-3 py-2 mb-3 bg-surface-2 border border-border rounded-md">
+              <Search size={12} className="text-fg-3 shrink-0" />
+              <input
+                type="text"
+                value={tokenFilter}
+                onChange={e => setTokenFilter(e.target.value)}
+                placeholder="Filter by name, email or token…"
+                className="flex-1 bg-transparent text-xs text-fg outline-none placeholder:text-fg-3"
+              />
+              {tokenFilter && (
+                <button onClick={() => setTokenFilter('')} className="text-fg-3 hover:text-fg">
+                  <X size={11} />
+                </button>
+              )}
             </div>
+
             {pushTokenHolders.length === 0 ? (
-              <div className="text-xs text-fg-3 italic py-2">No push tokens registered. Users need to open the app and allow notifications.</div>
+              <div className="py-6 text-center text-xs text-fg-3 italic">No push tokens registered yet. Users need to open the app and allow notifications.</div>
+            ) : filteredTokenHolders.length === 0 ? (
+              <div className="py-6 text-center text-xs text-fg-3 italic">No matches for &quot;{tokenFilter}&quot;</div>
             ) : (
               <div className="divide-y divide-dashed divide-border">
-                {pushTokenHolders.map(h => (
-                  <div key={h.userId} className="py-2.5 flex items-start gap-2">
-                    <div className={`mt-0.5 w-2 h-2 rounded-full shrink-0 ${h.announcements ? 'bg-ok' : 'bg-fg-3'}`} title={h.announcements ? 'Opted in to announcements' : 'Opted out of announcements'} />
+                {filteredTokenHolders.map(h => (
+                  <div key={h.userId} className="py-2.5 flex items-center gap-3">
+                    <div
+                      className={`w-2 h-2 rounded-full shrink-0 ${h.announcements ? 'bg-ok' : 'bg-fg-3'}`}
+                      title={h.announcements ? 'Opted in to announcements' : 'Opted out of announcements'}
+                    />
                     <div className="flex-1 min-w-0">
                       <div className="text-xs font-medium text-fg truncate">{h.fullName || h.email}</div>
                       {h.fullName && <div className="font-mono text-[10px] text-fg-3 truncate">{h.email}</div>}
-                      <div className="font-mono text-[10px] text-fg-4 truncate mt-0.5">{h.token}</div>
                     </div>
+                    <div className="font-mono text-[10px] text-fg-4 truncate max-w-[260px] hidden md:block">{h.token}</div>
                     <span className={`shrink-0 font-mono text-[9px] px-1.5 py-0.5 rounded-sm ${h.announcements ? 'bg-ok/10 text-ok' : 'bg-surface-2 text-fg-3'}`}>
                       {h.announcements ? 'opted in' : 'opted out'}
                     </span>
@@ -525,37 +597,38 @@ export default function AnnouncementsCompose({ recentSends, segments, recipientC
               </div>
             )}
           </div>
+        )}
 
-          {/* Recent sends */}
-          <div className="bg-surface border border-border rounded-md p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="font-mono text-[10px] text-fg-3 uppercase tracking-widest">RECENT SENDS</div>
-              <a href="/admin/announcements/all" className="font-mono text-[10px] text-sky hover:underline">View all →</a>
-            </div>
-            {sends.length === 0 && (
-              <div className="text-xs text-fg-3 italic py-2">No announcements sent yet.</div>
-            )}
-            {sends.map((s, i) => (
-              <div key={s.id ?? i} className="py-2.5 border-b border-dashed border-border last:border-0">
-                <div className="flex items-center justify-between mb-0.5">
-                  <div className="text-xs font-medium text-fg truncate pr-2">{s.title}</div>
-                  <span className="font-mono text-[10px] text-fg-3 shrink-0">
-                    {s.sent_at ? new Date(s.sent_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }) : '—'}
-                  </span>
-                </div>
-                <div className="font-mono text-[10px] text-fg-3">
-                  {s.segments?.name ?? (
-                    s.segment_key === 'active'   ? 'Active subs' :
-                    s.segment_key === 'trial'    ? 'Trial users' :
-                    s.segment_key === 'overdue'  ? 'Overdue' :
-                    s.segment_key === 'specific' ? 'Specific users' :
-                    'All users'
-                  )}
-                </div>
+        {/* Recent Sends tab */}
+        {bottomTab === 'sends' && (
+          <div className="p-4">
+            {sends.length === 0 ? (
+              <div className="py-6 text-center text-xs text-fg-3 italic">No announcements sent yet.</div>
+            ) : (
+              <div className="divide-y divide-dashed divide-border">
+                {sends.map((s, i) => (
+                  <div key={s.id ?? i} className="py-2.5 flex items-center gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-medium text-fg truncate">{s.title}</div>
+                      <div className="font-mono text-[10px] text-fg-3 mt-0.5">
+                        {s.segments?.name ?? (
+                          s.segment_key === 'active'   ? 'Active subs' :
+                          s.segment_key === 'trial'    ? 'Trial users' :
+                          s.segment_key === 'overdue'  ? 'Overdue' :
+                          s.segment_key === 'specific' ? 'Specific users' :
+                          'All users'
+                        )}
+                      </div>
+                    </div>
+                    <span className="font-mono text-[10px] text-fg-3 shrink-0">
+                      {s.sent_at ? new Date(s.sent_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                    </span>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
-        </div>
+        )}
       </div>
     </div>
   )
