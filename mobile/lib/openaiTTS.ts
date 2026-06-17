@@ -66,6 +66,27 @@ async function fetchAndWriteWarm(text: string): Promise<string | null> {
 // Unused — kept as a no-op so callers that import it don't break.
 let audioModeReady = false; // eslint-disable-line @typescript-eslint/no-unused-vars
 
+const PLAYBACK_MODE = {
+  playsInSilentModeIOS: true,
+  allowsRecordingIOS: false,    // AVAudioSessionCategoryPlayback → speaker routing
+  staysActiveInBackground: false, // stop audio when app backgrounds (Apple 2.5.4)
+  shouldDuckAndroid: true,
+} as const;
+
+/**
+ * Call this as soon as STT ends so the AVAudioSession starts transitioning
+ * from recording (earpiece) to playback (speaker) before TTS begins.
+ * The earlier this is called, the less likely TTS routes to the earpiece.
+ */
+export async function resetAudioForPlayback(): Promise<void> {
+  try {
+    await _setAudioModeAsync?.(PLAYBACK_MODE);
+    console.log('[TTS] audio session pre-reset to playback');
+  } catch (e) {
+    console.warn('[TTS] resetAudioForPlayback failed:', e);
+  }
+}
+
 /** Pre-fetches and caches TTS audio so speakAI can play with no network delay. */
 export function prewarmTTS(text: string): void {
   if (!_createAudioPlayer || !text.trim()) return;
@@ -171,15 +192,10 @@ export async function speakAI(text: string, onDone?: () => void, onStarted?: () 
     // STT (expo-speech-recognition) reconfigures the iOS audio session to
     // recording mode (earpiece, ducked volume) between turns. Without this
     // reset the second and subsequent TTS calls play at very low volume.
-    // Retry once: without UIBackgroundModes the hardware fully deactivates after
-    // STT, so the first setAudioModeAsync call can fail mid-teardown.
+    // Retry once in case the first call races with the STT session teardown.
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        await _setAudioModeAsync?.({
-          playsInSilentModeIOS: true,
-          allowsRecordingIOS: false, // playback only → routes to speaker at full volume
-          shouldDuckAndroid: true,
-        });
+        await _setAudioModeAsync?.(PLAYBACK_MODE);
         console.log('[TTS] audio mode restored to playback');
         break;
       } catch (e) {
@@ -187,10 +203,8 @@ export async function speakAI(text: string, onDone?: () => void, onStarted?: () 
         if (attempt === 0) await new Promise<void>(r => setTimeout(r, 300));
       }
     }
-    // Longer pause so iOS can fully transition the AVAudioSession from
-    // recording mode to playback before we create the player.
-    // Without UIBackgroundModes the audio hardware fully deactivates after STT
-    // and needs more time to reactivate for speaker playback.
+    // Give iOS time to fully switch the AVAudioSession from recording (earpiece)
+    // to playback (speaker) before the player is created.
     await new Promise<void>(r => setTimeout(r, 500));
     if (ttsGen !== myGen) return;
 

@@ -34,7 +34,7 @@ import {
   sttAvailable,
   useSafeRecognitionEvent,
 } from '@/lib/speechRecognition';
-import { speakAI, stopAITTS, prewarmTTS } from '@/lib/openaiTTS';
+import { speakAI, stopAITTS, prewarmTTS, resetAudioForPlayback } from '@/lib/openaiTTS';
 import { spacing, radii, shadows } from '@/constants/tokens';
 import type { ColorSet } from '@/constants/tokens';
 import { useColors } from '@/lib/theme';
@@ -579,6 +579,10 @@ export default function VoiceLogModal({ visible, onClose, onComplete, suggestedJ
 
   useSafeRecognitionEvent('end', () => {
     stopPulse();
+    // Start transitioning the AVAudioSession from recording (earpiece) back to
+    // playback (speaker) immediately — the earlier this fires the less likely
+    // TTS will be routed to the earpiece when it plays.
+    resetAudioForPlayback();
     console.log('[STT] end, status:', statusRef.current, 'transcript:', JSON.stringify(transcriptRef.current));
     if (!isActiveRef.current) return; // modal closed
     // Summary correction window: user spoke after "Does this look right?"
@@ -637,6 +641,7 @@ export default function VoiceLogModal({ visible, onClose, onComplete, suggestedJ
 
   useSafeRecognitionEvent('error', (event: any) => {
     stopPulse();
+    resetAudioForPlayback();
     if (summaryListeningRef.current) {
       summaryListeningRef.current = false;
       setSummaryListening(false);
