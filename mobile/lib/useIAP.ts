@@ -139,7 +139,9 @@ export function useIAP() {
       console.log('[IAP] purchaseErrorListener fired:', JSON.stringify(err));
       if (!mountedRef.current) return;
       const code = (err as Record<string, string>)?.code;
-      if (code === 'E_USER_CANCELLED') { setStatus('ready'); return; }
+      const msg  = (err as Record<string, string>)?.message ?? '';
+      const isCancelled = code === 'E_USER_CANCELLED' || msg.toLowerCase().includes('cancel');
+      if (isCancelled) { setStatus('ready'); return; }
       setError('Purchase could not be completed. Please try again.');
       setStatus('error');
     });
@@ -202,9 +204,11 @@ export function useIAP() {
       console.log('[IAP] requestPurchase returned (waiting for purchaseUpdatedListener)');
     } catch (err: unknown) {
       const code = (err as Record<string, string>)?.code;
-      console.log('[IAP] requestPurchase error, code:', code, 'message:', (err as Record<string, string>)?.message);
-      if (code === 'E_USER_CANCELLED') { setStatus('ready'); }
-      else { setError((err as Record<string, string>)?.message ?? 'Could not start purchase.'); setStatus('error'); }
+      const msg  = (err as Record<string, string>)?.message ?? '';
+      console.log('[IAP] requestPurchase error, code:', code, 'message:', msg);
+      const isCancelled = code === 'E_USER_CANCELLED' || msg.toLowerCase().includes('cancel');
+      if (isCancelled) { setStatus('ready'); }
+      else { setError('Purchase could not be completed. Please try again.'); setStatus('error'); }
     }
   };
 
