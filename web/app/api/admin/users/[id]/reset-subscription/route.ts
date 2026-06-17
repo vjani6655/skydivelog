@@ -28,6 +28,12 @@ export async function POST(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  // Expire the trial too — otherwise a recently-created account falls back into trial
+  const yesterday = new Date(Date.now() - 86400000).toISOString()
+  await db.auth.admin.updateUserById(params.id, {
+    user_metadata: { trial_ends_at: yesterday },
+  })
+
   await db.from('audit_log').insert({
     admin_id: adminRow.id,
     action: 'subscription_reset',
