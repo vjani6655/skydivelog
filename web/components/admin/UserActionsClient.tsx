@@ -123,6 +123,9 @@ export default function UserActionsClient({
       }
       if (action === 'delete') {
         router.push('/admin/users')
+      }
+      // Refresh server component data so badges/subscription card reflect the new state
+      if (['revoke-subscription', 'reset-subscription', 'lock', 'refund'].includes(action)) {
         router.refresh()
       }
     } catch (e) {
@@ -224,6 +227,7 @@ export default function UserActionsClient({
       if (!res.ok) throw new Error(data.error ?? 'Failed')
       setExtendedTrialEnd(data.trial_ends_at as string)
       setShowExtendTrial(false)
+      router.refresh()
     } catch (e) {
       setExtendTrialError(e instanceof Error ? e.message : 'Failed')
     } finally {
