@@ -13,6 +13,7 @@ type SubData = {
   status: string
   plan: string | null
   price_at_signup: number | string
+  source: string | null
   started_at: string
   renews_at: string | null
   payment_method_brand: string | null
