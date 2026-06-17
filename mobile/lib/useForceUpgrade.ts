@@ -75,7 +75,7 @@ export function getAppVersion(): string {
       : (Constants.expoConfig?.android?.versionCode != null
           ? String(Constants.expoConfig.android.versionCode)
           : null));
-  return buildNum ? `${semver}.${buildNum}` : semver;
+  return buildNum ? `${semver} (${buildNum})` : semver;
 }
 
 export function useForceUpgrade(): { required: boolean; config: UpgradeConfig; appVersion: string } {
