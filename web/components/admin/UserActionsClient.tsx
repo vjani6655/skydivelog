@@ -451,6 +451,34 @@ export default function UserActionsClient({
           </>
         )}
 
+        {/* Extend trial — always visible */}
+        <div className="mt-3 pt-3 border-t border-border">
+          {extendedTrialEnd ? (
+            <div className="text-center text-xs text-ok font-mono">✓ Trial extended to {fmtDateShort(extendedTrialEnd)}</div>
+          ) : showExtendTrial ? (
+            <div className="flex items-center gap-2">
+              <input
+                type="number" min={1} max={365} value={extendDays}
+                onChange={e => setExtendDays(Number(e.target.value))}
+                className="w-16 px-2 py-1 bg-surface border border-border rounded-sm font-mono text-xs text-fg outline-none focus:border-sky/60 text-center"
+              />
+              <span className="text-xs text-fg-3">days</span>
+              <button onClick={handleExtendTrial} disabled={extendingTrial}
+                className="flex-1 py-1 bg-sky/10 border border-sky/40 rounded-sm text-xs text-sky font-medium disabled:opacity-50 hover:bg-sky/20 transition-colors">
+                {extendingTrial ? 'Extending…' : 'Extend'}
+              </button>
+              <button onClick={() => setShowExtendTrial(false)}
+                className="px-2 py-1 bg-surface-2 border border-border rounded-sm text-xs text-fg-3 hover:text-fg transition-colors">✕</button>
+            </div>
+          ) : (
+            <button onClick={() => setShowExtendTrial(true)}
+              className="w-full py-1.5 border border-border rounded-sm text-xs text-fg-2 hover:text-fg transition-colors">
+              Extend trial…
+            </button>
+          )}
+          {extendTrialError && <div className="mt-1 font-mono text-[10px] text-danger">{extendTrialError}</div>}
+        </div>
+
         {/* Reset for Apple Review — always visible */}
         <div className="mt-3 pt-3 border-t border-border">
           {done.has('reset-subscription') ? (
