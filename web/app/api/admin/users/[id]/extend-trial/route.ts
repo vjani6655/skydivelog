@@ -47,6 +47,13 @@ export async function POST(
   })
   if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 })
 
+  // Remove any cancelled subscription so the trial check can fire
+  await db
+    .from('subscriptions')
+    .delete()
+    .eq('user_id', params.id)
+    .in('status', ['cancelled', 'expired'])
+
   // Audit log
   await db.from('audit_log').insert({
     admin_id: adminRow.id,
