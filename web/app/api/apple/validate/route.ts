@@ -39,15 +39,21 @@ export async function POST(req: NextRequest) {
 
     // Try production first; status 21007 means sandbox receipt sent to production
     let apple = await callVerifyReceipt(receipt, false)
-    if (apple.status === 21007) apple = await callVerifyReceipt(receipt, true)
+    console.log('[apple/validate] prod status:', apple.status)
+    if (apple.status === 21007) {
+      apple = await callVerifyReceipt(receipt, true)
+      console.log('[apple/validate] sandbox status:', apple.status)
+    }
 
     if (apple.status !== 0) {
-      console.error('[apple/validate] Apple status:', apple.status)
+      console.error('[apple/validate] Apple validation failed, status:', apple.status)
       return NextResponse.json({ error: `Apple validation error (${apple.status}).` }, { status: 400 })
     }
 
     const productId = process.env.APPLE_IAP_PRODUCT_ID!
     const txList: Record<string, string>[] = apple.latest_receipt_info ?? apple.receipt?.in_app ?? []
+    const txProductIds = txList.map((t) => t.product_id)
+    console.log('[apple/validate] looking for productId:', productId, 'found in receipt:', txProductIds)
 
     // Pick the most recent non-expired transaction for our product
     const latest = txList
@@ -55,6 +61,7 @@ export async function POST(req: NextRequest) {
       .sort((a, b) => Number(b.purchase_date_ms) - Number(a.purchase_date_ms))[0]
 
     if (!latest) {
+      console.error('[apple/validate] no matching tx — expected:', productId, 'got:', txProductIds)
       return NextResponse.json({ error: 'No matching transaction found.' }, { status: 400 })
     }
 
