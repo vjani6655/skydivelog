@@ -74,6 +74,7 @@ export default function LogScreen() {
   // ── data fetch ────────────────────────────────────────────────────────────
   const fetchAll = async () => {
     try {
+    await supabase.auth.refreshSession().catch(() => null);
     const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } } as any));
     if (!user) { setLoading(false); return; }
 

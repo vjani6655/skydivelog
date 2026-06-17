@@ -62,6 +62,7 @@ export default function SubscriptionScreen() {
   useFocusEffect(useCallback(() => {
     (async () => {
       setLoading(true);
+      await supabase.auth.refreshSession().catch(() => null);
       const [{ data: { user } }] = await Promise.all([
         supabase.auth.getUser(),
       ]);

@@ -6,6 +6,8 @@ import { supabase } from '@/lib/supabase';
  * of grace period — the caller should redirect to /paywall.
  */
 export async function checkAccess(): Promise<boolean> {
+  // Refresh session so user_metadata (trial_ends_at) reflects latest admin changes
+  await supabase.auth.refreshSession().catch(() => null);
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return false;
 
