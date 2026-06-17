@@ -61,6 +61,8 @@ export default function AnnouncementsCompose({ recentSends, segments, recipientC
   const [tokenFilter,    setTokenFilter]    = useState('')
   const [tokenPage,      setTokenPage]      = useState(1)
   const [sendsPage,      setSendsPage]      = useState(1)
+  const [confirmClear,   setConfirmClear]   = useState(false)
+  const [clearing,       setClearing]       = useState(false)
 
   const TOKENS_PER_PAGE = 10
   const SENDS_PER_PAGE  = 5
@@ -103,6 +105,20 @@ export default function AnnouncementsCompose({ recentSends, segments, recipientC
   }
 
   const removeUser = (id: string) => setSelectedUsers(prev => prev.filter(u => u.id !== id))
+
+  async function handleClearAll() {
+    setClearing(true)
+    try {
+      const res = await fetch('/api/admin/announcements/clear', { method: 'DELETE' })
+      if (res.ok) {
+        setSends([])
+        setSendsPage(1)
+        setConfirmClear(false)
+      }
+    } finally {
+      setClearing(false)
+    }
+  }
 
   const toggleChannel = (c: Channel) =>
     setChannels(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c])
@@ -570,6 +586,35 @@ export default function AnnouncementsCompose({ recentSends, segments, recipientC
             </span>
           </button>
           <div className="flex-1" />
+          {bottomTab === 'sends' && sends.length > 0 && (
+            <div className="self-center mr-3 flex items-center gap-2">
+              {confirmClear ? (
+                <>
+                  <span className="font-mono text-[10px] text-danger">Delete all?</span>
+                  <button
+                    onClick={handleClearAll}
+                    disabled={clearing}
+                    className="font-mono text-[10px] px-2 py-1 rounded-sm bg-danger/10 text-danger border border-danger/30 hover:bg-danger/20 disabled:opacity-40 transition-colors"
+                  >
+                    {clearing ? 'Clearing…' : 'Yes, clear'}
+                  </button>
+                  <button
+                    onClick={() => setConfirmClear(false)}
+                    className="font-mono text-[10px] px-2 py-1 rounded-sm border border-border text-fg-3 hover:text-fg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => setConfirmClear(true)}
+                  className="font-mono text-[10px] text-fg-3 hover:text-danger transition-colors"
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
+          )}
           <a
             href={bottomTab === 'tokens' ? '/admin/announcements/tokens' : '/admin/announcements/all'}
             className="self-center mr-4 font-mono text-[10px] text-sky hover:underline"
