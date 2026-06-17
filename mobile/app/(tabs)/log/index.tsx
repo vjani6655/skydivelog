@@ -152,14 +152,11 @@ export default function LogScreen() {
     if (trialEndsAt) { const d = new Date(trialEndsAt); if (!isNaN(d.getTime())) return d; }
     return userCreatedAt ? new Date(new Date(userCreatedAt).getTime() + 14 * 86400000) : null;
   })();
-  const inTrial = !subActive && !!trialEnd && Date.now() < trialEnd.getTime();
   const trialExpired = !subActive && !!trialEnd && Date.now() >= trialEnd.getTime();
 
   const handleAddJump = () => {
     if (trialExpired) {
       router.push({ pathname: '/paywall', params: { reason: 'trial_expired' } } as any);
-    } else if (inTrial && jumps.length >= 5) {
-      router.push({ pathname: '/paywall', params: { skippable: '1', reason: 'trial_limit' } } as any);
     } else {
       router.push('/(tabs)/log/new');
     }
@@ -168,8 +165,6 @@ export default function LogScreen() {
   const handleVoiceOpen = () => {
     if (trialExpired) {
       router.push({ pathname: '/paywall', params: { reason: 'trial_expired' } } as any);
-    } else if (inTrial && jumps.length >= 5) {
-      router.push({ pathname: '/paywall', params: { skippable: '1', reason: 'trial_limit' } } as any);
     } else {
       // Start prewarming the opening greeting immediately while the disclaimer is shown
       const greeting = suggestedJumpNumber
