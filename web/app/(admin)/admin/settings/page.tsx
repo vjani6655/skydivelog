@@ -1,5 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import SettingsTabs from '@/components/admin/SettingsTabs'
+import { AdminCard, AdminPageHeader } from '@/components/admin/ui'
+import ResetRevenueButton from '@/components/admin/ResetRevenueButton'
 
 export default async function AdminSettingsPage() {
   const db = createAdminClient()
@@ -31,9 +33,24 @@ export default async function AdminSettingsPage() {
   }))
 
   return (
-    <SettingsTabs
-      admins={adminsWithSignIn as Parameters<typeof SettingsTabs>[0]['admins']}
-      auditEntries={(auditEntries ?? []) as unknown as Parameters<typeof SettingsTabs>[0]['auditEntries']}
-    />
+    <div>
+      <SettingsTabs
+        admins={adminsWithSignIn as Parameters<typeof SettingsTabs>[0]['admins']}
+        auditEntries={(auditEntries ?? []) as unknown as Parameters<typeof SettingsTabs>[0]['auditEntries']}
+      />
+
+      <div className="mt-6">
+        <AdminPageHeader title="Danger zone" sub="Irreversible operations — super-admin only" />
+        <AdminCard title="DATA TOOLS">
+          <div className="flex items-center justify-between py-2.5">
+            <div>
+              <div className="text-sm font-medium text-fg">Reset revenue data</div>
+              <div className="font-mono text-[10px] text-fg-3 mt-0.5">Zeroes price_at_signup on all subscriptions — affects MRR / ARR figures</div>
+            </div>
+            <ResetRevenueButton />
+          </div>
+        </AdminCard>
+      </div>
+    </div>
   )
 }

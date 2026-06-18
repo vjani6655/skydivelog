@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { AdminCard, AdminPageHeader } from '@/components/admin/ui'
 import { ChevronRight } from 'lucide-react'
 import Link from 'next/link'
+import CleanupDropzonesButton from '@/components/admin/CleanupDropzonesButton'
 
 export default async function DropzonesListPage() {
   const db = createAdminClient()
@@ -31,7 +32,7 @@ export default async function DropzonesListPage() {
         <span className="text-fg-2">Dropzones</span>
       </div>
 
-      <AdminPageHeader title="Dropzones" sub={`${rows.length} total`} />
+      <AdminPageHeader title="Dropzones" sub={`${rows.length} total`} actions={<CleanupDropzonesButton />} />
 
       <AdminCard title={`ALL DROPZONES · ${rows.length}`}>
         {rows.length === 0 && <div className="text-xs text-fg-3 py-2">No dropzones yet</div>}

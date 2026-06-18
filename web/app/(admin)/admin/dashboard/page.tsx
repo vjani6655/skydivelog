@@ -2,11 +2,8 @@ export const dynamic = 'force-dynamic'
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { KPI, AdminCard, LineChart, AdminPageHeader } from '@/components/admin/ui'
-import { Download, Calendar } from 'lucide-react'
 import Link from 'next/link'
-import ResetRevenueButton from '@/components/admin/ResetRevenueButton'
-import RefreshButton from '@/components/admin/RefreshButton'
-import CleanupDropzonesButton from '@/components/admin/CleanupDropzonesButton'
+import DashboardControls from '@/components/admin/DashboardControls'
 import type { HealthResponse } from '@/app/api/admin/health/route'
 
 async function getHealth(): Promise<HealthResponse | null> {
@@ -42,11 +39,19 @@ function timeAgo(s: string | null): string {
   return `${Math.floor(h / 24)}d ago`
 }
 
-export default async function AdminDashboardPage() {
+export default async function AdminDashboardPage({
+  searchParams,
+}: {
+  searchParams: { range?: string }
+}) {
   const db = createAdminClient()
 
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString()
-  const sixtyDaysAgo  = new Date(Date.now() - 60 * 86400000).toISOString()
+  const range = searchParams.range ?? '30d'
+  const days = range === '7d' ? 7 : range === '90d' ? 90 : range === '12m' ? 365 : 30
+  const rangeLabel = range === '7d' ? '7 days' : range === '90d' ? '90 days' : range === '12m' ? '12 months' : '30 days'
+
+  const thirtyDaysAgo = new Date(Date.now() - days * 86400000).toISOString()
+  const sixtyDaysAgo  = new Date(Date.now() - 2 * days * 86400000).toISOString()
 
   const [
     health,
@@ -101,10 +106,10 @@ export default async function AdminDashboardPage() {
   // Churn rate
   const churnRate = totalUsers ? ((overdueCount ?? 0) / (totalUsers ?? 1) * 100).toFixed(1) : '0.0'
 
-  // Sign-up chart (30d daily buckets)
+  // Sign-up chart — daily buckets for the selected range
   const dayCounts: Record<string, number> = {}
   const now = new Date()
-  for (let i = 29; i >= 0; i--) {
+  for (let i = days - 1; i >= 0; i--) {
     const d = new Date(now); d.setDate(d.getDate() - i)
     dayCounts[d.toISOString().slice(0, 10)] = 0
   }
@@ -169,18 +174,8 @@ export default async function AdminDashboardPage() {
 
   return (
     <div>
-      <AdminPageHeader title="Dashboard" sub="Overview · 24h" actions={
-        <div className="flex gap-2">
-          <ResetRevenueButton />
-          <CleanupDropzonesButton />
-          <RefreshButton />
-          <button className="flex items-center gap-1.5 px-3 py-1.5 bg-surface border border-border rounded-sm text-xs text-fg-2 font-medium">
-            <Calendar size={12} /> Last 30 days
-          </button>
-          <button className="flex items-center gap-1.5 px-3 py-1.5 bg-sky text-on-sky rounded-sm text-xs font-semibold">
-            <Download size={12} /> Export
-          </button>
-        </div>
+      <AdminPageHeader title="Dashboard" sub={`Overview · last ${rangeLabel}`} actions={
+        <DashboardControls />
       } />
 
       {/* Top 5 KPIs */}
@@ -209,7 +204,7 @@ export default async function AdminDashboardPage() {
 
       <div className="grid grid-cols-[2fr_1fr] gap-3.5 mb-3.5">
         {/* Sign-up chart */}
-        <AdminCard title="NEW SIGN-UPS · LAST 30 DAYS" action={
+        <AdminCard title={`NEW SIGN-UPS · LAST ${rangeLabel.toUpperCase()}`} action={
           <div className="flex gap-0.5">
             {['7D', '30D', '90D'].map((t, i) => (
               <button key={t} className={`font-mono text-[10px] px-2 py-1 rounded-sm transition-colors ${i === 1 ? 'bg-sky/20 text-sky' : 'text-fg-3 hover:text-fg-2'}`}>{t}</button>
