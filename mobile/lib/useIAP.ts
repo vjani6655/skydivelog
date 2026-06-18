@@ -31,29 +31,35 @@ export function useIAP() {
   const purchaseListenerRef = useRef<{ remove: () => void } | null>(null);
   const errorListenerRef    = useRef<{ remove: () => void } | null>(null);
 
-  const validateReceipt = async (purchase: { productId: string }) => {
-    console.log('[IAP] validateReceipt start, productId:', purchase.productId);
+  const validateReceipt = async (purchase: { productId: string }, forceRefresh = false) => {
+    console.log('[IAP] validateReceipt start, productId:', purchase.productId, 'forceRefresh:', forceRefresh);
     try {
-      // PurchaseIOS does not carry receiptData/jwsRepresentation directly.
-      // getReceiptIOS() reads the on-disk receipt file (plain async fn, most reliable).
-      // If empty, requestReceiptRefreshIOS() forces Apple to rewrite the file via
-      // SKReceiptRefreshRequest — necessary immediately after a first-ever purchase.
-      let receipt: string | null = null;
       const iosModule = iapModule as unknown as {
         getReceiptIOS: () => Promise<string | null>;
         requestReceiptRefreshIOS: () => Promise<string>;
       };
+
+      let receipt: string | null = null;
       try {
-        receipt = (await iosModule.getReceiptIOS?.()) ?? null;
-        console.log('[IAP] getReceiptIOS length:', receipt?.length ?? 0);
-        if (!receipt) {
-          console.log('[IAP] receipt empty, calling requestReceiptRefreshIOS...');
+        if (forceRefresh) {
+          // Force Apple to rewrite the receipt file — used when the on-disk receipt
+          // is stale (e.g. first-ever purchase on a fresh install returns 21003).
+          console.log('[IAP] forceRefresh: calling requestReceiptRefreshIOS...');
           receipt = (await iosModule.requestReceiptRefreshIOS?.()) ?? null;
           console.log('[IAP] requestReceiptRefreshIOS length:', receipt?.length ?? 0);
+        } else {
+          receipt = (await iosModule.getReceiptIOS?.()) ?? null;
+          console.log('[IAP] getReceiptIOS length:', receipt?.length ?? 0);
+          if (!receipt) {
+            console.log('[IAP] receipt empty, calling requestReceiptRefreshIOS...');
+            receipt = (await iosModule.requestReceiptRefreshIOS?.()) ?? null;
+            console.log('[IAP] requestReceiptRefreshIOS length:', receipt?.length ?? 0);
+          }
         }
       } catch (receiptErr) {
         console.log('[IAP] receipt fetch error:', String(receiptErr));
       }
+
       if (!receipt) {
         if (mountedRef.current) {
           setError('Could not retrieve purchase receipt. Please contact support.');
@@ -61,12 +67,11 @@ export function useIAP() {
         }
         return;
       }
-      // getSession() returns a cached (possibly expired) token from AsyncStorage.
+
       // Force-refresh so the server's verifyBearerToken call succeeds.
       let { data: { session }, error: refreshErr } = await supabase.auth.refreshSession();
       console.log('[IAP] refreshSession result - session:', !!session, 'error:', refreshErr?.message ?? 'none');
       if (!session) {
-        // refreshSession failed (e.g. network error) — fall back to cached session
         const fallback = await supabase.auth.getSession();
         session = fallback.data.session;
         console.log('[IAP] getSession fallback - session:', !!session, 'expires_at:', session?.expires_at);
@@ -79,6 +84,7 @@ export function useIAP() {
         if (mountedRef.current) setStatus('error');
         return;
       }
+
       console.log('[IAP] validateReceipt: posting to', `${WEB_URL}/api/apple/validate`);
       const res = await fetch(`${WEB_URL}/api/apple/validate`, {
         method: 'POST',
@@ -98,6 +104,10 @@ export function useIAP() {
       if (json.success) {
         console.log('[IAP] validateReceipt: success');
         if (mountedRef.current) setStatus('success');
+      } else if (!forceRefresh && json.appleStatus === 21003) {
+        // Stale on-disk receipt — force Apple to reissue and retry once.
+        console.log('[IAP] got 21003, retrying with requestReceiptRefreshIOS...');
+        await validateReceipt(purchase, true);
       } else {
         console.log('[IAP] validateReceipt: failed', json.error);
         if (mountedRef.current) {

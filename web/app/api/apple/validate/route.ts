@@ -37,17 +37,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
     }
 
-    // Try production first; status 21007 means sandbox receipt sent to production
-    let apple = await callVerifyReceipt(receipt, false)
+    // Strip any whitespace/newlines — some iOS SDK versions emit MIME-style base64
+    const cleanReceipt = (receipt as string).replace(/[\s\r\n]/g, '')
+
+    // Try production first; 21007 = sandbox receipt sent to prod (expected for TestFlight).
+    // 21003 = receipt unauthenticated — prod sometimes returns this instead of 21007
+    // for valid sandbox receipts, so also fall through to sandbox on 21003.
+    let apple = await callVerifyReceipt(cleanReceipt, false)
     console.log('[apple/validate] prod status:', apple.status)
-    if (apple.status === 21007) {
-      apple = await callVerifyReceipt(receipt, true)
+    if (apple.status === 21007 || apple.status === 21003) {
+      apple = await callVerifyReceipt(cleanReceipt, true)
       console.log('[apple/validate] sandbox status:', apple.status)
     }
 
     if (apple.status !== 0) {
       console.error('[apple/validate] Apple validation failed, status:', apple.status)
-      return NextResponse.json({ error: `Apple validation error (${apple.status}).` }, { status: 400 })
+      return NextResponse.json({ error: `Apple validation error (${apple.status}).`, appleStatus: apple.status }, { status: 400 })
     }
 
     const productId = process.env.APPLE_IAP_PRODUCT_ID!
