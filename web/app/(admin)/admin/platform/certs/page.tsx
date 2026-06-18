@@ -15,7 +15,7 @@ export default async function CertsListPage() {
 
   const { data: certs } = await db
     .from('certificates')
-    .select('id, cert_type, cert_number, issued_date, expiry_date, users(id, full_name, email)')
+    .select('id, category, title, issued_date, expires_date, reference_number, users(id, full_name, email)')
     .order('issued_date', { ascending: false })
 
   const rows = certs ?? []
@@ -34,18 +34,19 @@ export default async function CertsListPage() {
         {rows.length === 0 && <div className="text-xs text-fg-3 py-2">No certificates yet</div>}
         {rows.map(c => {
           const user = c.users as unknown as { id: string; full_name: string; email: string } | null
-          const expired = c.expiry_date && new Date(c.expiry_date) < new Date()
+          const expired = c.expires_date && new Date(c.expires_date) < new Date()
           return (
             <div key={c.id} className="flex items-center justify-between py-2.5 border-b border-dashed border-border last:border-0">
               <div>
-                <div className="text-sm font-medium text-fg">{c.cert_type}{c.cert_number ? ` · ${c.cert_number}` : ''}</div>
+                <div className="text-sm font-medium text-fg">{c.title}{c.reference_number ? ` · ${c.reference_number}` : ''}</div>
                 {user && (
                   <Link href={`/admin/users/${user.id}`} className="font-mono text-[10px] text-sky hover:underline mt-0.5 block">
                     {user.full_name || user.email}
                   </Link>
                 )}
                 <div className="font-mono text-[10px] text-fg-3 mt-0.5">
-                  Issued {fmtDate(c.issued_date)}{c.expiry_date ? ` · Expires ${fmtDate(c.expiry_date)}` : ''}
+                  {c.category && <span className="text-fg-4 mr-1.5">{c.category}</span>}
+                  Issued {fmtDate(c.issued_date)}{c.expires_date ? ` · Expires ${fmtDate(c.expires_date)}` : ''}
                 </div>
               </div>
               {expired && <Badge kind="warn">EXPIRED</Badge>}

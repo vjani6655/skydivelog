@@ -1228,7 +1228,7 @@ export default function NewJumpScreen() {
 
             <View style={{ height: spacing[3] }} />
             <Label text="SIGNED BY" />
-            <TextInput style={[styles.input, errors.signerName ? styles.inputError : null]} value={signerName} onChangeText={v => { setSignerName(v); setErrors(e => ({ ...e, signerName: '' })); }} placeholder="Full name" placeholderTextColor={colors.fg3} onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)} />
+            <TextInput style={[styles.input, errors.signerName ? styles.inputError : null]} value={signerName} onChangeText={v => { setSignerName(v); setErrors(e => ({ ...e, signerName: '' })); }} placeholder="Full name" placeholderTextColor={colors.fg3} autoCapitalize="words" autoCorrect={false} onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)} />
             {errors.signerName && <Text style={styles.fieldError}>{errors.signerName}</Text>}
             <Label text="LICENCE #" />
             <TextInput style={[styles.input, errors.signerLicence ? styles.inputError : null]} value={signerLicence} onChangeText={v => { setSignerLicence(v); setErrors(e => ({ ...e, signerLicence: '' })); }} placeholder="APF 14829" placeholderTextColor={colors.fg3} autoCapitalize="none" autoCorrect={false} onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)} />
