@@ -37,7 +37,7 @@ interface ChangeItem extends ReleaseChange {
 type Platform = 'iOS App' | 'Android App' | 'Web'
 const ALL_PLATFORMS: Platform[] = ['iOS App', 'Android App', 'Web']
 
-interface Release {
+export interface Release {
   id: string
   build_number: number | null
   version: string | null
@@ -187,7 +187,7 @@ function ReleaseForm({ initial, onSave, onCancel, loading }: {
       title:        title || null,
       platforms,
       published_at: releaseDate ? new Date(releaseDate).toISOString() : null,
-      changes: changes.filter(c => c.text.trim()).map(({ _id: _, ...rest }) => rest),
+      changes: changes.filter(c => c.text.trim()).map(c => ({ category: c.category, text: c.text })),
     })
   }
 

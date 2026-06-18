@@ -24,7 +24,7 @@ function fmtDate(iso: string) {
 
 export default async function ChangelogPage() {
   const db = createAdminClient()
-  let { data: releases, error } = await db
+  const releaseQuery = await db
     .from('releases')
     .select('id, build_number, version, title, changes, platforms, published_at')
     .eq('is_published', true)
@@ -32,13 +32,13 @@ export default async function ChangelogPage() {
     .order('created_at', { ascending: false })
 
   // sort_order column may not exist yet — fall back to created_at ordering
-  if (error) {
-    ;({ data: releases } = await db
-      .from('releases')
-      .select('id, build_number, version, title, changes, platforms, published_at')
-      .eq('is_published', true)
-      .order('created_at', { ascending: false }))
-  }
+  const { data: releases } = releaseQuery.error
+    ? await db
+        .from('releases')
+        .select('id, build_number, version, title, changes, platforms, published_at')
+        .eq('is_published', true)
+        .order('created_at', { ascending: false })
+    : releaseQuery
 
   return (
     <main className="max-w-2xl mx-auto px-5 py-16">

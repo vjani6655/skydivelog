@@ -2,10 +2,11 @@ export const dynamic = 'force-dynamic'
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import ReleasesClient from './ReleasesClient'
+import type { Release } from './ReleasesClient'
 
 export default async function AdminReleasesPage() {
   const db = createAdminClient()
-  let { data: releases, error } = await db
+  const { data: releases, error } = await db
     .from('releases')
     .select('*')
     .order('sort_order', { ascending: true })
@@ -13,11 +14,12 @@ export default async function AdminReleasesPage() {
 
   // sort_order column may not exist yet — fall back to created_at ordering
   if (error) {
-    ;({ data: releases } = await db
+    const { data: fallback } = await db
       .from('releases')
       .select('*')
-      .order('created_at', { ascending: false }))
+      .order('created_at', { ascending: false })
+    return <ReleasesClient initialReleases={(fallback ?? []) as Release[]} />
   }
 
-  return <ReleasesClient initialReleases={(releases ?? []) as any} />
+  return <ReleasesClient initialReleases={(releases ?? []) as Release[]} />
 }
