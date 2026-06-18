@@ -74,7 +74,10 @@ export async function POST(
   // support_tickets → ticket_messages
   // auth.users (direct) → notifications, subscription_events
   const { error } = await db.auth.admin.deleteUser(params.id)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    console.error('[admin/delete] deleteUser failed:', error.message, 'code:', (error as { code?: string }).code)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   // Delete dropzones that are now orphaned (no jumps and no user home_dropzone_id references)
   for (const dzId of dropzoneIds) {
