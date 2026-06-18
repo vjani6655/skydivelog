@@ -49,11 +49,23 @@ export async function POST(req: NextRequest) {
     const receiptPrefix = cleanReceipt.substring(0, 20)
     console.log('[apple/validate] receipt length:', cleanReceipt.length, 'prefix:', receiptPrefix)
     if (receiptPrefix.startsWith('eyJ')) {
-      // JWS / StoreKit 2 token — legacy verifyReceipt cannot authenticate this format.
-      // This happens on iOS 17+ when StoreKit 2 is used. The receipt must be decoded
-      // as a JWS, not sent to verifyReceipt.
       console.error('[apple/validate] receipt is JWS format (StoreKit 2) — verifyReceipt will return 21003')
     }
+    // Detect truncated receipt: PKCS#7 outer SEQUENCE declares its full length in bytes 3-4.
+    // A truncated receipt will cause 21003 because the signature (at the end) is missing.
+    try {
+      const decoded = Buffer.from(cleanReceipt, 'base64')
+      if (decoded.length > 4 && decoded[0] === 0x30 && decoded[1] === 0x82) {
+        const declaredContentLen = (decoded[2] << 8) | decoded[3]
+        const actualContentLen = decoded.length - 4
+        const pct = Math.round(actualContentLen / declaredContentLen * 100)
+        if (actualContentLen < declaredContentLen) {
+          console.error('[apple/validate] RECEIPT TRUNCATED: declared', declaredContentLen, 'bytes, received', actualContentLen, 'bytes (', pct, '%) — getReceiptIOS() returned stale partial receipt; need requestReceiptRefreshIOS()')
+        } else {
+          console.log('[apple/validate] receipt integrity OK:', actualContentLen, '/', declaredContentLen, 'bytes (100%)')
+        }
+      }
+    } catch { /* non-fatal */ }
 
     // Try production first; 21007 = sandbox receipt sent to prod (expected for TestFlight).
     // 21003 = receipt unauthenticated — prod sometimes returns this instead of 21007
