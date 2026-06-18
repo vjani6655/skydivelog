@@ -1,3 +1,4 @@
+// v2
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyBearerToken } from '@/lib/supabase/bearer'
 import { createAdminClient } from '@/lib/supabase/admin'
