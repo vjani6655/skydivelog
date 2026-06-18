@@ -255,19 +255,19 @@ export default async function AdminDashboardPage() {
         {/* Platform totals */}
         <AdminCard title="PLATFORM TOTALS">
           {[
-            { label: 'Jumps logged',      value: fmt(totalJumps ?? 0),    delta: null },
-            { label: 'Hours of freefall', value: fmt(ffHours),             delta: null },
-            { label: 'Dropzones tracked', value: fmt(totalDZs ?? 0),       delta: null },
-            { label: 'Aircraft tracked',  value: fmt(totalAircraft ?? 0),  delta: null },
-            { label: 'Certs registered',  value: fmt(totalCerts ?? 0),     delta: null },
-          ].map(({ label, value, delta }) => (
-            <div key={label} className="flex justify-between items-center py-2 border-b border-dashed border-border last:border-0">
-              <span className="text-xs text-fg-2">{label}</span>
-              <div className="text-right">
+            { label: 'Jumps logged',      value: fmt(totalJumps ?? 0),   href: '/admin/platform' },
+            { label: 'Hours of freefall', value: fmt(ffHours),            href: '/admin/platform' },
+            { label: 'Dropzones tracked', value: fmt(totalDZs ?? 0),      href: '/admin/platform/dropzones' },
+            { label: 'Aircraft tracked',  value: fmt(totalAircraft ?? 0), href: '/admin/platform/aircraft' },
+            { label: 'Certs registered',  value: fmt(totalCerts ?? 0),    href: '/admin/platform/certs' },
+          ].map(({ label, value, href }) => (
+            <Link key={label} href={href} className="flex justify-between items-center py-2 border-b border-dashed border-border last:border-0 hover:bg-surface-2 -mx-4 px-4 transition-colors group">
+              <span className="text-xs text-fg-2 group-hover:text-fg transition-colors">{label}</span>
+              <div className="flex items-center gap-2">
                 <div className="font-mono text-sm font-medium">{value}</div>
-                {delta && <div className="font-mono text-[10px] text-ok">{delta}</div>}
+                <span className="font-mono text-[10px] text-fg-4 group-hover:text-fg-3">→</span>
               </div>
-            </div>
+            </Link>
           ))}
         </AdminCard>
 
