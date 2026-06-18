@@ -11,7 +11,7 @@ async function callVerifyReceipt(receipt: string, sandbox: boolean) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       'receipt-data': receipt,
-      password: sharedSecret,
+      password: process.env.APPLE_IAP_SHARED_SECRET ?? '',
       'exclude-old-transactions': true,
     }),
   })
