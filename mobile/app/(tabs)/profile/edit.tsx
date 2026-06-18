@@ -18,11 +18,11 @@ function FieldLabel({ text }: { text: string }) {
   return <Text style={{ fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: colors.fg3, marginBottom: spacing[1.5] }}>{text}</Text>;
 }
 
-function IconInput({ icon, ...props }: { icon: string } & React.ComponentProps<typeof TextInput>) {
+function IconInput({ icon, rowStyle, ...props }: { icon: string; rowStyle?: object } & React.ComponentProps<typeof TextInput>) {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
-    <View style={styles.iconInputRow}>
+    <View style={[styles.iconInputRow, rowStyle]}>
       <Ionicons name={icon as any} size={16} color={colors.fg3} style={styles.inputIcon} />
       <TextInput style={styles.iconInputField} placeholderTextColor={colors.fg3} {...props} />
     </View>
@@ -128,10 +128,12 @@ export default function EditProfileScreen() {
         <ScrollView style={styles.flex} contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
           <Text style={styles.sectionTitle}>PERSONAL</Text>
           <FieldLabel text="FULL NAME" />
-          <TextInput style={styles.input} value={fullName} onChangeText={setFullName} placeholder="Your full name" placeholderTextColor={colors.fg3} autoCapitalize="words" />
+          <TextInput style={[styles.input, { marginBottom: 4, opacity: 0.5 }]} value={fullName} editable={false} placeholderTextColor={colors.fg3} />
+          <Text style={styles.hint}>Contact support to request changes</Text>
 
           <FieldLabel text="EMAIL" />
-          <IconInput icon="mail-outline" value={email} editable={false} placeholder="email" selectTextOnFocus={false} />
+          <IconInput icon="mail-outline" value={email} editable={false} placeholder="email" selectTextOnFocus={false} rowStyle={{ opacity: 0.5, marginBottom: 4 }} />
+          <Text style={styles.hint}>Contact support to request changes</Text>
 
           <FieldLabel text="LICENCE NUMBER" />
           <TextInput style={[styles.input, { marginBottom: 4 }]} value={licenceNumber} onChangeText={setLicenceNumber} placeholder="APF-2457830" placeholderTextColor={colors.fg3} autoCapitalize="characters" autoCorrect={false} />

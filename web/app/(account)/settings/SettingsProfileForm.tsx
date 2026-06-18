@@ -78,24 +78,21 @@ export default function SettingsProfileForm({ profile, userId }: { profile: Prof
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <FieldGroup label="Full name">
+          <FieldGroup label="Full name" hint="Contact support to request a name change">
             <input
               type="text"
               value={data.full_name ?? ""}
-              onChange={set("full_name")}
-              className={inputCls}
-              placeholder="James Smith"
-              required
+              readOnly
+              className={`${inputCls} opacity-50 cursor-not-allowed select-none`}
             />
           </FieldGroup>
 
-          <FieldGroup label="Email">
+          <FieldGroup label="Email" hint="Contact support to request an email change">
             <input
               type="email"
               value={data.email ?? ""}
-              onChange={set("email")}
-              className={inputCls}
-              placeholder="you@example.com"
+              readOnly
+              className={`${inputCls} opacity-50 cursor-not-allowed select-none`}
             />
           </FieldGroup>
 
