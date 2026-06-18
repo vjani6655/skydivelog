@@ -11,7 +11,7 @@ async function callVerifyReceipt(receipt: string, sandbox: boolean) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       'receipt-data': receipt,
-      password: process.env.APPLE_IAP_SHARED_SECRET!,
+      password: sharedSecret,
       'exclude-old-transactions': true,
     }),
   })
@@ -37,9 +37,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
     }
 
-    const sharedSecretSet = !!process.env.APPLE_IAP_SHARED_SECRET
-    console.log('[apple/validate] APPLE_IAP_SHARED_SECRET set:', sharedSecretSet)
-    if (!sharedSecretSet) {
+    const sharedSecret = process.env.APPLE_IAP_SHARED_SECRET ?? ''
+    console.log('[apple/validate] APPLE_IAP_SHARED_SECRET set:', !!sharedSecret, 'length:', sharedSecret.length)
+    if (!sharedSecret) {
       console.error('[apple/validate] APPLE_IAP_SHARED_SECRET is missing — Apple will reject all receipts')
     }
 
