@@ -62,15 +62,18 @@ export default function SettingsProfileForm({ profile, userId }: { profile: Prof
         <p className="text-xs text-fg-4 mb-5">Visible only to you, and your instructors.</p>
 
         {/* Avatar */}
-        <div className="flex items-center gap-4 mb-6">
+        <div className="flex items-center gap-4 mb-6 pb-6 border-b border-border">
           <div className="w-14 h-14 rounded-full bg-sky flex items-center justify-center flex-shrink-0">
             <span className="text-lg font-bold text-on-sky">
               {(data.full_name || "?").split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()}
             </span>
           </div>
           <div>
-            <button type="button" className="text-xs text-sky hover:text-sky/80 font-medium">Change photo</button>
-            <p className="text-xs text-fg-4 mt-0.5">PNG / JPG · max 2 MB</p>
+            <p className="text-base font-bold text-fg">{data.full_name || "—"}</p>
+            <p className="font-mono text-xs text-fg-3 mt-0.5">
+              {[data.licence_number, data.licence_rating].filter(Boolean).join(" · ") || "No licence on file"}
+            </p>
+            <p className="text-xs text-fg-4 mt-0.5">{data.email}</p>
           </div>
         </div>
 
@@ -96,23 +99,25 @@ export default function SettingsProfileForm({ profile, userId }: { profile: Prof
             />
           </FieldGroup>
 
-          <FieldGroup label="Licence number">
+          <FieldGroup label="Licence number" hint="Your APF number or governing body number">
             <input
               type="text"
               value={data.licence_number ?? ""}
               onChange={set("licence_number")}
-              className={inputCls}
-              placeholder="APF 14829"
+              className={`${inputCls} uppercase`}
+              placeholder="APF-2457830"
+              autoComplete="off"
             />
           </FieldGroup>
 
-          <FieldGroup label="Rating">
+          <FieldGroup label="Rating" hint="Your latest rating, e.g. B-237 or D-1897">
             <input
               type="text"
               value={data.licence_rating ?? ""}
               onChange={set("licence_rating")}
-              className={inputCls}
-              placeholder="B"
+              className={`${inputCls} uppercase`}
+              placeholder="B-237 or D-1897"
+              autoComplete="off"
             />
           </FieldGroup>
 
@@ -222,13 +227,14 @@ export default function SettingsProfileForm({ profile, userId }: { profile: Prof
 const inputCls =
   "w-full bg-surface-2 border border-border rounded-sm px-3 py-2.5 text-sm text-fg placeholder:text-fg-4 focus:outline-none focus:border-sky transition-colors"
 
-function FieldGroup({ label, children }: { label: string; children: React.ReactNode }) {
+function FieldGroup({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div>
       <label className="block text-overline font-semibold tracking-widest uppercase text-fg-4 mb-1.5">
         {label}
       </label>
       {children}
+      {hint && <p className="text-[11px] text-fg-4 mt-1">{hint}</p>}
     </div>
   )
 }
