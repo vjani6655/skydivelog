@@ -1,5 +1,5 @@
 import { Modal, View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native'
-import { useMemo, Fragment } from 'react'
+import { useMemo } from 'react'
 import { useColors } from '@/lib/theme'
 import { spacing, radii } from '@/constants/tokens'
 
@@ -24,39 +24,6 @@ interface Props {
   onDismiss: () => void
 }
 
-// Simple markdown renderer — handles **bold**, *italic*, and - bullet lines
-function MarkdownText({ text, style }: { text: string; style: object }) {
-  const lines = text.split('\n')
-  return (
-    <View style={{ gap: 2 }}>
-      {lines.map((line, li) => {
-        const isBullet = line.startsWith('- ') || line.startsWith('* ')
-        const content = isBullet ? line.slice(2) : line
-        const segments = parseInline(content)
-        return (
-          <View key={li} style={isBullet ? { flexDirection: 'row', alignItems: 'flex-start' } : undefined}>
-            {isBullet && <Text style={[style, { marginRight: 6, marginTop: 1 }]}>{'•'}</Text>}
-            <Text style={[style, { flex: isBullet ? 1 : undefined }]}>
-              {segments.map((seg, si) => (
-                <Text
-                  key={si}
-                  style={[
-                    seg.bold && seg.italic ? { fontFamily: 'InterTight-Bold' } :
-                    seg.bold   ? { fontFamily: 'InterTight-SemiBold' } :
-                    seg.italic ? { fontStyle: 'italic' } : undefined
-                  ]}
-                >
-                  {seg.text}
-                </Text>
-              ))}
-            </Text>
-          </View>
-        )
-      })}
-    </View>
-  )
-}
-
 function parseInline(text: string): { text: string; bold: boolean; italic: boolean }[] {
   const out: { text: string; bold: boolean; italic: boolean }[] = []
   const re = /(\*\*(.+?)\*\*|\*(.+?)\*)/g
@@ -71,11 +38,66 @@ function parseInline(text: string): { text: string; bold: boolean; italic: boole
   return out.length ? out : [{ text, bold: false, italic: false }]
 }
 
-function categoryStyle(cat: ChangeCategory, colors: ReturnType<typeof useColors>) {
+function MarkdownBlock({ text, baseStyle }: { text: string; baseStyle: object }) {
+  const lines = text.split('\n')
+  return (
+    <View style={{ gap: 3 }}>
+      {lines.map((line, li) => {
+        const isH2 = line.startsWith('## ')
+        const isH3 = line.startsWith('### ')
+        const isBullet = line.startsWith('- ') || line.startsWith('* ')
+        const content = isH2 ? line.slice(3) : isH3 ? line.slice(4) : isBullet ? line.slice(2) : line
+        if (!content.trim()) return <View key={li} style={{ height: 2 }} />
+        const segments = parseInline(content)
+        if (isH2) {
+          return (
+            <Text key={li} style={[baseStyle, { fontFamily: 'InterTight-Bold', fontSize: 15, marginTop: 10, marginBottom: 2 }]}>
+              {content}
+            </Text>
+          )
+        }
+        if (isH3) {
+          return (
+            <Text key={li} style={[baseStyle, { fontFamily: 'InterTight-SemiBold', fontSize: 13, marginTop: 8, marginBottom: 1, opacity: 0.7 }]}>
+              {content}
+            </Text>
+          )
+        }
+        if (isBullet) {
+          return (
+            <View key={li} style={{ flexDirection: 'row', alignItems: 'flex-start', paddingLeft: 4 }}>
+              <Text style={[baseStyle, { marginRight: 8, marginTop: 1, opacity: 0.5 }]}>{'·'}</Text>
+              <Text style={[baseStyle, { flex: 1 }]}>
+                {segments.map((seg, si) => (
+                  <Text key={si} style={
+                    seg.bold ? { fontFamily: 'InterTight-SemiBold' } :
+                    seg.italic ? { fontStyle: 'italic' } : undefined
+                  }>{seg.text}</Text>
+                ))}
+              </Text>
+            </View>
+          )
+        }
+        return (
+          <Text key={li} style={baseStyle}>
+            {segments.map((seg, si) => (
+              <Text key={si} style={
+                seg.bold ? { fontFamily: 'InterTight-SemiBold' } :
+                seg.italic ? { fontStyle: 'italic' } : undefined
+              }>{seg.text}</Text>
+            ))}
+          </Text>
+        )
+      })}
+    </View>
+  )
+}
+
+function categoryMeta(cat: ChangeCategory, colors: ReturnType<typeof useColors>) {
   switch (cat) {
-    case 'New':         return { bg: colors.ok + '1A',  text: colors.ok,   label: 'NEW' }
-    case 'Fix':         return { bg: colors.warn + '1A', text: colors.warn, label: 'FIX' }
-    case 'Improvement': return { bg: colors.sky + '1A',  text: colors.sky,  label: 'IMPROVED' }
+    case 'New':         return { bg: colors.ok + '22',   text: colors.ok,   label: 'NEW' }
+    case 'Fix':         return { bg: colors.warn + '22', text: colors.warn, label: 'FIX' }
+    case 'Improvement': return { bg: colors.sky + '22',  text: colors.sky,  label: 'IMPROVED' }
   }
 }
 
@@ -90,22 +112,18 @@ export default function WhatsNewModal({ releases, onDismiss }: Props) {
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onDismiss}>
       <View style={styles.overlay}>
-        <View style={styles.sheet} pointerEvents="box-none">
-          {/* Handle */}
+        <View style={styles.sheet}>
           <View style={styles.handle} />
 
-          {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.emoji}>🎉</Text>
             <Text style={styles.title}>What's New</Text>
             <Text style={styles.subtitle}>
               {releases.length === 1
-                ? `Version ${latestVersion}`
+                ? `Version ${latestVersion} (${releases[0].build_number})`
                 : `Versions ${releases[releases.length - 1].version} – ${latestVersion}`}
             </Text>
           </View>
 
-          {/* Changes */}
           <ScrollView
             style={styles.scroll}
             contentContainerStyle={styles.scrollContent}
@@ -116,17 +134,20 @@ export default function WhatsNewModal({ releases, onDismiss }: Props) {
                 {releases.length > 1 && (
                   <Text style={styles.versionLabel}>v{release.version} · Build {release.build_number}</Text>
                 )}
-                {release.title && releases.length === 1 && (
+                {release.title && (
                   <Text style={styles.releaseTitle}>{release.title}</Text>
                 )}
                 {release.changes.map((ch, ci) => {
-                  const cat = categoryStyle(ch.category, colors)
+                  const meta = categoryMeta(ch.category, colors)
+                  const isOnly = release.changes.length === 1
                   return (
-                    <View key={ci} style={styles.changeRow}>
-                      <View style={[styles.catBadge, { backgroundColor: cat.bg }]}>
-                        <Text style={[styles.catText, { color: cat.text }]}>{cat.label}</Text>
-                      </View>
-                      <MarkdownText text={ch.text} style={styles.changeText} />
+                    <View key={ci} style={[styles.changeBlock, ci > 0 && styles.changeBlockSep]}>
+                      {!isOnly && (
+                        <View style={[styles.catBadge, { backgroundColor: meta.bg }]}>
+                          <Text style={[styles.catText, { color: meta.text }]}>{meta.label}</Text>
+                        </View>
+                      )}
+                      <MarkdownBlock text={ch.text} baseStyle={styles.bodyText} />
                     </View>
                   )
                 })}
@@ -134,7 +155,6 @@ export default function WhatsNewModal({ releases, onDismiss }: Props) {
             ))}
           </ScrollView>
 
-          {/* Dismiss */}
           <View style={styles.footer}>
             <TouchableOpacity style={styles.btn} onPress={onDismiss} activeOpacity={0.8}>
               <Text style={styles.btnText}>Got it!</Text>
@@ -151,14 +171,13 @@ function makeStyles(c: ReturnType<typeof useColors>) {
     overlay: {
       flex: 1,
       justifyContent: 'flex-end',
-      backgroundColor: 'rgba(0,0,0,0.6)',
+      backgroundColor: 'rgba(0,0,0,0.55)',
     },
     sheet: {
       backgroundColor: c.surface,
       borderTopLeftRadius: radii.xl,
       borderTopRightRadius: radii.xl,
-      maxHeight: '88%',
-      flexShrink: 1,
+      height: '88%',
     },
     handle: {
       width: 36,
@@ -173,38 +192,33 @@ function makeStyles(c: ReturnType<typeof useColors>) {
       paddingHorizontal: spacing[6],
       paddingTop: spacing[4],
       paddingBottom: spacing[4],
-      borderBottomWidth: 1,
+      borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: c.border,
-    },
-    emoji: {
-      fontSize: 36,
-      marginBottom: spacing[2],
     },
     title: {
       fontFamily: 'InterTight-Bold',
-      fontSize: 22,
+      fontSize: 20,
       color: c.fg,
-      textAlign: 'center',
     },
     subtitle: {
       fontFamily: 'InterTight-Regular',
       fontSize: 13,
       color: c.fg3,
-      marginTop: 4,
-      textAlign: 'center',
+      marginTop: 3,
     },
     scroll: {
       flex: 1,
     },
     scrollContent: {
       paddingHorizontal: spacing[5],
-      paddingVertical: spacing[4],
+      paddingTop: spacing[4],
+      paddingBottom: spacing[6],
     },
     releaseBlock: {
       paddingBottom: spacing[4],
     },
     releaseBlockBorder: {
-      borderTopWidth: 1,
+      borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: c.border,
       paddingTop: spacing[4],
     },
@@ -216,41 +230,42 @@ function makeStyles(c: ReturnType<typeof useColors>) {
       marginBottom: spacing[2],
     },
     releaseTitle: {
-      fontFamily: 'InterTight-SemiBold',
-      fontSize: 15,
+      fontFamily: 'InterTight-Bold',
+      fontSize: 17,
       color: c.fg,
       marginBottom: spacing[3],
     },
-    changeRow: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
+    changeBlock: {
       gap: spacing[2],
-      marginBottom: spacing[2.5],
+    },
+    changeBlockSep: {
+      marginTop: spacing[3],
+      paddingTop: spacing[3],
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: c.border,
     },
     catBadge: {
-      paddingHorizontal: 6,
-      paddingVertical: 2,
+      alignSelf: 'flex-start',
+      paddingHorizontal: 8,
+      paddingVertical: 3,
       borderRadius: 4,
-      flexShrink: 0,
-      marginTop: 1,
     },
     catText: {
       fontFamily: 'JetBrainsMono-Regular',
       fontSize: 9,
-      letterSpacing: 0.6,
+      letterSpacing: 0.8,
     },
-    changeText: {
+    bodyText: {
       fontFamily: 'InterTight-Regular',
       fontSize: 14,
       color: c.fg2,
-      flex: 1,
-      lineHeight: 20,
+      lineHeight: 21,
     },
     footer: {
       paddingHorizontal: spacing[5],
       paddingTop: spacing[3],
       paddingBottom: 34,
-      borderTopWidth: 1,
+      borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: c.border,
     },
     btn: {
