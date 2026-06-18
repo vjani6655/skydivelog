@@ -57,7 +57,7 @@ export async function POST(
     .select('dropzone_id')
     .eq('user_id', params.id)
     .not('dropzone_id', 'is', null)
-  const dropzoneIds = [...new Set((userJumps ?? []).map(j => j.dropzone_id).filter(Boolean))]
+  const dropzoneIds = Array.from(new Set((userJumps ?? []).map(j => j.dropzone_id).filter(Boolean)))
 
   // Audit record before deletion (user row won't exist after)
   await db.from('audit_log').insert({
