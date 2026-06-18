@@ -488,12 +488,15 @@ export default function NewJumpScreen() {
   useFocusEffect(useCallback(() => {
     if (draftId || voicePrefill) return;
     (async () => {
+      let persistedDzName = '';
+      let persistedAcType = '';
+      let persistedAcRego = '';
       const saved = await AsyncStorage.getItem(PERSIST_KEY).catch(() => null);
       if (saved) {
         const p = JSON.parse(saved);
-        if (p.dzName) setDzName(p.dzName);
-        if (p.acType) setAcType(p.acType);
-        if (p.acRego) setAcRego(p.acRego);
+        if (p.dzName) { setDzName(p.dzName); persistedDzName = p.dzName; }
+        if (p.acType) { setAcType(p.acType); persistedAcType = p.acType; }
+        if (p.acRego) { setAcRego(p.acRego); persistedAcRego = p.acRego; }
         if (p.jumperType && p.jumperType !== 'Other') setJumperType(p.jumperType);
       }
       // ── Step 1: fill jump number immediately from local data (fast, no network) ──
@@ -520,15 +523,15 @@ export default function NewJumpScreen() {
           .eq('type', 'canopy')
           .order('make_model');
         setUserCanopies(canopies ?? []);
-        const { data } = await supabase
+        const { data: lastJump } = await supabase
           .from('jumps')
-          .select('jump_number')
+          .select('jump_number, aircraft_type, aircraft_rego, dropzones(name)')
           .eq('user_id', user.id)
           .is('deleted_at', null)
           .order('jump_number', { ascending: false })
           .limit(1)
           .maybeSingle();
-        const freshLast = data ? Math.max(data.jump_number, maxQueued) : maxQueued;
+        const freshLast = lastJump ? Math.max(lastJump.jump_number, maxQueued) : maxQueued;
         if (freshLast > 0) {
           await AsyncStorage.setItem('@jumplogs/last_jump_number', String(freshLast)).catch(() => null);
           setLastJumpNum(freshLast);
@@ -538,6 +541,13 @@ export default function NewJumpScreen() {
           await AsyncStorage.removeItem('@jumplogs/last_jump_number').catch(() => null);
           setLastJumpNum(null);
           setJumpNum('1');
+        }
+        // Fall back to DB values for any field AsyncStorage didn't provide
+        if (lastJump) {
+          const dz = lastJump.dropzones as { name: string } | null;
+          if (!persistedDzName && dz?.name) setDzName(dz.name);
+          if (!persistedAcType && lastJump.aircraft_type) setAcType(lastJump.aircraft_type);
+          if (!persistedAcRego && lastJump.aircraft_rego) setAcRego(lastJump.aircraft_rego);
         }
       } catch {
         // offline / token-refresh timeout — step 1 value is already shown, nothing to do
@@ -728,6 +738,8 @@ export default function NewJumpScreen() {
           if (newDz) dropzoneId = newDz.id;
         }
       }
+
+      await AsyncStorage.setItem(PERSIST_KEY, JSON.stringify({ dzName, acType, acRego, jumperType })).catch(() => null);
 
       const { data: newJump, error } = await supabase.from('jumps').insert({
         user_id: user.id,
