@@ -16,6 +16,23 @@ import WhatsNewModal, { type ReleaseNote } from '@/components/WhatsNewModal';
 const WHATS_NEW_KEY = 'WHATS_NEW_BUILD';
 const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'https://www.jumplogs.com';
 
+async function checkWhatsNew(): Promise<ReleaseNote[]> {
+  const build = Application.nativeBuildVersion;
+  if (!build) return [];
+  const lastSeen = await AsyncStorage.getItem(WHATS_NEW_KEY).catch(() => null);
+  const lastBuild = Number(lastSeen ?? '0');
+  const currentBuild = Number(build);
+  if (currentBuild <= lastBuild) return [];
+  try {
+    const res = await fetch(`${WEB_URL}/api/releases?since=${lastBuild}`);
+    if (res.ok) {
+      const data: ReleaseNote[] = await res.json();
+      return data.length > 0 ? data : [];
+    }
+  } catch {}
+  return [];
+}
+
 /** 
  * getSession() hangs indefinitely offline when the access token is expired
  * (Supabase tries to refresh it via network with no fetch timeout in RN).
@@ -76,8 +93,13 @@ export default function RootLayout() {
   }, [error]);
 
   useEffect(() => {
-    getSessionWithOfflineFallback().then(session => {
+    getSessionWithOfflineFallback().then(async (session) => {
       setSession(session);
+      // Check on every app launch — covers users who update and reopen without signing in again
+      if (session?.user) {
+        const releases = await checkWhatsNew();
+        if (releases.length > 0) setWhatsNewReleases(releases);
+      }
     });
 
     const {
@@ -98,22 +120,10 @@ export default function RootLayout() {
             ...(appVersion ? { app_version: appVersion } : {}),
           }).eq('id', session.user.id).then(() => null);
 
-          // Check for release notes the user hasn't seen yet
-          if (build) {
-            AsyncStorage.getItem(WHATS_NEW_KEY).then(async (lastSeen) => {
-              const lastBuild = Number(lastSeen ?? '0');
-              const currentBuild = Number(build);
-              if (currentBuild > lastBuild) {
-                try {
-                  const res = await fetch(`${WEB_URL}/api/releases?since=${lastBuild}`);
-                  if (res.ok) {
-                    const data: ReleaseNote[] = await res.json();
-                    if (data.length > 0) setWhatsNewReleases(data);
-                  }
-                } catch {}
-              }
-            }).catch(() => null);
-          }
+          // Check for release notes the user hasn't seen yet (fresh sign-in path)
+          checkWhatsNew().then(releases => {
+            if (releases.length > 0) setWhatsNewReleases(releases);
+          }).catch(() => null);
         }
       }
     });
