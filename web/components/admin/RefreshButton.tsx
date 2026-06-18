@@ -1,17 +1,14 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 
 export default function RefreshButton() {
-  const router = useRouter()
   const [spinning, setSpinning] = useState(false)
 
   const handleRefresh = () => {
     setSpinning(true)
-    router.refresh()
-    setTimeout(() => setSpinning(false), 800)
+    window.location.reload()
   }
 
   return (
