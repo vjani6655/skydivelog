@@ -7,16 +7,29 @@ const VERIFY_PROD    = 'https://buy.itunes.apple.com/verifyReceipt'
 const VERIFY_SANDBOX = 'https://sandbox.itunes.apple.com/verifyReceipt'
 
 async function callVerifyReceipt(receipt: string, sandbox: boolean) {
-  const res = await fetch(sandbox ? VERIFY_SANDBOX : VERIFY_PROD, {
+  const url = sandbox ? VERIFY_SANDBOX : VERIFY_PROD
+  const body = JSON.stringify({
+    'receipt-data': receipt,
+    password: process.env.APPLE_IAP_SHARED_SECRET ?? '',
+    'exclude-old-transactions': true,
+  })
+  console.log('[apple/validate] calling', sandbox ? 'SANDBOX' : 'PROD', 'url:', url, 'body size:', body.length)
+  const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      'receipt-data': receipt,
-      password: process.env.APPLE_IAP_SHARED_SECRET ?? '',
-      'exclude-old-transactions': true,
-    }),
+    body,
   })
-  return res.json()
+  const json = await res.json()
+  console.log('[apple/validate]', sandbox ? 'sandbox' : 'prod', 'raw response:', JSON.stringify({
+    status: json.status,
+    environment: json.environment,
+    receipt_bundle_id: json.receipt?.bundle_id,
+    receipt_app_item_id: json.receipt?.app_item_id,
+    receipt_version_external_identifier: json.receipt?.version_external_identifier,
+    latest_receipt_info_count: json.latest_receipt_info?.length ?? 0,
+    is_retryable: json.is_retryable,
+  }))
+  return json
 }
 
 export async function POST(req: NextRequest) {
@@ -51,21 +64,40 @@ export async function POST(req: NextRequest) {
     if (receiptPrefix.startsWith('eyJ')) {
       console.error('[apple/validate] receipt is JWS format (StoreKit 2) — verifyReceipt will return 21003')
     }
-    // Detect truncated receipt: PKCS#7 outer SEQUENCE declares its full length in bytes 3-4.
-    // A truncated receipt will cause 21003 because the signature (at the end) is missing.
+    // Deep-inspect the receipt structure for diagnostics
     try {
       const decoded = Buffer.from(cleanReceipt, 'base64')
+      console.log('[apple/validate] receipt decoded bytes:', decoded.length,
+        'first8hex:', decoded.slice(0, 8).toString('hex'),
+        'last8hex:', decoded.slice(-8).toString('hex'))
+
+      // PKCS#7 outer SEQUENCE with 2-byte length
       if (decoded.length > 4 && decoded[0] === 0x30 && decoded[1] === 0x82) {
         const declaredContentLen = (decoded[2] << 8) | decoded[3]
         const actualContentLen = decoded.length - 4
         const pct = Math.round(actualContentLen / declaredContentLen * 100)
         if (actualContentLen < declaredContentLen) {
-          console.error('[apple/validate] RECEIPT TRUNCATED: declared', declaredContentLen, 'bytes, received', actualContentLen, 'bytes (', pct, '%) — getReceiptIOS() returned stale partial receipt; need requestReceiptRefreshIOS()')
+          console.error('[apple/validate] RECEIPT TRUNCATED: declared', declaredContentLen,
+            'bytes content, received', actualContentLen, 'bytes (', pct, '%)')
         } else {
-          console.log('[apple/validate] receipt integrity OK:', actualContentLen, '/', declaredContentLen, 'bytes (100%)')
+          console.log('[apple/validate] receipt integrity OK:', actualContentLen, '/',
+            declaredContentLen, 'declared bytes (', pct, '%)')
         }
+        // OID immediately follows the outer SEQUENCE header (at byte 4)
+        if (decoded[4] === 0x06) {
+          const oidLen = decoded[5]
+          const oidBytes = decoded.slice(6, 6 + oidLen).toString('hex')
+          console.log('[apple/validate] receipt OID bytes:', oidBytes,
+            '(pkcs7-signedData = 2a864886f70d010702)')
+        }
+      } else {
+        console.warn('[apple/validate] receipt does not start with expected PKCS#7 SEQUENCE:',
+          'byte0=0x' + decoded[0]?.toString(16),
+          'byte1=0x' + decoded[1]?.toString(16))
       }
-    } catch { /* non-fatal */ }
+    } catch (e) {
+      console.warn('[apple/validate] receipt inspection error:', String(e))
+    }
 
     // Try production first; 21007 = sandbox receipt sent to prod (expected for TestFlight).
     // 21003 = receipt unauthenticated — prod sometimes returns this instead of 21007
