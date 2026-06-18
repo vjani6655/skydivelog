@@ -51,6 +51,14 @@ export async function POST(
     }
   }
 
+  // Collect dropzone IDs from this user's jumps before deletion
+  const { data: userJumps } = await db
+    .from('jumps')
+    .select('dropzone_id')
+    .eq('user_id', params.id)
+    .not('dropzone_id', 'is', null)
+  const dropzoneIds = [...new Set((userJumps ?? []).map(j => j.dropzone_id).filter(Boolean))]
+
   // Audit record before deletion (user row won't exist after)
   await db.from('audit_log').insert({
     admin_id: adminRow.id,
@@ -67,6 +75,17 @@ export async function POST(
   // auth.users (direct) → notifications, subscription_events
   const { error } = await db.auth.admin.deleteUser(params.id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Delete dropzones that are now orphaned (no jumps and no user home_dropzone_id references)
+  for (const dzId of dropzoneIds) {
+    const [{ count: jumpRefs }, { count: homeRefs }] = await Promise.all([
+      db.from('jumps').select('*', { count: 'exact', head: true }).eq('dropzone_id', dzId),
+      db.from('users').select('*', { count: 'exact', head: true }).eq('home_dropzone_id', dzId),
+    ])
+    if ((jumpRefs ?? 0) === 0 && (homeRefs ?? 0) === 0) {
+      await db.from('dropzones').delete().eq('id', dzId)
+    }
+  }
 
   revalidatePath('/admin/dashboard')
   revalidatePath('/admin/users')

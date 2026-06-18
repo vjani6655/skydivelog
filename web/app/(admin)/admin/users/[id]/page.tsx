@@ -43,6 +43,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
     { data: authUserData },
     { data: subEvents },
     { data: notifPrefs },
+    { data: userDropzones },
   ] = await Promise.all([
     db.from('users').select('*, dropzones!home_dropzone_id(name)').eq('id', id).single(),
     db.from('subscriptions').select('*').eq('user_id', id).order('started_at', { ascending: false }).limit(1).maybeSingle(),
@@ -62,12 +63,23 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
     db.auth.admin.getUserById(id),
     db.from('subscription_events').select('id, event, metadata, created_at').eq('user_id', id).order('created_at', { ascending: false }),
     db.from('notification_preferences').select('push_token, announcements').eq('user_id', id).maybeSingle(),
+    db.from('jumps').select('dropzone_id, dropzones(id, name, region)').eq('user_id', id).is('deleted_at', null).not('dropzone_id', 'is', null),
   ])
 
   if (!user) notFound()
 
   const initials = (user.full_name || user.email).split(' ').map((p: string) => p[0]).join('').slice(0, 2).toUpperCase()
   const displayId = (totalUsers ?? 0) > 0 ? `#${totalUsers}` : `#—`
+
+  // Dropzones — count jumps per DZ for this user
+  const dzJumpCounts: Record<string, { name: string; region: string | null; count: number }> = {}
+  for (const j of userDropzones ?? []) {
+    const dz = j.dropzones as unknown as { id: string; name: string; region: string | null } | null
+    if (!dz || !j.dropzone_id) continue
+    if (!dzJumpCounts[j.dropzone_id]) dzJumpCounts[j.dropzone_id] = { name: dz.name, region: dz.region, count: 0 }
+    dzJumpCounts[j.dropzone_id].count++
+  }
+  const dzList = Object.values(dzJumpCounts).sort((a, b) => b.count - a.count)
 
   // Freefall total
   const ffTotalSec = ffData?.reduce((s, j) => s + (j.freefall_seconds ?? 0), 0) ?? 0
@@ -250,6 +262,21 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
               </div>
             )) : <div className="text-xs text-fg-3 py-2">No recent activity</div>}
           </AdminCard>
+
+          {/* Dropzones */}
+          {dzList.length > 0 && (
+            <AdminCard title={`DROPZONES · ${dzList.length} VISITED`}>
+              {dzList.map(dz => (
+                <div key={dz.name} className="flex items-center justify-between py-2 border-b border-dashed border-border last:border-0">
+                  <div>
+                    <div className="text-xs font-medium text-fg">{dz.name}</div>
+                    {dz.region && <div className="font-mono text-[10px] text-fg-3 mt-0.5">{dz.region}</div>}
+                  </div>
+                  <span className="font-mono text-xs text-fg-3">{dz.count} jump{dz.count !== 1 ? 's' : ''}</span>
+                </div>
+              ))}
+            </AdminCard>
+          )}
 
           {/* Support tickets */}
           {recentTickets && recentTickets.length > 0 && (
