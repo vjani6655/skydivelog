@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { stripe } from '@/lib/stripe'
@@ -66,6 +67,9 @@ export async function POST(
   // auth.users (direct) → notifications, subscription_events
   const { error } = await db.auth.admin.deleteUser(params.id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  revalidatePath('/admin/dashboard')
+  revalidatePath('/admin/users')
 
   return NextResponse.json({ ok: true })
 }
