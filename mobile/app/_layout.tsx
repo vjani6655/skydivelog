@@ -6,6 +6,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import 'react-native-reanimated';
 import type { Session } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Application from 'expo-application';
 import { supabase } from '@/lib/supabase';
 import { UserPrefsProvider } from '@/lib/prefsContext';
 import { registerPushToken } from '@/lib/notifications';
@@ -81,11 +82,15 @@ export default function RootLayout() {
       if (session?.user) {
         registerPushToken(supabase, session.user.id).catch(() => null);
 
-        // Track last sign-in time and platform (fire-and-forget, non-critical)
+        // Track last sign-in time, platform and app version (fire-and-forget, non-critical)
         if (_event === 'SIGNED_IN') {
+          const version = Application.nativeApplicationVersion ?? null;
+          const build = Application.nativeBuildVersion ?? null;
+          const appVersion = version ? (build ? `${version} (${build})` : version) : null;
           supabase.from('users').update({
             last_sign_in_at: new Date().toISOString(),
             last_sign_in_platform: Platform.OS,
+            ...(appVersion ? { app_version: appVersion } : {}),
           }).eq('id', session.user.id).then(() => null);
         }
       }

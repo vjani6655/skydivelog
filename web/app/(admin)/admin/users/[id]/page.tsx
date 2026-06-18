@@ -198,6 +198,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
                 ['ACCOUNT CREATED', fmtDate(user.created_at),                      true],
                 ['LAST SIGN-IN',    fmtDate(user.last_sign_in_at),                 true],
                 ['IP (LAST SEEN)',  user.last_ip ?? '—',                           true],
+                ['APP VERSION',     user.app_version ?? '—',                       true],
                 ['2FA',             (authUserData?.user?.factors ?? []).some((f: { factor_type: string; status: string }) => f.factor_type === 'totp' && f.status === 'verified') ? 'Enabled · TOTP' : 'Disabled', false],
               ].map(([k, v, mono]) => (
                 <div key={k as string}>
