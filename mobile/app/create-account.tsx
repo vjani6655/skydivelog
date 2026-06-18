@@ -217,28 +217,32 @@ export default function CreateAccountScreen() {
                 <View style={[styles.inputRow, !!errors.licence && styles.inputRowError]}>
                   <TextInput
                     style={styles.input}
-                    placeholder="APF 14829"
+                    placeholder="APF-2457830"
                     placeholderTextColor={colors.fg4}
                     autoCapitalize="characters"
+                    autoCorrect={false}
                     value={licence}
                     onChangeText={v => { setLicence(v); clear('licence'); }}
                   />
                 </View>
                 {!!errors.licence && <Text style={styles.errorText}>{errors.licence}</Text>}
+                <Text style={styles.hintText}>Your APF number or governing body number</Text>
               </View>
-              <View style={[styles.inputGroup, { width: 88 }]}>
+              <View style={[styles.inputGroup, { width: 100 }]}>
                 <Text style={styles.label}>RATING</Text>
                 <View style={[styles.inputRow, !!errors.rating && styles.inputRowError]}>
                   <TextInput
                     style={styles.input}
-                    placeholder="B"
+                    placeholder="B-237"
                     placeholderTextColor={colors.fg4}
                     autoCapitalize="characters"
+                    autoCorrect={false}
                     value={rating}
                     onChangeText={v => { setRating(v); clear('rating'); }}
                   />
                 </View>
                 {!!errors.rating && <Text style={styles.errorText}>{errors.rating}</Text>}
+                <Text style={styles.hintText}>e.g. B-237 or D-1897</Text>
               </View>
             </View>
 
@@ -350,6 +354,12 @@ function makeStyles(c: ColorSet) {
     fontSize: 12,
     color: c.danger,
     marginTop: 2,
+  },
+  hintText: {
+    fontFamily: 'InterTight-Regular',
+    fontSize: 11,
+    color: c.fg4,
+    marginTop: 4,
   },
   emailExistsBox: {
     marginTop: 6,

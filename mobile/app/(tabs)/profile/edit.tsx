@@ -134,10 +134,12 @@ export default function EditProfileScreen() {
           <IconInput icon="mail-outline" value={email} editable={false} placeholder="email" selectTextOnFocus={false} />
 
           <FieldLabel text="LICENCE NUMBER" />
-          <TextInput style={styles.input} value={licenceNumber} onChangeText={setLicenceNumber} placeholder="A-12345" placeholderTextColor={colors.fg3} autoCapitalize="none" autoCorrect={false} />
+          <TextInput style={[styles.input, { marginBottom: 4 }]} value={licenceNumber} onChangeText={setLicenceNumber} placeholder="APF-2457830" placeholderTextColor={colors.fg3} autoCapitalize="characters" autoCorrect={false} />
+          <Text style={styles.hint}>Your APF number, or the number provided by your governing body</Text>
 
           <FieldLabel text="RATING" />
-          <TextInput style={styles.input} value={licenceRating} onChangeText={setLicenceRating} placeholder="e.g. AFF-I, Coach" placeholderTextColor={colors.fg3} autoCapitalize="words" />
+          <TextInput style={[styles.input, { marginBottom: 4 }]} value={licenceRating} onChangeText={setLicenceRating} placeholder="B-237 or D-1897" placeholderTextColor={colors.fg3} autoCapitalize="characters" autoCorrect={false} />
+          <Text style={styles.hint}>Your latest rating, e.g. B-237 or D-1897</Text>
 
           <FieldLabel text="COUNTRY" />
           <TouchableOpacity
@@ -302,6 +304,7 @@ function makeStyles(c: ColorSet) {
   sectionTitle: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: c.fg3, marginBottom: spacing[3], marginTop: spacing[2] },
   label: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: c.fg3, marginBottom: spacing[1.5] },
   input: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, paddingHorizontal: spacing[3], paddingVertical: spacing[3], marginBottom: spacing[4], fontFamily: 'InterTight-Regular', fontSize: 15, color: c.fg },
+  hint: { fontFamily: 'InterTight-Regular', fontSize: 11, color: c.fg4, marginBottom: spacing[4] },
   iconInputRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, marginBottom: spacing[4] },
   inputIcon: { marginLeft: spacing[3] },
   iconInputField: { flex: 1, paddingLeft: spacing[2], paddingRight: spacing[3], paddingVertical: spacing[3], fontFamily: 'InterTight-Regular', fontSize: 15, color: c.fg },

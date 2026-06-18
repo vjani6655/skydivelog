@@ -169,7 +169,11 @@ export default function ProfileScreen() {
             <Text style={styles.avatarText}>{ini}</Text>
           </View>
           <Text style={styles.heroName}>{name ?? email ?? 'Skydiver'}</Text>
-          {licence ? <Text style={styles.heroLicence}>{licence}</Text> : null}
+          {(licence || profile?.licence_rating) ? (
+            <Text style={styles.heroLicence}>
+              {[licence, profile?.licence_rating].filter(Boolean).join(' · ')}
+            </Text>
+          ) : null}
           <View style={styles.heroRow}>
             <View style={[styles.subBadge, { backgroundColor: subBadge.bg }]}>
               <Text style={[styles.subBadgeText, { color: subBadge.text }]}>{subBadge.label}</Text>
