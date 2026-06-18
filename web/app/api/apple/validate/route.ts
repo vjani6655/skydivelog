@@ -45,6 +45,14 @@ export async function POST(req: NextRequest) {
 
     // Strip any whitespace/newlines — some iOS SDK versions emit MIME-style base64
     const cleanReceipt = (receipt as string).replace(/[\s\r\n]/g, '')
+    const receiptPrefix = cleanReceipt.substring(0, 20)
+    console.log('[apple/validate] receipt length:', cleanReceipt.length, 'prefix:', receiptPrefix)
+    if (receiptPrefix.startsWith('eyJ')) {
+      // JWS / StoreKit 2 token — legacy verifyReceipt cannot authenticate this format.
+      // This happens on iOS 17+ when StoreKit 2 is used. The receipt must be decoded
+      // as a JWS, not sent to verifyReceipt.
+      console.error('[apple/validate] receipt is JWS format (StoreKit 2) — verifyReceipt will return 21003')
+    }
 
     // Try production first; 21007 = sandbox receipt sent to prod (expected for TestFlight).
     // 21003 = receipt unauthenticated — prod sometimes returns this instead of 21007
