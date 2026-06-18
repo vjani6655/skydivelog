@@ -53,10 +53,22 @@ export default async function AdminPlatformPage() {
   const totalTyped = Object.values(typeCount).reduce((a, b) => a + b, 0) || 1
   const topTypes = Object.entries(typeCount).sort(([, a], [, b]) => b - a).slice(0, 6)
 
-  // Top aircraft
-  const acCount: Record<string, number> = {}
-  aircraftRaw?.forEach(j => { if (j.aircraft_type) acCount[j.aircraft_type] = (acCount[j.aircraft_type] ?? 0) + 1 })
-  const topAc = Object.entries(acCount).sort(([, a], [, b]) => b - a).slice(0, 8)
+  // Top aircraft — grouped case-insensitively, display name = most common casing
+  const acMap: Record<string, { count: number; variants: Record<string, number> }> = {}
+  aircraftRaw?.forEach(j => {
+    if (!j.aircraft_type) return
+    const key = j.aircraft_type.toLowerCase().trim()
+    if (!acMap[key]) acMap[key] = { count: 0, variants: {} }
+    acMap[key].count++
+    acMap[key].variants[j.aircraft_type] = (acMap[key].variants[j.aircraft_type] ?? 0) + 1
+  })
+  const topAc = Object.values(acMap)
+    .map(({ count, variants }) => {
+      const display = Object.entries(variants).sort(([, a], [, b]) => b - a)[0]?.[0] ?? ''
+      return [display, count] as [string, number]
+    })
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 8)
 
   const TYPE_COLORS = ['#4A9EFF', '#4ADE80', '#FFB74A', '#34D2D6', '#FF6B6B', '#A78BFA']
   const DZ_COLORS = ['#4A9EFF', '#4ADE80', '#FFB74A', '#34D2D6', '#FF6B6B', '#A78BFA', '#F472B6', '#FCD34D', '#6EE7B7']

@@ -13,14 +13,17 @@ export default async function AircraftListPage() {
     db.from('jumps').select('aircraft_type').is('deleted_at', null).not('aircraft_type', 'is', null),
   ])
 
-  // Count jumps per aircraft type (jumps store type as text, not FK)
-  const jumpCount: Record<string, number> = {}
+  // Count jumps per aircraft type — normalise to lowercase to merge case variants
+  const jumpCountByKey: Record<string, number> = {}
   for (const j of jumpAircraft ?? []) {
-    if (j.aircraft_type) jumpCount[j.aircraft_type] = (jumpCount[j.aircraft_type] ?? 0) + 1
+    if (j.aircraft_type) {
+      const key = j.aircraft_type.toLowerCase().trim()
+      jumpCountByKey[key] = (jumpCountByKey[key] ?? 0) + 1
+    }
   }
 
   const rows = (allAircraft ?? [])
-    .map(a => ({ ...a, count: jumpCount[a.type] ?? 0 }))
+    .map(a => ({ ...a, count: jumpCountByKey[a.type.toLowerCase().trim()] ?? 0 }))
     .sort((a, b) => b.count - a.count)
 
   return (
