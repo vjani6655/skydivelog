@@ -8,22 +8,28 @@ import Link from 'next/link'
 export default async function AircraftListPage() {
   const db = createAdminClient()
 
-  const [{ data: allAircraft }, { data: jumpAircraft }] = await Promise.all([
-    db.from('aircraft').select('id, type, category').order('type'),
-    db.from('jumps').select('aircraft_type').is('deleted_at', null).not('aircraft_type', 'is', null),
-  ])
+  const { data: jumpAircraft } = await db
+    .from('jumps')
+    .select('aircraft_type')
+    .is('deleted_at', null)
+    .not('aircraft_type', 'is', null)
+    .limit(100000)
 
-  // Count jumps per aircraft type — normalise to lowercase to merge case variants
-  const jumpCountByKey: Record<string, number> = {}
+  // Group case-insensitively, display most common casing
+  const acMap: Record<string, { count: number; variants: Record<string, number> }> = {}
   for (const j of jumpAircraft ?? []) {
-    if (j.aircraft_type) {
-      const key = j.aircraft_type.toLowerCase().trim()
-      jumpCountByKey[key] = (jumpCountByKey[key] ?? 0) + 1
-    }
+    if (!j.aircraft_type) continue
+    const key = j.aircraft_type.toLowerCase().trim()
+    if (!acMap[key]) acMap[key] = { count: 0, variants: {} }
+    acMap[key].count++
+    acMap[key].variants[j.aircraft_type] = (acMap[key].variants[j.aircraft_type] ?? 0) + 1
   }
 
-  const rows = (allAircraft ?? [])
-    .map(a => ({ ...a, count: jumpCountByKey[a.type.toLowerCase().trim()] ?? 0 }))
+  const rows = Object.values(acMap)
+    .map(({ count, variants }) => {
+      const display = Object.entries(variants).sort(([, a], [, b]) => b - a)[0]?.[0] ?? ''
+      return { display, count }
+    })
     .sort((a, b) => b.count - a.count)
 
   return (
@@ -37,17 +43,12 @@ export default async function AircraftListPage() {
       <AdminPageHeader title="Aircraft" sub={`${rows.length} types`} />
 
       <AdminCard title={`ALL AIRCRAFT · ${rows.length}`}>
-        {rows.length === 0 && <div className="text-xs text-fg-3 py-2">No aircraft yet</div>}
+        {rows.length === 0 && <div className="text-xs text-fg-3 py-2">No aircraft logged yet</div>}
         {rows.map(a => (
-          <div key={a.id} className="flex items-center justify-between py-2.5 border-b border-dashed border-border last:border-0">
-            <div>
-              <div className="text-sm font-medium text-fg">{a.type}</div>
-              <div className="font-mono text-[10px] text-fg-3 mt-0.5">{a.category}</div>
-            </div>
+          <div key={a.display} className="flex items-center justify-between py-2.5 border-b border-dashed border-border last:border-0">
+            <div className="text-sm font-medium text-fg">{a.display}</div>
             <span className="font-mono text-xs text-fg-3">
-              {a.count === 0
-                ? <span className="text-warn">0 jumps · not used</span>
-                : `${a.count} jump${a.count !== 1 ? 's' : ''}`}
+              {a.count} jump{a.count !== 1 ? 's' : ''}
             </span>
           </div>
         ))}

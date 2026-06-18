@@ -9,9 +9,10 @@ import CleanupDropzonesButton from '@/components/admin/CleanupDropzonesButton'
 export default async function DropzonesListPage() {
   const db = createAdminClient()
 
-  const [{ data: allDZs }, { data: jumpDZs }] = await Promise.all([
+  const [{ data: allDZs }, { data: jumpDZs }, { data: homeDZs }] = await Promise.all([
     db.from('dropzones').select('id, name, region').order('name'),
     db.from('jumps').select('dropzone_id').is('deleted_at', null).not('dropzone_id', 'is', null),
+    db.from('users').select('home_dropzone_id').not('home_dropzone_id', 'is', null),
   ])
 
   // Count jumps per dropzone
@@ -20,8 +21,15 @@ export default async function DropzonesListPage() {
     if (j.dropzone_id) jumpCount[j.dropzone_id] = (jumpCount[j.dropzone_id] ?? 0) + 1
   }
 
+  // Which dropzones are set as a home DZ for at least one user
+  const homeDZSet = new Set((homeDZs ?? []).map(u => u.home_dropzone_id).filter(Boolean))
+
   const rows = (allDZs ?? [])
-    .map(dz => ({ ...dz, count: jumpCount[dz.id] ?? 0 }))
+    .map(dz => ({
+      ...dz,
+      count: jumpCount[dz.id] ?? 0,
+      isHomeDZ: homeDZSet.has(dz.id),
+    }))
     .sort((a, b) => b.count - a.count)
 
   return (
@@ -43,7 +51,11 @@ export default async function DropzonesListPage() {
               {dz.region && <div className="font-mono text-[10px] text-fg-3 mt-0.5">{dz.region}</div>}
             </div>
             <span className="font-mono text-xs text-fg-3">
-              {dz.count === 0 ? <span className="text-warn">0 jumps · orphaned</span> : `${dz.count} jump${dz.count !== 1 ? 's' : ''}`}
+              {dz.count === 0 && !dz.isHomeDZ
+                ? <span className="text-warn">0 jumps · orphaned</span>
+                : dz.count === 0 && dz.isHomeDZ
+                ? <span className="text-fg-3">0 jumps · home DZ</span>
+                : `${dz.count} jump${dz.count !== 1 ? 's' : ''}${dz.isHomeDZ ? ' · home DZ' : ''}`}
             </span>
           </div>
         ))}
