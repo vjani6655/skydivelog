@@ -121,7 +121,17 @@ export async function POST(req: NextRequest) {
       })
     } catch { /* ignore — events table may have enum constraints */ }
 
-    console.log(`[apple/validate] ${existing ? 'updated' : 'created'} sub for user`, user.id)
+    console.log(`[apple/validate] ${existing ? 'updated' : 'created'} sub for user`, user.id, 'status:', status)
+
+    // If the receipt is already expired, tell the client so it can show an appropriate message
+    // rather than silently marking the purchase as successful while the subscription is cancelled.
+    if (status === 'cancelled') {
+      return NextResponse.json({
+        success: false,
+        error: 'Your subscription has expired. Please contact support if you were charged.',
+      }, { status: 422 })
+    }
+
     return NextResponse.json({ success: true })
   } catch (e) {
     console.error('[apple/validate]', e)
