@@ -56,6 +56,11 @@ export default async function AdminUsersPage({
   if (subscribedUserIds.length > 0) trialCountQuery = trialCountQuery.not('id', 'in', `(${subscribedUserIds.join(',')})`)
   const { count: trialCount } = await trialCountQuery
 
+  // Expired count = users without any subscription created more than 14 days ago
+  let expiredCountQuery = db.from('users').select('*', { count: 'exact', head: true }).lt('created_at', trialCutoff.toISOString())
+  if (subscribedUserIds.length > 0) expiredCountQuery = expiredCountQuery.not('id', 'in', `(${subscribedUserIds.join(',')})`)
+  const { count: expiredCount } = await expiredCountQuery
+
   const { count: totalCount } = await db.from('users').select('*', { count: 'exact', head: true })
 
   // Determine which user IDs to include based on the active filter tab
@@ -72,6 +77,12 @@ export default async function AdminUsersPage({
     if (subscribedUserIds.length > 0) tq = tq.not('id', 'in', `(${subscribedUserIds.join(',')})`)
     const { data: tUsers } = await tq
     filterIds = tUsers?.map(u => u.id) ?? []
+  } else if (status === 'expired') {
+    // Users without any subscription whose trial period has passed (created >14 days ago)
+    let eq = db.from('users').select('id').lt('created_at', trialCutoff.toISOString())
+    if (subscribedUserIds.length > 0) eq = eq.not('id', 'in', `(${subscribedUserIds.join(',')})`)
+    const { data: eUsers } = await eq
+    filterIds = eUsers?.map(u => u.id) ?? []
   }
 
   let usersQuery = db
@@ -81,7 +92,10 @@ export default async function AdminUsersPage({
       created_at, last_sign_in_at,
       subscriptions ( status, renews_at, price_at_signup, started_at )
     `)
-    .order(sort === 'seen' ? 'last_sign_in_at' : 'created_at', { ascending: false })
+    .order(
+      sort === 'seen' ? 'last_sign_in_at' : sort === 'name' ? 'full_name' : 'created_at',
+      { ascending: sort === 'name', nullsFirst: false }
+    )
     .limit(50)
 
   if (q) usersQuery = usersQuery.or(`email.ilike.%${q}%,full_name.ilike.%${q}%,licence_number.ilike.%${q}%`)
@@ -159,6 +173,7 @@ export default async function AdminUsersPage({
     { label: 'All',       value: 'all',       count: totalCount ?? 0 },
     { label: 'Active',    value: 'active',    count: activeCount ?? 0 },
     { label: 'Trial',     value: 'trial',     count: trialCount ?? 0 },
+    { label: 'Expired',   value: 'expired',   count: expiredCount ?? 0 },
     { label: 'Overdue',   value: 'overdue',   count: overdueCount ?? 0 },
     { label: 'Cancelled', value: 'cancelled', count: cancelledCount ?? 0 },
   ]
