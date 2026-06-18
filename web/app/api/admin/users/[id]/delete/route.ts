@@ -15,11 +15,12 @@ export async function POST(
   const db = createAdminClient()
   const { data: adminRow } = await db
     .from('admins')
-    .select('id')
+    .select('id, role')
     .eq('email', user.email!)
     .eq('active', true)
     .maybeSingle()
   if (!adminRow) return new Response('Forbidden', { status: 403 })
+  if (adminRow.role !== 'super-admin') return new Response('Forbidden', { status: 403 })
 
   const { error } = await db.auth.admin.deleteUser(params.id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

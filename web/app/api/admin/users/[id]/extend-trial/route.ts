@@ -14,10 +14,12 @@ export async function POST(
   const db = createAdminClient()
   const { data: adminRow } = await db
     .from('admins')
-    .select('id')
+    .select('id, role')
     .eq('email', user.email!)
+    .eq('active', true)
     .single()
   if (!adminRow) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!['super-admin', 'admin'].includes(adminRow.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await req.json().catch(() => ({}))
   const days = Number(body.days)

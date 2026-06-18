@@ -13,11 +13,15 @@ export async function POST(req: NextRequest) {
 
   const { data: adminRow, error: adminErr } = await db
     .from('admins')
-    .select('id')
+    .select('id, role')
     .eq('email', user.email!)
+    .eq('active', true)
     .single()
   if (adminErr || !adminRow) {
     return NextResponse.json({ error: 'Admin record not found' }, { status: 403 })
+  }
+  if (!['super-admin', 'admin', 'support'].includes(adminRow.role)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   const body = await req.json().catch(() => ({}))

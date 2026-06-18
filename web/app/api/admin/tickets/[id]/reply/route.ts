@@ -16,11 +16,12 @@ export async function POST(
   const db = createAdminClient()
   const { data: adminRow } = await db
     .from('admins')
-    .select('id')
+    .select('id, role')
     .eq('email', user.email!)
     .eq('active', true)
     .maybeSingle()
   if (!adminRow) return new Response('Forbidden', { status: 403 })
+  if (!['super-admin', 'admin', 'support'].includes(adminRow.role)) return new Response('Forbidden', { status: 403 })
 
   const { message } = await req.json()
   if (!message?.trim()) return NextResponse.json({ error: 'Message required' }, { status: 400 })

@@ -19,11 +19,12 @@ export async function POST(request: Request) {
   const db = createAdminClient()
   const { data: adminRow } = await db
     .from('admins')
-    .select('id')
+    .select('id, role')
     .eq('email', user.email!)
     .eq('active', true)
     .maybeSingle()
   if (!adminRow) return new Response('Forbidden', { status: 403 })
+  if (!['super-admin', 'admin'].includes(adminRow.role)) return new Response('Forbidden', { status: 403 })
 
   // 2. Parse and validate body
   let body_: { title: string; body: string; channels: string[]; segment: string; deepLink?: string; scheduleMode: string; userIds?: string[] }

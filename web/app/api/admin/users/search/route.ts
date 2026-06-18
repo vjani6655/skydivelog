@@ -21,6 +21,7 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url)
   const q = searchParams.get('q')?.trim() ?? ''
+  if (q.length > 200) return NextResponse.json({ error: 'Search query too long' }, { status: 400 })
 
   let query = db
     .from('users')
