@@ -6,6 +6,7 @@ import { Download, Calendar } from 'lucide-react'
 import Link from 'next/link'
 import ResetRevenueButton from '@/components/admin/ResetRevenueButton'
 import RefreshButton from '@/components/admin/RefreshButton'
+import CleanupDropzonesButton from '@/components/admin/CleanupDropzonesButton'
 import type { HealthResponse } from '@/app/api/admin/health/route'
 
 async function getHealth(): Promise<HealthResponse | null> {
@@ -171,6 +172,7 @@ export default async function AdminDashboardPage() {
       <AdminPageHeader title="Dashboard" sub="Overview · 24h" actions={
         <div className="flex gap-2">
           <ResetRevenueButton />
+          <CleanupDropzonesButton />
           <RefreshButton />
           <button className="flex items-center gap-1.5 px-3 py-1.5 bg-surface border border-border rounded-sm text-xs text-fg-2 font-medium">
             <Calendar size={12} /> Last 30 days
