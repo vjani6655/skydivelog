@@ -661,7 +661,7 @@ export default function InstructorSignScreen() {
           <Label text="FULL NAME" />
           <TextInput style={styles.input} value={signerName} onChangeText={setSignerName} placeholder={isStudent ? 'Instructor full name' : 'Full name'} placeholderTextColor={colors.fg3} autoCapitalize="words" autoCorrect={false} />
           <Label text={isStudent ? 'INSTRUCTOR LICENCE #' : 'LICENCE # (optional)'} />
-          <TextInput style={styles.input} value={signerLicence} onChangeText={setSignerLicence} placeholder="APF-2457830" placeholderTextColor={colors.fg3} autoCapitalize="characters" autoCorrect={false} />
+          <TextInput style={styles.input} value={signerLicence} onChangeText={setSignerLicence} placeholder="B-237 or D-1897" placeholderTextColor={colors.fg3} autoCapitalize="characters" autoCorrect={false} />
           <Label text={isStudent ? 'INSTRUCTOR NOTES' : 'NOTES (optional)'} />
           <TextInput style={[styles.input, styles.textarea]} value={signerNotes} onChangeText={setSignerNotes} multiline numberOfLines={3} placeholder="Instructor notes..." placeholderTextColor={colors.fg3} textAlignVertical="top" />
 

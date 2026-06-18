@@ -35,6 +35,8 @@ import { prewarmTTS } from '@/lib/openaiTTS';
 type Layout = 'Compact' | 'Cards' | 'Timeline';
 
 const JUMP_CACHE_KEY = '@jumplogs/jumps_list_cache';
+const JUMP_CACHE_LIMIT = 10;
+const SUB_CACHE_KEY  = '@jumplogs/sub_cache';
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -70,12 +72,17 @@ export default function LogScreen() {
   const [subActive, setSubActive] = useState(false);
   const [voiceModalVisible, setVoiceModalVisible] = useState(false);
   const [voiceDisclaimerVisible, setVoiceDisclaimerVisible] = useState(false);
+  const [isOfflineCache, setIsOfflineCache] = useState(false);
 
   // ── data fetch ────────────────────────────────────────────────────────────
   const fetchAll = async () => {
     try {
     await supabase.auth.refreshSession().catch(() => null);
-    const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } } as any));
+    // getUser() requires network; fall back to getSession() (local storage) when offline
+    let user = (await supabase.auth.getUser().catch(() => ({ data: { user: null } }))).data.user;
+    if (!user) {
+      user = (await supabase.auth.getSession().catch(() => ({ data: { session: null } }))).data.session?.user ?? null;
+    }
     if (!user) { setLoading(false); return; }
 
     // Flush any locally-queued jumps first
@@ -110,6 +117,13 @@ export default function LogScreen() {
       subData?.status === 'overdue' ||
       cancelledInGrace,
     );
+    // Persist subscription state so the offline catch block can enforce access correctly
+    await AsyncStorage.setItem(SUB_CACHE_KEY, JSON.stringify({
+      status:        subData?.status   ?? null,
+      renews_at:     subData?.renews_at ?? null,
+      trial_ends_at: (user.user_metadata?.trial_ends_at as string) ?? null,
+      created_at:    user.created_at,
+    })).catch(() => null);
 
     if (userData?.display_layout_jump_list) {
       setLayout(userData.display_layout_jump_list as Layout);
@@ -118,13 +132,15 @@ export default function LogScreen() {
     const queuedJumps = (await getRawQueue()).map(queuedToJumpFull);
     let displayJumps: JumpFull[] = [];
     if (jumpData) {
-      // Online: cache the fresh data for offline use later
-      await AsyncStorage.setItem(JUMP_CACHE_KEY, JSON.stringify(jumpData)).catch(() => null);
+      // Online: cache the most recent jumps for offline use
+      const toCache = (jumpData as JumpFull[]).slice(0, JUMP_CACHE_LIMIT);
+      await AsyncStorage.setItem(JUMP_CACHE_KEY, JSON.stringify(toCache)).catch(() => null);
       displayJumps = jumpData as JumpFull[];
+      setIsOfflineCache(false);
     } else {
       // Offline: fall back to cached list
       const raw = await AsyncStorage.getItem(JUMP_CACHE_KEY).catch(() => null);
-      if (raw) displayJumps = JSON.parse(raw);
+      if (raw) { displayJumps = JSON.parse(raw); setIsOfflineCache(true); }
     }
     const merged = [...queuedJumps, ...displayJumps];
     merged.sort((a, b) => (b.jump_number ?? 0) - (a.jump_number ?? 0));
@@ -135,11 +151,25 @@ export default function LogScreen() {
       // On any unexpected error (e.g. offline token refresh), fall back to
       // the cached list merged with anything still in the offline queue.
       const queuedJumps = (await getRawQueue().catch(() => [])).map(queuedToJumpFull);
-      const raw = await AsyncStorage.getItem(JUMP_CACHE_KEY).catch(() => null);
+      const raw    = await AsyncStorage.getItem(JUMP_CACHE_KEY).catch(() => null);
       const cached: JumpFull[] = raw ? JSON.parse(raw) : [];
       const merged = [...queuedJumps, ...cached];
       merged.sort((a, b) => (b.jump_number ?? 0) - (a.jump_number ?? 0));
       setJumps(merged);
+      if (cached.length > 0) setIsOfflineCache(true);
+
+      // Restore subscription state so access gates work correctly when offline.
+      // Without this, subActive stays false and trialEndsAt stays null, which
+      // makes trialExpired always false — letting expired/cancelled users log jumps.
+      const subRaw = await AsyncStorage.getItem(SUB_CACHE_KEY).catch(() => null);
+      if (subRaw) {
+        const s = JSON.parse(subRaw) as { status: string | null; renews_at: string | null; trial_ends_at: string | null; created_at: string };
+        const grace = s.status === 'cancelled' && !!s.renews_at && new Date(s.renews_at) > new Date();
+        setSubActive(s.status === 'active' || s.status === 'overdue' || grace);
+        setTrialEndsAt(s.trial_ends_at);
+        setUserCreatedAt(s.created_at);
+      }
+
       setLoading(false);
       setRefreshing(false);
     }
@@ -260,6 +290,16 @@ export default function LogScreen() {
       </View>
     );
   }
+
+  // ── offline cache banner ──────────────────────────────────────────────────
+  const OfflineBanner = isOfflineCache ? (
+    <View style={styles.offlineBanner}>
+      <Ionicons name="cloud-offline-outline" size={14} color={colors.fg3} />
+      <Text style={styles.offlineBannerText}>
+        Showing last {JUMP_CACHE_LIMIT} cached jumps · Pull to refresh when online
+      </Text>
+    </View>
+  ) : null;
 
   // ── header ────────────────────────────────────────────────────────────────
   const Header = (
@@ -453,6 +493,7 @@ export default function LogScreen() {
           data={timelineGroups}
           keyExtractor={g => g.month}
           ListHeaderComponent={Header}
+          ListFooterComponent={OfflineBanner}
           renderItem={({ item }) => (
             <TimelineGroup
               month={item.month}
@@ -497,6 +538,7 @@ export default function LogScreen() {
           data={filtered}
           keyExtractor={j => j.id}
           ListHeaderComponent={Header}
+          ListFooterComponent={OfflineBanner}
           renderItem={({ item }) => (
             <CompactRow
               jump={item}
@@ -540,6 +582,7 @@ export default function LogScreen() {
         data={filtered}
         keyExtractor={j => j.id}
         ListHeaderComponent={Header}
+        ListFooterComponent={OfflineBanner}
         renderItem={({ item }) => (
           <DataCard
             jump={item}
@@ -586,6 +629,30 @@ function makeStyles(c: ColorSet) {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+
+  // ── offline banner ───────────────────────────────────────────
+  offlineBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing[1.5],
+    paddingVertical: spacing[3],
+    paddingHorizontal: spacing[5],
+    marginHorizontal: spacing[5],
+    marginTop: spacing[2],
+    marginBottom: spacing[4],
+    backgroundColor: c.surface,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: c.border,
+  },
+  offlineBannerText: {
+    fontFamily: 'InterTight-Regular',
+    fontSize: 12,
+    color: c.fg3,
+    textAlign: 'center',
+    flexShrink: 1,
   },
 
   // ── header ──────────────────────────────────────────────────

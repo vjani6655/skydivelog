@@ -91,6 +91,7 @@ export default async function MarketingLayout({
           <Link href="/blog" className="hover:text-fg transition-colors">Blog</Link>
           <Link href="/contact" className="hover:text-fg transition-colors">Contact</Link>
           <Link href="/verify" className="hover:text-fg transition-colors">Verify jump</Link>
+          <Link href="/changelog" className="hover:text-fg transition-colors">Changelog</Link>
           <Link href="/privacy" className="hover:text-fg transition-colors">Privacy</Link>
           <Link href="/terms" className="hover:text-fg transition-colors">Terms</Link>
           <a

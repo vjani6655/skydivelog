@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, ShieldAlert, CreditCard, Repeat, Tag, Percent,
-  BarChart2, Download, Mail, Bell, Settings, ChevronRight, Image, LogOut, BookOpen, Smartphone, Menu, X, Activity,
+  BarChart2, Download, Mail, Bell, Settings, ChevronRight, Image, LogOut, BookOpen, Smartphone, Menu, X, Activity, Megaphone,
 } from 'lucide-react'
 import AdminThemeToggle from './AdminThemeToggle'
 import { createClient } from '@/lib/supabase/client'
@@ -43,8 +43,9 @@ const NAV_GROUPS = [
   {
     label: 'Support',
     items: [
-      { key: 'tickets',  label: 'Tickets',         href: '/admin/support',        Icon: Mail },
-      { key: 'announce', label: 'Announcements',   href: '/admin/announcements',  Icon: Bell },
+      { key: 'tickets',   label: 'Tickets',         href: '/admin/support',        Icon: Mail },
+      { key: 'announce',  label: 'Announcements',  href: '/admin/announcements',  Icon: Bell },
+      { key: 'releases',  label: 'Releases',        href: '/admin/releases',       Icon: Megaphone },
     ],
   },
   {

@@ -11,6 +11,10 @@ import { supabase } from '@/lib/supabase';
 import { UserPrefsProvider } from '@/lib/prefsContext';
 import { registerPushToken } from '@/lib/notifications';
 import ForceUpgradeGate from '@/components/ForceUpgradeGate';
+import WhatsNewModal, { type ReleaseNote } from '@/components/WhatsNewModal';
+
+const WHATS_NEW_KEY = 'WHATS_NEW_BUILD';
+const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'https://www.jumplogs.com';
 
 /** 
  * getSession() hangs indefinitely offline when the access token is expired
@@ -65,6 +69,7 @@ export default function RootLayout() {
     'JetBrainsMono-SemiBold': require('@expo-google-fonts/jetbrains-mono/600SemiBold/JetBrainsMono_600SemiBold.ttf'),
   });
   const [session, setSession] = useState<Session | null | undefined>(undefined);
+  const [whatsNewReleases, setWhatsNewReleases] = useState<ReleaseNote[]>([]);
 
   useEffect(() => {
     if (error) throw error;
@@ -92,6 +97,23 @@ export default function RootLayout() {
             last_sign_in_platform: Platform.OS,
             ...(appVersion ? { app_version: appVersion } : {}),
           }).eq('id', session.user.id).then(() => null);
+
+          // Check for release notes the user hasn't seen yet
+          if (build) {
+            AsyncStorage.getItem(WHATS_NEW_KEY).then(async (lastSeen) => {
+              const lastBuild = Number(lastSeen ?? '0');
+              const currentBuild = Number(build);
+              if (currentBuild > lastBuild) {
+                try {
+                  const res = await fetch(`${WEB_URL}/api/releases?since=${lastBuild}`);
+                  if (res.ok) {
+                    const data: ReleaseNote[] = await res.json();
+                    if (data.length > 0) setWhatsNewReleases(data);
+                  }
+                } catch {}
+              }
+            }).catch(() => null);
+          }
         }
       }
     });
@@ -149,6 +171,14 @@ export default function RootLayout() {
       </Stack>
       {/* Force-upgrade gate — shown instantly via Supabase Realtime when admin triggers it */}
       <ForceUpgradeGate />
+      <WhatsNewModal
+        releases={whatsNewReleases}
+        onDismiss={() => {
+          const build = Application.nativeBuildVersion;
+          if (build) AsyncStorage.setItem(WHATS_NEW_KEY, build).catch(() => null);
+          setWhatsNewReleases([]);
+        }}
+      />
     </UserPrefsProvider>
   );
 }
