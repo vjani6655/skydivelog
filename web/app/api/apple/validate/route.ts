@@ -37,6 +37,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
     }
 
+    const sharedSecretSet = !!process.env.APPLE_IAP_SHARED_SECRET
+    console.log('[apple/validate] APPLE_IAP_SHARED_SECRET set:', sharedSecretSet)
+    if (!sharedSecretSet) {
+      console.error('[apple/validate] APPLE_IAP_SHARED_SECRET is missing — Apple will reject all receipts')
+    }
+
     // Strip any whitespace/newlines — some iOS SDK versions emit MIME-style base64
     const cleanReceipt = (receipt as string).replace(/[\s\r\n]/g, '')
 
