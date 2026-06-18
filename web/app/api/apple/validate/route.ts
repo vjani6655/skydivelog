@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     }
 
     const sharedSecret = process.env.APPLE_IAP_SHARED_SECRET ?? ''
-    console.log('[apple/validate] APPLE_IAP_SHARED_SECRET set:', !!sharedSecret, 'length:', sharedSecret.length)
+    console.log('[apple/validate] APPLE_IAP_SHARED_SECRET set:', !!sharedSecret, 'length:', sharedSecret.length, 'hint:', sharedSecret.slice(0, 3) + '...' + sharedSecret.slice(-3))
     if (!sharedSecret) {
       console.error('[apple/validate] APPLE_IAP_SHARED_SECRET is missing — Apple will reject all receipts')
     }
