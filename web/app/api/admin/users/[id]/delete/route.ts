@@ -67,12 +67,51 @@ export async function POST(
     reason:   `Account permanently deleted by admin. Email: ${targetEmail}`,
   })
 
-  // Delete the auth user — Postgres cascades handle all table cleanup:
-  // users → jumps, gear, certificates, subscriptions, support_tickets,
-  //         pdf_exports, notification_preferences, jump_edit_log
-  // jumps → jump_tags, jump_people, flagged_entries, jump_signatures
-  // support_tickets → ticket_messages
-  // auth.users (direct) → notifications, subscription_events
+  // Manually delete public-schema rows before calling deleteUser.
+  // Supabase's auth.admin.deleteUser returns unexpected_failure when the Postgres
+  // cascade encounters any error (trigger, RLS edge-case, ordering conflict).
+  // Cleaning up first leaves auth.users with no dependencies so deleteUser is a
+  // simple single-row delete that cannot cascade-fail.
+
+  // Tables that reference auth.users(id) directly must be cleared first.
+  await db.from('subscription_events').delete().eq('user_id', params.id)
+  await db.from('notifications').delete().eq('user_id', params.id)
+
+  // Delete jump children before the jumps themselves.
+  const { data: jumpIds } = await db
+    .from('jumps')
+    .select('id')
+    .eq('user_id', params.id)
+  const jids = (jumpIds ?? []).map(j => j.id)
+  if (jids.length > 0) {
+    await db.from('jump_tags').delete().in('jump_id', jids)
+    await db.from('jump_people').delete().in('jump_id', jids)
+    await db.from('flagged_entries').delete().in('jump_id', jids)
+    await db.from('jump_signatures').delete().in('jump_id', jids)
+    await db.from('jumps').delete().in('id', jids)
+  }
+
+  // Delete remaining public.users children.
+  await db.from('gear').delete().eq('user_id', params.id)
+  await db.from('certificates').delete().eq('user_id', params.id)
+  await db.from('subscriptions').delete().eq('user_id', params.id)
+  const { data: tickets } = await db
+    .from('support_tickets')
+    .select('id')
+    .eq('user_id', params.id)
+  const tids = (tickets ?? []).map(t => t.id)
+  if (tids.length > 0) {
+    await db.from('ticket_messages').delete().in('ticket_id', tids)
+    await db.from('support_tickets').delete().in('id', tids)
+  }
+  await db.from('pdf_exports').delete().eq('user_id', params.id)
+  await db.from('edit_log').delete().eq('user_id', params.id)
+  await db.from('notification_preferences').delete().eq('user_id', params.id)
+
+  // Delete the public.users row (removes the FK that auth.users cascades to).
+  await db.from('users').delete().eq('id', params.id)
+
+  // Now delete the auth user — no dependencies remain.
   const { error } = await db.auth.admin.deleteUser(params.id)
   if (error) {
     console.error('[admin/delete] deleteUser failed:', error.message, 'code:', (error as { code?: string }).code)
