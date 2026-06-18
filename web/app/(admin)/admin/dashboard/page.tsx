@@ -60,7 +60,7 @@ export default async function AdminDashboardPage({
     { count: overdueCount },
     { count: totalJumps },
     { count: totalDZs },
-    { count: totalAircraft },
+    { data: aircraftTypeData },
     { count: totalCerts },
     { count: openFlagsCount },
     { count: openTicketsCount },
@@ -81,7 +81,7 @@ export default async function AdminDashboardPage({
     db.from('subscriptions').select('*', { count: 'exact', head: true }).eq('status', 'overdue'),
     db.from('jumps').select('*', { count: 'exact', head: true }).is('deleted_at', null),
     db.from('dropzones').select('*', { count: 'exact', head: true }),
-    db.from('aircraft').select('*', { count: 'exact', head: true }),
+    db.from('jumps').select('aircraft_type').is('deleted_at', null).not('aircraft_type', 'is', null).limit(100000),
     db.from('certificates').select('*', { count: 'exact', head: true }),
     db.from('flagged_entries').select('*', { count: 'exact', head: true }).eq('status', 'open'),
     db.from('support_tickets').select('*', { count: 'exact', head: true }).eq('status', 'open'),
@@ -90,7 +90,7 @@ export default async function AdminDashboardPage({
     db.from('subscriptions').select('price_at_signup').eq('status', 'cancelled').gt('renews_at', new Date().toISOString()).is('refunded_at', null),
     db.from('users').select('created_at').gte('created_at', thirtyDaysAgo),
     db.from('users').select('created_at').gte('created_at', sixtyDaysAgo).lt('created_at', thirtyDaysAgo),
-    db.from('jumps').select('freefall_seconds').is('deleted_at', null),
+    db.from('jumps').select('freefall_seconds').is('deleted_at', null).not('freefall_seconds', 'is', null).limit(100000),
     db.from('users').select('id, email, full_name, created_at').order('created_at', { ascending: false }).limit(3),
     db.from('jumps').select('user_id, jump_number, jump_type, created_at, users(email, full_name)').is('deleted_at', null).order('created_at', { ascending: false }).limit(3),
     db.from('subscriptions').select('price_at_signup, started_at, users(email)').eq('status', 'active').order('started_at', { ascending: false }).limit(3),
@@ -122,6 +122,9 @@ export default async function AdminDashboardPage({
   const prior30 = signupsPrior30d?.length ?? 0
   const current30 = signups30d?.length ?? 0
   const signupDelta = prior30 ? Math.round((current30 - prior30) / prior30 * 100) : 0
+
+  // Distinct aircraft types from jumps (case-insensitive)
+  const totalAircraft = new Set((aircraftTypeData ?? []).map(j => j.aircraft_type?.toLowerCase().trim())).size
 
   // Freefall hours
   const ffTotal = jumpStats?.reduce((sum, j) => sum + (j.freefall_seconds ?? 0), 0) ?? 0

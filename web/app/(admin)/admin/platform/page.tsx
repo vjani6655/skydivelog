@@ -23,11 +23,11 @@ export default async function AdminPlatformPage() {
     { count: totalUsers },
   ] = await Promise.all([
     db.from('jumps').select('*', { count: 'exact', head: true }).is('deleted_at', null),
-    db.from('jumps').select('freefall_seconds').is('deleted_at', null).not('freefall_seconds', 'is', null),
+    db.from('jumps').select('freefall_seconds').is('deleted_at', null).not('freefall_seconds', 'is', null).limit(100000),
     db.from('jumps').select('dropzones(name, region)').is('deleted_at', null).limit(5000),
     db.from('jumps').select('jump_type').is('deleted_at', null).not('jump_type', 'is', null).limit(5000),
     db.from('users').select('*', { count: 'exact', head: true }).gte('last_sign_in_at', new Date(Date.now() - 30 * 86400000).toISOString()),
-    db.from('jumps').select('aircraft_type').is('deleted_at', null).not('aircraft_type', 'is', null).limit(5000),
+    db.from('jumps').select('aircraft_type').is('deleted_at', null).not('aircraft_type', 'is', null).limit(100000),
     db.from('users').select('*', { count: 'exact', head: true }),
   ])
 
