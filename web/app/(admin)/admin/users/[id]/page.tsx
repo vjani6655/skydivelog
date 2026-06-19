@@ -113,14 +113,36 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
   const activityFeed: { icon: string; text: string; sub: string; time: string; color?: string }[] = []
 
   // Subscription events from the events log
+  const actor = (m: Record<string, unknown>) => {
+    if (m.actor === 'admin') return `Admin${m.admin_email ? ` · ${m.admin_email}` : ''}`
+    if (m.actor === 'apple') return 'Apple'
+    if (m.actor === 'stripe') return 'Stripe'
+    return ''
+  }
   const eventLabels: Record<string, { icon: string; text: (m: Record<string, unknown>) => string; subText: (m: Record<string, unknown>) => string; color: string }> = {
-    subscribed:                { icon: '$', color: 'bg-ok/10 text-ok',      text: (m) => `Subscribed · ${m.plan ?? 'Pro'} · $${m.price}`,           subText: () => 'New subscription' },
-    resubscribed_after_refund: { icon: '↻', color: 'bg-sky/10 text-sky',   text: (m) => `Re-subscribed · ${m.plan ?? 'Pro'} · $${m.price}`,         subText: () => 'After previous refund' },
-    cancelled:                 { icon: '✕', color: 'bg-danger/10 text-danger', text: () => 'Subscription cancelled',                                subText: () => '' },
-    cancelled_immediately:     { icon: '✕', color: 'bg-danger/10 text-danger', text: () => 'Subscription cancelled immediately',                     subText: () => 'Admin revoked' },
-    overdue:                   { icon: '!', color: 'bg-warn/10 text-warn',  text: () => 'Payment overdue',                                           subText: () => '' },
-    refunded:                  { icon: '↩', color: 'bg-warn/10 text-warn',  text: (m) => `Refunded · $${Number(m.refunded_amount ?? 0).toFixed(2)}`, subText: () => 'Access revoked' },
-    subscription_deleted:      { icon: '✕', color: 'bg-danger/10 text-danger', text: () => 'Stripe subscription deleted',                            subText: () => '' },
+    // Stripe events
+    subscribed:                { icon: '$', color: 'bg-ok/10 text-ok',         text: (m) => `Subscribed · ${m.plan ?? 'Pro'} · $${m.price}`,              subText: () => 'Stripe · New subscription' },
+    resubscribed_after_refund: { icon: '↻', color: 'bg-sky/10 text-sky',       text: (m) => `Re-subscribed · ${m.plan ?? 'Pro'} · $${m.price}`,            subText: () => 'Stripe · After previous refund' },
+    stripe_renewed:            { icon: '↻', color: 'bg-ok/10 text-ok',         text: () => 'Subscription renewed',                                          subText: () => 'Stripe · Auto-renewal' },
+    stripe_cancelled:          { icon: '✕', color: 'bg-danger/10 text-danger',  text: () => 'Auto-renewal cancelled',                                        subText: () => 'Stripe · User cancelled' },
+    stripe_overdue:            { icon: '!', color: 'bg-warn/10 text-warn',      text: () => 'Payment overdue',                                               subText: () => 'Stripe · Renewal failed' },
+    subscription_deleted:      { icon: '✕', color: 'bg-danger/10 text-danger',  text: () => 'Stripe subscription deleted',                                   subText: () => 'Stripe' },
+    // Apple IAP events
+    iap_subscribed:            { icon: '$', color: 'bg-ok/10 text-ok',         text: (m) => `Subscribed · Apple · $${m.price_at_signup ?? '—'}`,             subText: (m) => `Apple${m.source === 'webhook_appAccountToken' ? ' · via webhook' : ''}` },
+    iap_renewed:               { icon: '↻', color: 'bg-ok/10 text-ok',         text: () => 'Subscription renewed',                                          subText: () => 'Apple · Auto-renewal' },
+    iap_overdue:               { icon: '!', color: 'bg-warn/10 text-warn',      text: () => 'Payment overdue',                                               subText: () => 'Apple · Renewal failed' },
+    iap_expired:               { icon: '✕', color: 'bg-danger/10 text-danger',  text: () => 'Subscription expired',                                          subText: () => 'Apple' },
+    iap_refunded:              { icon: '↩', color: 'bg-warn/10 text-warn',      text: () => 'Subscription refunded',                                         subText: () => 'Apple · Refund issued by Apple' },
+    iap_revoked:               { icon: '✕', color: 'bg-danger/10 text-danger',  text: () => 'Family sharing revoked',                                        subText: () => 'Apple' },
+    iap_cancelled:             { icon: '✕', color: 'bg-danger/10 text-danger',  text: () => 'Auto-renewal turned off',                                       subText: () => 'Apple · User cancelled' },
+    iap_reactivated:           { icon: '↻', color: 'bg-sky/10 text-sky',       text: () => 'Auto-renewal turned on',                                        subText: () => 'Apple · User reactivated' },
+    iap_revalidated:           { icon: '✓', color: 'bg-sky/10 text-sky',       text: () => 'Receipt revalidated',                                           subText: () => 'Apple · IAP receipt check' },
+    // Legacy / shared
+    cancelled:                 { icon: '✕', color: 'bg-danger/10 text-danger',  text: () => 'Subscription cancelled',                                        subText: (m) => actor(m) || 'User' },
+    cancelled_immediately:     { icon: '✕', color: 'bg-danger/10 text-danger',  text: () => 'Subscription revoked',                                          subText: (m) => actor(m) || 'Admin' },
+    overdue:                   { icon: '!', color: 'bg-warn/10 text-warn',      text: () => 'Payment overdue',                                               subText: (m) => actor(m) },
+    refunded:                  { icon: '↩', color: 'bg-warn/10 text-warn',      text: (m) => `Refunded · $${Number(m.refunded_amount ?? 0).toFixed(2)}`,     subText: () => 'Admin · Access revoked' },
+    admin_reset:               { icon: '⟳', color: 'bg-warn/10 text-warn',      text: () => 'Subscription reset',                                            subText: (m) => actor(m) },
   }
   subEvents?.forEach(ev => {
     const meta = (ev.metadata ?? {}) as Record<string, unknown>

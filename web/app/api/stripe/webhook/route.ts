@@ -147,12 +147,20 @@ export async function POST(req: NextRequest) {
     const newStatus = isCancelling ? 'cancelled' : (STATUS_MAP[subscription.status] ?? 'active')
     const newRenewsAt = new Date((subscription.items.data[0]?.current_period_end ?? 0) * 1000).toISOString()
 
+    let updatedSubId: string | null = null
+    let updatedUserId: string | null = null
+
     // Try matching by subscription ID first
     const { data: bySubId } = await admin
       .from('subscriptions')
       .update({ status: newStatus, renews_at: newRenewsAt })
       .eq('stripe_subscription_id', subscription.id)
-      .select('id')
+      .select('id, user_id')
+
+    if (bySubId?.length) {
+      updatedSubId = bySubId[0].id
+      updatedUserId = bySubId[0].user_id
+    }
 
     // Fall back to customer ID if the row was created before we stored stripe_subscription_id
     if (!bySubId?.length) {
@@ -160,21 +168,48 @@ export async function POST(req: NextRequest) {
         .from('subscriptions')
         .update({ status: newStatus, renews_at: newRenewsAt, stripe_subscription_id: subscription.id })
         .eq('stripe_customer_id', subscription.customer as string)
-        .select('id')
+        .select('id, user_id')
+
+      if (byCustomerId?.length) {
+        updatedSubId = byCustomerId[0].id
+        updatedUserId = byCustomerId[0].user_id
+      }
 
       // 3rd fallback: both IDs null in DB — look up user by Stripe customer email
       if (!byCustomerId?.length) {
         const userId = await resolveUserIdFromStripeCustomer(subscription.customer as string, admin)
         if (userId) {
-          await admin
+          const { data: byUserId } = await admin
             .from('subscriptions')
             .update({ status: newStatus, renews_at: newRenewsAt, stripe_subscription_id: subscription.id, stripe_customer_id: subscription.customer as string })
             .eq('user_id', userId)
+            .select('id')
+          updatedSubId = byUserId?.[0]?.id ?? null
+          updatedUserId = userId
           console.log('[stripe/webhook] updated via email fallback for customer', subscription.customer)
         } else {
           console.error('[stripe/webhook] could not resolve user for customer', subscription.customer)
         }
       }
+    }
+
+    // Log the status change event
+    if (updatedUserId) {
+      const stripeEventName = newStatus === 'cancelled' ? 'stripe_cancelled'
+        : newStatus === 'overdue' ? 'stripe_overdue'
+        : 'stripe_renewed'
+      await admin.from('subscription_events').insert({
+        user_id: updatedUserId,
+        sub_id: updatedSubId,
+        event: stripeEventName,
+        metadata: {
+          actor: 'stripe',
+          stripe_subscription_id: subscription.id,
+          new_status: newStatus,
+          renews_at: newRenewsAt,
+          cancel_at_period_end: subscription.cancel_at_period_end,
+        },
+      })
     }
   }
 

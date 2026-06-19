@@ -42,5 +42,17 @@ export async function POST(
     reason: 'Reset for Apple Review / testing',
   })
 
+  await db.from('subscription_events').insert({
+    user_id: params.id,
+    sub_id: null,
+    event: 'admin_reset',
+    metadata: {
+      actor: 'admin',
+      admin_id: adminRow.id,
+      admin_email: user.email,
+      reason: 'Reset for Apple Review / testing',
+    },
+  })
+
   return NextResponse.json({ ok: true })
 }

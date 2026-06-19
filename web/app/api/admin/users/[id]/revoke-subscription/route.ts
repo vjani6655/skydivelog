@@ -89,5 +89,18 @@ export async function POST(
     reason,
   })
 
+  await db.from('subscription_events').insert({
+    user_id: params.id,
+    sub_id: sub.id,
+    event: 'cancelled_immediately',
+    metadata: {
+      actor: 'admin',
+      admin_id: adminRow.id,
+      admin_email: user.email,
+      reason,
+      stripe_subscription_id: sub.stripe_subscription_id ?? null,
+    },
+  })
+
   return NextResponse.json({ ok: true })
 }

@@ -33,6 +33,21 @@ function resolveStatus(notificationType: string, subtype: string): string | unde
   }
 }
 
+// Maps Apple notificationType to our subscription_events event name.
+function resolveEventName(notificationType: string, subtype: string): string {
+  switch (notificationType) {
+    case 'SUBSCRIBED':              return 'iap_subscribed'
+    case 'DID_RENEW':               return 'iap_renewed'
+    case 'DID_FAIL_TO_RENEW':       return 'iap_overdue'
+    case 'EXPIRED':                 return 'iap_expired'
+    case 'REFUND':                  return 'iap_refunded'
+    case 'REVOKE':                  return 'iap_revoked'
+    case 'DID_CHANGE_RENEWAL_STATUS':
+      return subtype === 'AUTO_RENEW_DISABLED' ? 'iap_cancelled' : 'iap_reactivated'
+    default:                        return `iap_${notificationType.toLowerCase()}`
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -83,14 +98,31 @@ export async function POST(req: NextRequest) {
 
     const { data: existing } = await admin
       .from('subscriptions')
-      .select('id')
+      .select('id, user_id')
       .eq('apple_original_transaction_id', originalTransactionId)
       .maybeSingle()
+
+    const eventName = resolveEventName(notificationType, subtype)
+    const eventMeta = {
+      actor: 'apple',
+      notification_type: notificationType,
+      subtype: subtype || null,
+      original_transaction_id: originalTransactionId,
+      product_id: (tx.productId as string | undefined) ?? null,
+      new_status: newStatus,
+      renews_at: renewsAt ?? null,
+    }
 
     if (existing) {
       const update: Record<string, unknown> = { status: newStatus }
       if (renewsAt) update.renews_at = renewsAt
       await admin.from('subscriptions').update(update).eq('id', existing.id)
+      await admin.from('subscription_events').insert({
+        user_id: existing.user_id,
+        sub_id: existing.id,
+        event: eventName,
+        metadata: eventMeta,
+      })
       console.log(`[apple/webhook] ${notificationType}/${subtype} → ${newStatus} for ${originalTransactionId}`)
     } else {
       // No row yet. If the client set applicationUsername (our Supabase user UUID) during
@@ -111,7 +143,7 @@ export async function POST(req: NextRequest) {
         const startedAt = purchaseMs   ? new Date(purchaseMs).toISOString()   : new Date().toISOString()
         const txRenewsAt = txExpiresMs ? new Date(txExpiresMs).toISOString()  : renewsAt
 
-        const { error: insertErr } = await admin.from('subscriptions').insert({
+        const { data: newSub, error: insertErr } = await admin.from('subscriptions').insert({
           user_id:                       appAccountToken,
           apple_original_transaction_id: originalTransactionId,
           apple_product_id:              productId,
@@ -121,11 +153,17 @@ export async function POST(req: NextRequest) {
           started_at:                    startedAt,
           ...(txRenewsAt ? { renews_at: txRenewsAt } : {}),
           ...(process.env.APPLE_IAP_PRICE ? { price_at_signup: Number(process.env.APPLE_IAP_PRICE) } : {}),
-        })
+        }).select('id').single()
 
         if (insertErr) {
           console.error(`[apple/webhook] failed to create sub from ${notificationType}:`, insertErr.message)
         } else {
+          await admin.from('subscription_events').insert({
+            user_id: appAccountToken,
+            sub_id: newSub?.id ?? null,
+            event: eventName,
+            metadata: { ...eventMeta, source: 'webhook_appAccountToken', price_at_signup: process.env.APPLE_IAP_PRICE ? Number(process.env.APPLE_IAP_PRICE) : null },
+          })
           console.log(`[apple/webhook] created sub for user ${appAccountToken} via ${notificationType} webhook`)
         }
       } else {
