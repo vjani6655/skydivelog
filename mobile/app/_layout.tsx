@@ -110,15 +110,16 @@ export default function RootLayout() {
         registerPushToken(supabase, session.user.id).catch(() => null);
 
         // Track last sign-in time, platform and app version (fire-and-forget, non-critical)
-        if (_event === 'SIGNED_IN') {
+        if (_event === 'SIGNED_IN' || _event === 'INITIAL_SESSION') {
           const version = Application.nativeApplicationVersion ?? null;
           const build = Application.nativeBuildVersion ?? null;
           const appVersion = version ? (build ? `${version} (${build})` : version) : null;
-          supabase.from('users').update({
-            last_sign_in_at: new Date().toISOString(),
+          const updates: Record<string, unknown> = {
             last_sign_in_platform: Platform.OS,
             ...(appVersion ? { app_version: appVersion } : {}),
-          }).eq('id', session.user.id).then(() => null);
+          };
+          if (_event === 'SIGNED_IN') updates.last_sign_in_at = new Date().toISOString();
+          supabase.from('users').update(updates).eq('id', session.user.id).then(() => null);
 
           // Check for release notes the user hasn't seen yet (fresh sign-in path)
           checkWhatsNew().then(releases => {
