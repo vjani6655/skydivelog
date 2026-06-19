@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
   // ── Fetch invoices from Stripe ──────────────────────────────────────────────
   try {
     const list = await stripe.invoices.list({
-      customer: sub.stripe_customer_id,
+      customer: sub.stripe_customer_id!,
       limit: 24,
     })
 
@@ -58,6 +58,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ invoices })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Stripe error"
+    // Fake/test customer IDs (e.g. Apple review account) return "No such customer" — treat as empty
+    if (message.includes('No such customer')) {
+      return NextResponse.json({ invoices: [] })
+    }
     console.error("[stripe/invoices]", message)
     return NextResponse.json({ error: message }, { status: 500 })
   }
