@@ -191,10 +191,30 @@ export function useIAP() {
           if (!user) { setError('Purchase could not be completed. Please try again.'); setStatus('error'); return; }
           supabase.from('subscriptions').select('status').eq('user_id', user.id).eq('status', 'active')
             .order('started_at', { ascending: false }).limit(1).maybeSingle()
-            .then(({ data }) => {
+            .then(async ({ data }) => {
               if (!mountedRef.current) return;
-              if (data) { console.log('[IAP] already-owned: active sub found in Supabase, success'); setStatus('success'); }
-              else { setError('Purchase could not be completed. Please try again.'); setStatus('error'); }
+              if (data) {
+                console.log('[IAP] already-owned: active sub found in Supabase, success');
+                setStatus('success');
+              } else {
+                // No Supabase row but Apple says already-owned — the Apple subscription exists
+                // but our DB is out of sync. Auto-restore to re-validate and create the row.
+                console.log('[IAP] already-owned: no Supabase row — auto-restoring');
+                if (!iapModule) { setError('Purchase could not be completed. Please try again.'); setStatus('error'); return; }
+                try {
+                  const purchases = await iapModule.getAvailablePurchases();
+                  const ours = purchases.find((p) => p.productId === APPLE_PRODUCT_ID);
+                  if (ours) {
+                    await validateReceipt(ours);
+                  } else {
+                    setError('Purchase could not be completed. Please try again.');
+                    setStatus('error');
+                  }
+                } catch {
+                  setError('Purchase could not be completed. Please try again.');
+                  setStatus('error');
+                }
+              }
             });
         });
         return;
