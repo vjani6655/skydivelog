@@ -242,7 +242,9 @@ export function useIAP() {
       // to create the subscription row even when verifyReceipt fails (e.g. iOS 27 beta).
       const { data: { user: purchaseUser } } = await supabase.auth.getUser();
       console.log('[IAP] requestPurchase start, sku:', APPLE_PRODUCT_ID, 'appAccountToken:', purchaseUser?.id ?? 'none');
-      await iapModule.requestPurchase({ request: { apple: { sku: APPLE_PRODUCT_ID, appAccountToken: purchaseUser?.id ?? undefined } }, type: 'subs' });
+      // Use 'ios' key (not 'apple') — openiap 1.3.15 resolveIosPurchaseProps
+      // only reads platforms.ios; platforms.apple is parsed but never accessed.
+      await iapModule.requestPurchase({ request: { ios: { sku: APPLE_PRODUCT_ID, appAccountToken: purchaseUser?.id ?? undefined } }, type: 'subs' });
       console.log('[IAP] requestPurchase returned (waiting for purchaseUpdatedListener)');
     } catch (err: unknown) {
       const code = (err as Record<string, string>)?.code;
