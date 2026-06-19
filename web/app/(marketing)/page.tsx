@@ -97,9 +97,6 @@ export default async function HomePage() {
           {/* Left column — all text stays within this so it never touches the photo */}
           <div className="max-w-[520px]">
             <div className="mb-6 flex flex-wrap items-center gap-3">
-              <span className="inline-flex items-center gap-2 border border-border rounded-pill px-3 py-1 text-overline font-semibold tracking-widest text-fg-3 uppercase">
-                V 2.4 · iOS &amp; Android
-              </span>
               <span className="inline-flex items-center gap-2 border border-ok/40 bg-ok/5 rounded-pill px-3 py-1 text-overline font-bold tracking-widest uppercase text-ok">
                 <span className="w-1.5 h-1.5 rounded-full bg-ok" />
                 Now on the App Store
