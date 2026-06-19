@@ -100,9 +100,9 @@ export default async function HomePage() {
               <span className="inline-flex items-center gap-2 border border-border rounded-pill px-3 py-1 text-overline font-semibold tracking-widest text-fg-3 uppercase">
                 V 2.4 · iOS &amp; Android
               </span>
-              <span className="inline-flex items-center gap-2 border border-sky/40 bg-sky/5 rounded-pill px-3 py-1 text-overline font-bold tracking-widest uppercase text-sky">
-                <span className="w-1.5 h-1.5 rounded-full bg-sky animate-pulse" />
-                App launching soon
+              <span className="inline-flex items-center gap-2 border border-ok/40 bg-ok/5 rounded-pill px-3 py-1 text-overline font-bold tracking-widest uppercase text-ok">
+                <span className="w-1.5 h-1.5 rounded-full bg-ok" />
+                Now on the App Store
               </span>
             </div>
 
@@ -228,9 +228,9 @@ export default async function HomePage() {
       {/* ── App Store downloads ──────────────────────────────────────── */}
       <section className="py-14 px-5 border-t border-border">
         <div className="max-w-5xl mx-auto flex flex-col items-center gap-4 text-center">
-          <p className="text-overline font-semibold tracking-widest uppercase text-fg-4">Coming soon</p>
-          <h3 className="text-h2 font-bold text-fg">The app is launching soon</h3>
-          <p className="text-sm text-fg-3 max-w-xs">Be first to know when it drops — enter your email and we&apos;ll notify you at launch.</p>
+          <p className="text-overline font-semibold tracking-widest uppercase text-fg-4">Get the app</p>
+          <h3 className="text-h2 font-bold text-fg">Now available on iOS</h3>
+          <p className="text-sm text-fg-3 max-w-xs">Download Jump Logs on the App Store. Android coming soon.</p>
           <AppStoreButtons />
         </div>
       </section>

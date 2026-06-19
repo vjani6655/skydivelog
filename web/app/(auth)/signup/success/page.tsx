@@ -24,7 +24,7 @@ export default function SignupSuccessPage() {
 
         <div className="flex flex-col sm:flex-row gap-2 mt-4">
           <a
-            href="https://apps.apple.com/app/skydivelog"
+            href="https://apps.apple.com/us/app/jump-logs/id6773196009"
             target="_blank"
             rel="noopener noreferrer"
             className="flex-1 flex items-center justify-center gap-2 bg-fg text-bg font-semibold text-sm rounded-sm py-2.5 hover:bg-fg/90 transition-colors"
