@@ -178,8 +178,27 @@ export function useIAP() {
       if (!mountedRef.current) return;
       const code = (err as Record<string, string>)?.code;
       const msg  = (err as Record<string, string>)?.message ?? '';
-      const isCancelled = code === 'E_USER_CANCELLED' || msg.toLowerCase().includes('cancel');
+      // expo-iap uses kebab-case codes ('user-cancelled', 'already-owned')
+      const isCancelled = code === 'E_USER_CANCELLED' || code === 'user-cancelled' || msg.toLowerCase().includes('cancel');
       if (isCancelled) { setStatus('ready'); return; }
+      // StoreKit emits already-owned when the sandbox account has an active subscription.
+      // The subscription row may already exist in Supabase — check before showing an error.
+      const isAlreadyOwned = code === 'already-owned' || msg.toLowerCase().includes('already');
+      if (isAlreadyOwned) {
+        console.log('[IAP] already-owned — checking Supabase for active subscription');
+        supabase.auth.getUser().then(({ data: { user } }) => {
+          if (!mountedRef.current) return;
+          if (!user) { setError('Purchase could not be completed. Please try again.'); setStatus('error'); return; }
+          supabase.from('subscriptions').select('status').eq('user_id', user.id).eq('status', 'active')
+            .order('started_at', { ascending: false }).limit(1).maybeSingle()
+            .then(({ data }) => {
+              if (!mountedRef.current) return;
+              if (data) { console.log('[IAP] already-owned: active sub found in Supabase, success'); setStatus('success'); }
+              else { setError('Purchase could not be completed. Please try again.'); setStatus('error'); }
+            });
+        });
+        return;
+      }
       setError('Purchase could not be completed. Please try again.');
       setStatus('error');
     });
