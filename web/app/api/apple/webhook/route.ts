@@ -93,9 +93,44 @@ export async function POST(req: NextRequest) {
       await admin.from('subscriptions').update(update).eq('id', existing.id)
       console.log(`[apple/webhook] ${notificationType}/${subtype} → ${newStatus} for ${originalTransactionId}`)
     } else {
-      // No row yet — the validate endpoint creates the row on first purchase.
-      // Webhook may arrive before the client validates; nothing to do.
-      console.log(`[apple/webhook] no row found for ${originalTransactionId}, skipping`)
+      // No row yet. If the client set applicationUsername (our Supabase user UUID) during
+      // purchase, Apple echoes it back as appAccountToken in the transaction JWS.
+      // Use it to create the subscription row now so the client's fallback check succeeds.
+      const appAccountToken = tx.appAccountToken as string | undefined
+      const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+      if (
+        appAccountToken &&
+        UUID_RE.test(appAccountToken) &&
+        (notificationType === 'SUBSCRIBED' || notificationType === 'DID_RENEW')
+      ) {
+        const productId  = (tx.productId  as string | undefined) ?? process.env.APPLE_IAP_PRODUCT_ID
+        const purchaseMs = tx.purchaseDate as number | undefined
+        const txExpiresMs = tx.expiresDate as number | undefined
+
+        const startedAt = purchaseMs   ? new Date(purchaseMs).toISOString()   : new Date().toISOString()
+        const txRenewsAt = txExpiresMs ? new Date(txExpiresMs).toISOString()  : renewsAt
+
+        const { error: insertErr } = await admin.from('subscriptions').insert({
+          user_id:                       appAccountToken,
+          apple_original_transaction_id: originalTransactionId,
+          apple_product_id:              productId,
+          source:                        'apple',
+          status:                        newStatus,
+          plan:                          'Pro',
+          started_at:                    startedAt,
+          ...(txRenewsAt ? { renews_at: txRenewsAt } : {}),
+          ...(process.env.APPLE_IAP_PRICE ? { price_at_signup: Number(process.env.APPLE_IAP_PRICE) } : {}),
+        })
+
+        if (insertErr) {
+          console.error(`[apple/webhook] failed to create sub from ${notificationType}:`, insertErr.message)
+        } else {
+          console.log(`[apple/webhook] created sub for user ${appAccountToken} via ${notificationType} webhook`)
+        }
+      } else {
+        console.log(`[apple/webhook] no row found for ${originalTransactionId}, skipping (appAccountToken: ${appAccountToken ?? 'none'})`)
+      }
     }
 
     return NextResponse.json({ received: true })

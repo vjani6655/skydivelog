@@ -108,6 +108,34 @@ export function useIAP() {
         // Stale on-disk receipt — force Apple to reissue and retry once.
         console.log('[IAP] got 21003, retrying with requestReceiptRefreshIOS...');
         await validateReceipt(purchase, true);
+      } else if (json.appleStatus === 21003) {
+        // verifyReceipt returned 21003 even after a forced receipt refresh.
+        // On iOS 27 beta, Apple's deprecated verifyReceipt endpoint rejects valid receipts.
+        // Apple independently sends a SUBSCRIBED webhook (with our appAccountToken as user_id)
+        // which creates the subscription row — wait briefly then check Supabase directly.
+        console.log('[IAP] 21003 on forced receipt refresh — waiting for webhook subscription...');
+        await new Promise<void>(r => setTimeout(r, 3500));
+        const { data: { user: webhookUser } } = await supabase.auth.getUser();
+        if (webhookUser) {
+          const { data: webhookSub } = await supabase
+            .from('subscriptions')
+            .select('status')
+            .eq('user_id', webhookUser.id)
+            .eq('status', 'active')
+            .order('started_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (webhookSub) {
+            console.log('[IAP] subscription confirmed via webhook fallback, success');
+            if (mountedRef.current) setStatus('success');
+            return;
+          }
+        }
+        console.log('[IAP] no subscription found after webhook fallback check');
+        if (mountedRef.current) {
+          setError(json.error ?? 'Validation failed. Please contact support.');
+          setStatus('error');
+        }
       } else {
         console.log('[IAP] validateReceipt: failed', json.error);
         if (mountedRef.current) {
@@ -209,8 +237,12 @@ export function useIAP() {
     setError('');
     setStatus('purchasing');
     try {
-      console.log('[IAP] requestPurchase start, sku:', APPLE_PRODUCT_ID);
-      await iapModule.requestPurchase({ request: { apple: { sku: APPLE_PRODUCT_ID } }, type: 'subs' });
+      // appAccountToken links the Apple purchase to our Supabase user UUID.
+      // Apple echoes it in SUBSCRIBED webhook notifications, allowing the webhook
+      // to create the subscription row even when verifyReceipt fails (e.g. iOS 27 beta).
+      const { data: { user: purchaseUser } } = await supabase.auth.getUser();
+      console.log('[IAP] requestPurchase start, sku:', APPLE_PRODUCT_ID, 'appAccountToken:', purchaseUser?.id ?? 'none');
+      await iapModule.requestPurchase({ request: { apple: { sku: APPLE_PRODUCT_ID, appAccountToken: purchaseUser?.id ?? undefined } }, type: 'subs' });
       console.log('[IAP] requestPurchase returned (waiting for purchaseUpdatedListener)');
     } catch (err: unknown) {
       const code = (err as Record<string, string>)?.code;
