@@ -267,7 +267,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
 
           {/* Activity · last 7 days */}
           <AdminCard title="ACTIVITY · LAST 7 DAYS" action={
-            <Link href={`/admin/users/${id}/jumps`} className="font-mono text-[10px] text-sky hover:underline">
+            <Link href={`/admin/users/${id}/activity`} className="font-mono text-[10px] text-sky hover:underline">
               View full log →
             </Link>
           }>
