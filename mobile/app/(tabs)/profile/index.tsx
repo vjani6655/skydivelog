@@ -62,6 +62,7 @@ export default function ProfileScreen() {
   const [userCreatedAt, setUserCreatedAt] = useState<string | null>(null);
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
   const [sub, setSub] = useState<{ status: string; renews_at: string | null } | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [unreadNotifs, setUnreadNotifs] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -76,12 +77,14 @@ export default function ProfileScreen() {
       if (!user) { setLoading(false); return; }
       setEmail(user.email ?? null);
 
-      const [profileRes, jumpsRes, subRes, unreadCount] = await Promise.all([
+      const [profileRes, jumpsRes, subRes, unreadCount, adminCheck] = await Promise.all([
         supabase.from('users').select('full_name, licence_number, licence_rating, country, date_of_birth, phone, home_dropzone_id, emergency_contact_name, emergency_contact_relationship, emergency_contact_phone, prior_freefall_seconds, prior_canopy_seconds').eq('id', user.id).single(),
         supabase.from('jumps').select('freefall_seconds, canopy_seconds, dropzone_id, jump_number').eq('user_id', user.id).is('deleted_at', null),
         supabase.from('subscriptions').select('status, renews_at').eq('user_id', user.id).order('started_at', { ascending: false }).limit(1).maybeSingle(),
         getUnreadCount(supabase, user.id).catch(() => 0),
+        supabase.rpc('is_admin'),
       ]);
+      setIsAdmin(adminCheck.data === true);
 
       setUnreadNotifs(unreadCount as number);
       setUserCreatedAt(user.created_at);
@@ -170,7 +173,9 @@ export default function ProfileScreen() {
     !!sub?.renews_at &&
     new Date(sub.renews_at) > new Date();
 
-  const subBadge = sub?.status === 'active'
+  const subBadge = isAdmin
+    ? { label: 'ADMIN', bg: colors.skyBg, text: colors.sky }
+    : sub?.status === 'active'
     ? { label: 'ACTIVE', bg: colors.okBg, text: colors.ok }
     : sub?.status === 'overdue'
     ? { label: 'OVERDUE', bg: colors.warnBg, text: colors.warn }
@@ -237,7 +242,7 @@ export default function ProfileScreen() {
               key={item.route}
               style={[styles.menuRow, i === MENU_ITEMS.length - 1 && styles.menuRowLast]}
               onPress={() => {
-                if (item.label === 'Export logbook' && (trialExpired || (sub && sub.status !== 'active' && sub.status !== 'overdue' && !cancelledInGrace))) {
+                if (item.label === 'Export logbook' && !isAdmin && (trialExpired || (sub && sub.status !== 'active' && sub.status !== 'overdue' && !cancelledInGrace))) {
                   router.push({ pathname: '/paywall', params: { reason: 'trial_expired' } } as any);
                   return;
                 }

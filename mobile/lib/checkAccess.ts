@@ -11,6 +11,9 @@ export async function checkAccess(): Promise<boolean> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return false;
 
+  const { data: adminFlag } = await supabase.rpc('is_admin');
+  if (adminFlag === true) return true;
+
   const { data: sub } = await supabase
     .from('subscriptions')
     .select('status, renews_at')
