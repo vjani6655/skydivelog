@@ -415,6 +415,10 @@ export default function NewJumpScreen() {
 
   // Step 3
   const [isFav, setIsFav] = useState(false);
+  const [aadFired, setAadFired] = useState(false);
+  const [reserveDeployed, setReserveDeployed] = useState(false);
+  const [plannedObjectives, setPlannedObjectives] = useState('');
+  const [plannedManoeuvres, setPlannedManoeuvres] = useState('');
   const [notes, setNotes] = useState('');
   const [peopleOnJump, setPeopleOnJump] = useState('');
 
@@ -588,6 +592,10 @@ export default function NewJumpScreen() {
         setCanopyType((data as any).canopy_type ?? '');
         setCanopyGearId((data as any).canopy_gear_id ?? null);
         setIsFav(data.is_favourite ?? false);
+        setAadFired((data as any).aad_fired ?? false);
+        setReserveDeployed((data as any).reserve_deployed ?? false);
+        setPlannedObjectives((data as any).planned_objectives ?? '');
+        setPlannedManoeuvres((data as any).planned_manoeuvres ?? '');
         setNotes(data.notes ?? '');
         setLandingAccuracyValue(data.landing_accuracy_value ?? '');
         setLandingAccuracyUnit(data.landing_accuracy_unit ?? 'M');
@@ -640,6 +648,10 @@ export default function NewJumpScreen() {
         canopy_type: canopyType.trim() || null,
         canopy_gear_id: canopyGearId || null,
         is_favourite: isFav,
+        aad_fired: aadFired,
+        reserve_deployed: reserveDeployed,
+        planned_objectives: jumperType === 'Student' ? (plannedObjectives.trim() || null) : null,
+        planned_manoeuvres: jumperType === 'Student' ? (plannedManoeuvres.trim() || null) : null,
         notes: notes.trim() || null,
         landing_accuracy_value: landingAccuracyValue.trim() || null,
         landing_accuracy_unit: landingAccuracyValue.trim() ? landingAccuracyUnit : null,
@@ -758,6 +770,10 @@ export default function NewJumpScreen() {
         canopy_type: canopyType.trim() || null,
         canopy_gear_id: canopyGearId || null,
         is_favourite: isFav,
+        aad_fired: aadFired,
+        reserve_deployed: reserveDeployed,
+        planned_objectives: jumperType === 'Student' ? (plannedObjectives.trim() || null) : null,
+        planned_manoeuvres: jumperType === 'Student' ? (plannedManoeuvres.trim() || null) : null,
         notes: notes.trim() || null,
         landing_accuracy_value: landingAccuracyValue.trim() || null,
         landing_accuracy_unit: landingAccuracyValue.trim() ? landingAccuracyUnit : null,
@@ -816,6 +832,10 @@ export default function NewJumpScreen() {
         canopy_type: canopyType.trim() || null,
         canopy_gear_id: canopyGearId || null,
         is_favourite: isFav,
+        aad_fired: aadFired,
+        reserve_deployed: reserveDeployed,
+        planned_objectives: jumperType === 'Student' ? (plannedObjectives.trim() || null) : null,
+        planned_manoeuvres: jumperType === 'Student' ? (plannedManoeuvres.trim() || null) : null,
         notes: notes.trim() || null,
         landing_accuracy_value: landingAccuracyValue.trim() || null,
         landing_accuracy_unit: landingAccuracyValue.trim() ? landingAccuracyUnit : null,
@@ -862,6 +882,8 @@ export default function NewJumpScreen() {
   const validateStep3 = () => {
     if (jumperType !== 'Student') return true;
     const errs: Record<string, string> = {};
+    if (!plannedObjectives.trim()) errs.plannedObjectives = 'Planned objectives are required for student jumps';
+    if (!plannedManoeuvres.trim()) errs.plannedManoeuvres = 'Planned manoeuvres are required for student jumps';
     if (!notes.trim()) errs.notes = 'Notes are required for student jumps';
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -1022,7 +1044,7 @@ export default function NewJumpScreen() {
                   style={[styles.input, errors.jumpType ? styles.inputError : null]}
                   value={jumpType}
                   onChangeText={v => { setJumpType(v); setErrors(e => ({ ...e, jumpType: '' })); }}
-                  placeholder="e.g. AFF 1, AFF 2 — Turns, IAD Stage 3"
+                  placeholder="Training stage or AFF level"
                   placeholderTextColor={colors.fg3}
                   autoCapitalize="words"
                   autoCorrect={false}
@@ -1067,8 +1089,30 @@ export default function NewJumpScreen() {
               </View>
               <Toggle on={isFav} onChange={setIsFav} />
             </View>
+            <TouchableOpacity style={styles.checkRow} onPress={() => setAadFired(v => !v)} activeOpacity={0.7}>
+              <Ionicons name={aadFired ? 'checkbox' : 'square-outline'} size={22} color={aadFired ? colors.warn : colors.fg3} />
+              <View>
+                <Text style={styles.toggleTitle}>AAD fired</Text>
+                <Text style={styles.toggleSub}>Automatic Activation Device deployed.</Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.checkRow} onPress={() => setReserveDeployed(v => !v)} activeOpacity={0.7}>
+              <Ionicons name={reserveDeployed ? 'checkbox' : 'square-outline'} size={22} color={reserveDeployed ? colors.warn : colors.fg3} />
+              <View>
+                <Text style={styles.toggleTitle}>Reserve deployed</Text>
+                <Text style={styles.toggleSub}>Reserve parachute was deployed on this jump.</Text>
+              </View>
+            </TouchableOpacity>
+            {jumperType === 'Student' && (<>
+              <Label text="PLANNED OBJECTIVES" />
+              <TextInput style={[styles.input, styles.textareaSm, errors.plannedObjectives ? styles.inputError : null]} value={plannedObjectives} onChangeText={v => { setPlannedObjectives(v); setErrors(e => ({ ...e, plannedObjectives: '' })); }} multiline numberOfLines={3} placeholder="What was the student expected to achieve on this jump?" placeholderTextColor={colors.fg3} textAlignVertical="top" />
+              {errors.plannedObjectives && <Text style={styles.fieldError}>{errors.plannedObjectives}</Text>}
+              <Label text="PLANNED MANOEUVRES" />
+              <TextInput style={[styles.input, styles.textareaSm, errors.plannedManoeuvres ? styles.inputError : null]} value={plannedManoeuvres} onChangeText={v => { setPlannedManoeuvres(v); setErrors(e => ({ ...e, plannedManoeuvres: '' })); }} multiline numberOfLines={3} placeholder="Specific manoeuvres or exercises planned" placeholderTextColor={colors.fg3} textAlignVertical="top" />
+              {errors.plannedManoeuvres && <Text style={styles.fieldError}>{errors.plannedManoeuvres}</Text>}
+            </>)}
             <Label text={jumperType === 'Student' ? 'JUMP DESCRIPTION' : 'JUMP DESCRIPTION (optional)'} />
-            <TextInput style={[styles.input, styles.textarea, errors.notes ? styles.inputError : null]} value={notes} onChangeText={v => { setNotes(v); setErrors(e => ({ ...e, notes: '' })); }} multiline numberOfLines={6} placeholder="What happened on this jump?" placeholderTextColor={colors.fg3} textAlignVertical="top" />
+            <TextInput style={[styles.input, styles.textarea, errors.notes ? styles.inputError : null]} value={notes} onChangeText={v => { setNotes(v); setErrors(e => ({ ...e, notes: '' })); }} multiline numberOfLines={6} placeholder={jumperType === 'Student' ? 'What was achieved, what was difficult, self-assessment' : 'What happened on this jump?'} placeholderTextColor={colors.fg3} textAlignVertical="top" />
             {errors.notes && <Text style={styles.fieldError}>{errors.notes}</Text>}
             <Label text="PEOPLE ON JUMP (optional)" />
             <TextInput style={styles.input} value={peopleOnJump} onChangeText={setPeopleOnJump} keyboardType="numeric" placeholder="e.g. 4" placeholderTextColor={colors.fg3} />
@@ -1170,7 +1214,7 @@ export default function NewJumpScreen() {
                 </View>
               </>) : null}
 
-              {(landingAccuracyValue.trim() || peopleOnJump.trim() || isFav) ? (<>
+              {(landingAccuracyValue.trim() || peopleOnJump.trim() || isFav || aadFired || reserveDeployed) ? (<>
                 <View style={styles.signSummaryDivider} />
                 <View style={styles.signSummaryDetailRow}>
                   {landingAccuracyValue.trim() ? (
@@ -1191,9 +1235,35 @@ export default function NewJumpScreen() {
                       <Text style={[styles.signSummaryDetailVal, { color: '#FFD700' }]}>★ Yes</Text>
                     </View>
                   ) : null}
+                  {aadFired ? (
+                    <View style={styles.signSummaryDetailItem}>
+                      <Text style={styles.signSummaryLabel}>AAD</Text>
+                      <Text style={[styles.signSummaryDetailVal, { color: colors.warn }]}>Fired</Text>
+                    </View>
+                  ) : null}
+                  {reserveDeployed ? (
+                    <View style={styles.signSummaryDetailItem}>
+                      <Text style={styles.signSummaryLabel}>RESERVE</Text>
+                      <Text style={[styles.signSummaryDetailVal, { color: colors.warn }]}>Deployed</Text>
+                    </View>
+                  ) : null}
                 </View>
               </>) : null}
 
+              {plannedObjectives.trim() ? (<>
+                <View style={styles.signSummaryDivider} />
+                <View style={styles.signSummaryNotes}>
+                  <Text style={styles.signSummaryLabel}>PLANNED OBJECTIVES</Text>
+                  <Text style={styles.signSummaryNotesText}>{plannedObjectives}</Text>
+                </View>
+              </>) : null}
+              {plannedManoeuvres.trim() ? (<>
+                <View style={styles.signSummaryDivider} />
+                <View style={styles.signSummaryNotes}>
+                  <Text style={styles.signSummaryLabel}>PLANNED MANOEUVRES</Text>
+                  <Text style={styles.signSummaryNotesText}>{plannedManoeuvres}</Text>
+                </View>
+              </>) : null}
               {notes.trim() ? (<>
                 <View style={styles.signSummaryDivider} />
                 <View style={styles.signSummaryNotes}>
@@ -1336,6 +1406,7 @@ function makeStyles(c: ColorSet) {
   chipText: { fontFamily: 'InterTight-Medium', fontSize: 13, color: c.fg2 },
   chipTextActive: { color: c.onSky },
   toggleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, padding: spacing[4], marginBottom: spacing[4] },
+  checkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing[3], backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, padding: spacing[4], marginBottom: spacing[4] },
   toggleTitle: { fontFamily: 'InterTight-Medium', fontSize: 15, color: c.fg },
   toggleSub: { fontFamily: 'InterTight-Regular', fontSize: 12, color: c.fg2, marginTop: 2 },
   warnBox: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing[2], backgroundColor: 'rgba(255,183,74,0.10)', borderWidth: 1, borderColor: 'rgba(255,183,74,0.3)', borderRadius: radii.md, padding: spacing[3], marginBottom: spacing[3], marginTop: -spacing[2] },

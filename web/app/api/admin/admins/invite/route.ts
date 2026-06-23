@@ -63,13 +63,23 @@ export async function POST(request: Request) {
   }
 
   // Send Supabase auth invite so they can set a password
-  const { error: inviteError } = await db.auth.admin.inviteUserByEmail(
+  const { data: inviteData, error: inviteError } = await db.auth.admin.inviteUserByEmail(
     email.trim().toLowerCase(),
     { data: { full_name: name.trim() } }
   )
   if (inviteError) {
     // Non-fatal if auth invite fails (e.g. user already has an account) — row is still inserted
     console.error('[admin/invite] auth invite error:', inviteError.message)
+  }
+
+  // Explicitly upsert the profile row for newly invited users.
+  // The handle_new_user trigger does this too, but raw_user_meta_data may not be
+  // committed at the exact moment the trigger fires, leaving full_name empty.
+  if (inviteData?.user?.id) {
+    await db.from('users').upsert(
+      { id: inviteData.user.id, email: email.trim().toLowerCase(), full_name: name.trim() },
+      { onConflict: 'id' }
+    )
   }
 
   return NextResponse.json({ ok: true })

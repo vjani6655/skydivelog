@@ -86,6 +86,10 @@ export async function POST(request: Request) {
       landing_accuracy_unit,
       notes,
       people_on_jump,
+      aad_fired,
+      reserve_deployed,
+      planned_objectives,
+      planned_manoeuvres,
       dropzones ( name, region ),
       signatures ( signer_name, signer_licence_number, signer_licence_rating, signature_data, outcome, notes )
     `)
@@ -161,6 +165,10 @@ export async function POST(request: Request) {
       landing_accuracy_unit:   raw.landing_accuracy_unit   ?? null,
       notes:                   raw.notes                   ?? null,
       people_on_jump:          raw.people_on_jump          ?? null,
+      aad_fired:               raw.aad_fired               ?? false,
+      reserve_deployed:        raw.reserve_deployed        ?? false,
+      planned_objectives:      raw.planned_objectives      ?? null,
+      planned_manoeuvres:      raw.planned_manoeuvres      ?? null,
       signer_name:             sig?.signer_name             ?? null,
       signer_licence_number:   sig?.signer_licence_number  ?? null,
       signer_licence_rating:   sig?.signer_licence_rating  ?? null,

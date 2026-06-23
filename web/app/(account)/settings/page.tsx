@@ -50,7 +50,7 @@ export default async function SettingsPage({
 
   const profileData = {
     full_name: profile?.full_name ?? "",
-    email: profile?.email ?? user?.email ?? "",
+    email: profile?.email || user?.email || "",
     licence_number: profile?.licence_number ?? null,
     licence_rating: profile?.licence_rating ?? null,
     date_of_birth: profile?.date_of_birth ?? null,

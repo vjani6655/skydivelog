@@ -3,8 +3,8 @@ import {
   View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet,
   SafeAreaView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
 } from 'react-native';
-import { useFocusEffect, useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect, useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { spacing, radii } from '@/constants/tokens';
 import type { ColorSet } from '@/constants/tokens';
@@ -69,6 +69,10 @@ export default function EditJumpScreen() {
   const [pullAlt, setPullAlt] = useState('');
   const [jumpType, setJumpType] = useState('');
   const [notes, setNotes] = useState('');
+  const [aadFired, setAadFired] = useState(false);
+  const [reserveDeployed, setReserveDeployed] = useState(false);
+  const [plannedObjectives, setPlannedObjectives] = useState('');
+  const [plannedManoeuvres, setPlannedManoeuvres] = useState('');
   const [landingAccuracyValue, setLandingAccuracyValue] = useState('');
   const [landingAccuracyUnit, setLandingAccuracyUnit] = useState('M');
   const [canopyType, setCanopyType] = useState('');
@@ -95,6 +99,10 @@ export default function EditJumpScreen() {
         setPullAlt(String(j.pull_altitude_ft ?? ''));
         setJumpType(j.jumper_type === 'student' ? ((j as any).jump_stage ?? j.jump_type ?? '') : (j.jump_type ?? ''));
         setNotes(j.notes ?? '');
+        setAadFired(j.aad_fired ?? false);
+        setReserveDeployed(j.reserve_deployed ?? false);
+        setPlannedObjectives(j.planned_objectives ?? '');
+        setPlannedManoeuvres(j.planned_manoeuvres ?? '');
         setLandingAccuracyValue(j.landing_accuracy_value ?? '');
         setLandingAccuracyUnit(j.landing_accuracy_unit ?? 'M');
         setCanopyType((j as any).canopy_type ?? '');
@@ -146,6 +154,10 @@ export default function EditJumpScreen() {
           jump_type: jump.jumper_type === 'student' ? sanitizeJumpType(jumpType) : (jumpType || null),
           jump_stage: jump.jumper_type === 'student' ? (jumpType.trim() || null) : null,
           notes: notes.trim() || null,
+          aad_fired: aadFired,
+          reserve_deployed: reserveDeployed,
+          planned_objectives: jump.jumper_type === 'student' ? (plannedObjectives.trim() || null) : null,
+          planned_manoeuvres: jump.jumper_type === 'student' ? (plannedManoeuvres.trim() || null) : null,
           landing_accuracy_value: landingAccuracyValue.trim() || null,
           landing_accuracy_unit: landingAccuracyValue.trim() ? landingAccuracyUnit : null,
           canopy_type: canopyType.trim() || null,
@@ -184,6 +196,14 @@ export default function EditJumpScreen() {
           changes.push({ field: 'Landing accuracy', from: origLandingFull || '—', to: newLandingFull || '—' });
         if (notes.trim() !== (jump.notes ?? ''))
           changes.push({ field: 'Notes', from: jump.notes || '—', to: notes.trim() || '—' });
+        if (aadFired !== (jump.aad_fired ?? false))
+          changes.push({ field: 'AAD fired', from: jump.aad_fired ? 'Yes' : 'No', to: aadFired ? 'Yes' : 'No' });
+        if (reserveDeployed !== (jump.reserve_deployed ?? false))
+          changes.push({ field: 'Reserve deployed', from: jump.reserve_deployed ? 'Yes' : 'No', to: reserveDeployed ? 'Yes' : 'No' });
+        if (plannedObjectives.trim() !== (jump.planned_objectives ?? ''))
+          changes.push({ field: 'Planned objectives', from: jump.planned_objectives || '—', to: plannedObjectives.trim() || '—' });
+        if (plannedManoeuvres.trim() !== (jump.planned_manoeuvres ?? ''))
+          changes.push({ field: 'Planned manoeuvres', from: jump.planned_manoeuvres || '—', to: plannedManoeuvres.trim() || '—' });
 
         // Persist the audit trail to jump_edits
         if (changes.length > 0) {
@@ -352,8 +372,30 @@ export default function EditJumpScreen() {
             </View>
           </View>
 
+          {jump?.jumper_type === 'student' && (<>
+            <Label text="PLANNED OBJECTIVES" />
+            <TextInput style={[styles.input, styles.textarea]} value={plannedObjectives} onChangeText={setPlannedObjectives} multiline numberOfLines={3} placeholder="What was the student expected to achieve?" placeholderTextColor={colors.fg3} textAlignVertical="top" />
+            <Label text="PLANNED MANOEUVRES" />
+            <TextInput style={[styles.input, styles.textarea]} value={plannedManoeuvres} onChangeText={setPlannedManoeuvres} multiline numberOfLines={3} placeholder="Specific manoeuvres or exercises planned" placeholderTextColor={colors.fg3} textAlignVertical="top" />
+          </>)}
+
           <Label text="JUMP DESCRIPTION" />
           <TextInput style={[styles.input, styles.textarea]} value={notes} onChangeText={setNotes} multiline numberOfLines={4} placeholderTextColor={colors.fg3} textAlignVertical="top" />
+
+          <TouchableOpacity style={styles.checkRow} onPress={() => setAadFired(v => !v)} activeOpacity={0.7}>
+            <Ionicons name={aadFired ? 'checkbox' : 'square-outline'} size={22} color={aadFired ? colors.warn : colors.fg3} />
+            <View>
+              <Text style={styles.checkTitle}>AAD fired</Text>
+              <Text style={styles.checkSub}>Automatic Activation Device deployed.</Text>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.checkRow} onPress={() => setReserveDeployed(v => !v)} activeOpacity={0.7}>
+            <Ionicons name={reserveDeployed ? 'checkbox' : 'square-outline'} size={22} color={reserveDeployed ? colors.warn : colors.fg3} />
+            <View>
+              <Text style={styles.checkTitle}>Reserve deployed</Text>
+              <Text style={styles.checkSub}>Reserve parachute was deployed on this jump.</Text>
+            </View>
+          </TouchableOpacity>
 
           <Label text="PEOPLE ON JUMP (optional)" />
           <TextInput style={styles.input} value={peopleOnJump} onChangeText={setPeopleOnJump} keyboardType="numeric" placeholder="e.g. 4" placeholderTextColor={colors.fg3} />
@@ -386,6 +428,9 @@ function makeStyles(c: ColorSet) {
   inputReadonly: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, paddingHorizontal: spacing[3], paddingVertical: spacing[3], marginBottom: spacing[4] },
   inputReadonlyText: { fontFamily: 'InterTight-Regular', fontSize: 15, color: c.fg2 },
   textarea: { minHeight: 100, paddingTop: spacing[3] },
+  checkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing[3], backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, padding: spacing[4], marginBottom: spacing[4] },
+  checkTitle: { fontFamily: 'InterTight-Medium', fontSize: 15, color: c.fg },
+  checkSub: { fontFamily: 'InterTight-Regular', fontSize: 12, color: c.fg2, marginTop: 2 },
   row2: { flexDirection: 'row', gap: spacing[3] },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2], marginTop: spacing[1], marginBottom: spacing[4] },
   chip: { paddingHorizontal: spacing[3], paddingVertical: spacing[1.5], borderRadius: radii.pill, backgroundColor: c.surface, borderWidth: 1, borderColor: c.border },

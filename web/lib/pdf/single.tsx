@@ -50,6 +50,8 @@ const PASS_BG      = '#E8F5E9'
 const PASS_FG      = '#2E7D32'
 const REPEAT_BG    = '#FFF3E0'
 const REPEAT_FG    = '#E65100'
+const ALERT_BG     = '#FDECEA'
+const ALERT_FG     = '#C62828'
 
 // ─── Shared styles ───────────────────────────────────────────────────────────
 
@@ -273,6 +275,20 @@ function SinglePage({
                 )}
               </View>
             )}
+            {(jump.aad_fired || jump.reserve_deployed) && (
+              <View style={{ flexDirection: 'row', gap: 4, marginTop: 6 }}>
+                {jump.aad_fired && (
+                  <View style={{ backgroundColor: ALERT_BG, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 3 }}>
+                    <Text style={[s.mono, { fontSize: 8, letterSpacing: 1, color: ALERT_FG }]}>AAD FIRED</Text>
+                  </View>
+                )}
+                {jump.reserve_deployed && (
+                  <View style={{ backgroundColor: ALERT_BG, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 3 }}>
+                    <Text style={[s.mono, { fontSize: 8, letterSpacing: 1, color: ALERT_FG }]}>RESERVE DEPLOYED</Text>
+                  </View>
+                )}
+              </View>
+            )}
           </View>
         </View>
 
@@ -301,6 +317,24 @@ function SinglePage({
             { label: 'People on jump', value: String(jump.people_on_jump), flex: 1 },
             { label: '', value: '', flex: 3 },
           ]} />
+        )}
+
+        {/* Planned objectives + manoeuvres — student only */}
+        {isStudent && jump.planned_objectives && (
+          <View style={{ marginTop: 4, marginBottom: 8 }}>
+            <Text style={[s.mono, { fontSize: 8, color: INK_3, letterSpacing: 1, marginBottom: 4 }]}>PLANNED OBJECTIVES</Text>
+            <View style={{ backgroundColor: CREAM, borderWidth: 1, borderColor: RULE, borderRadius: 4, padding: 10 }}>
+              <Text style={[s.ui, { fontSize: 10, color: INK_2, lineHeight: 1.5 }]}>{jump.planned_objectives}</Text>
+            </View>
+          </View>
+        )}
+        {isStudent && jump.planned_manoeuvres && (
+          <View style={{ marginTop: 4, marginBottom: 8 }}>
+            <Text style={[s.mono, { fontSize: 8, color: INK_3, letterSpacing: 1, marginBottom: 4 }]}>PLANNED MANOEUVRES</Text>
+            <View style={{ backgroundColor: CREAM, borderWidth: 1, borderColor: RULE, borderRadius: 4, padding: 10 }}>
+              <Text style={[s.ui, { fontSize: 10, color: INK_2, lineHeight: 1.5 }]}>{jump.planned_manoeuvres}</Text>
+            </View>
+          </View>
         )}
 
         {/* Description of jump */}

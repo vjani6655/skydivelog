@@ -233,6 +233,11 @@ function JumpCard({ jump }: { jump: PdfJump }) {
           {'PEOPLE: '}{jump.people_on_jump}
         </Text>
       ) : null}
+      {(jump.aad_fired || jump.reserve_deployed) ? (
+        <Text style={[s.mono, { fontSize: 7, color: '#C62828', letterSpacing: 0.4, marginBottom: 3 }]}>
+          {[jump.aad_fired && 'AAD FIRED', jump.reserve_deployed && 'RESERVE DEPLOYED'].filter(Boolean).join(' · ')}
+        </Text>
+      ) : null}
 
       {/* Description of jump — fixed height, clipped */}
       <View style={{ flex: 1, overflow: 'hidden', minHeight: 18 }}>

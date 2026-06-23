@@ -19,6 +19,10 @@ export interface JumpFull {
   jumper_type: string | null   // 'licensed' | 'student'
   is_favourite: boolean
   is_draft: boolean
+  aad_fired: boolean
+  reserve_deployed: boolean
+  planned_objectives: string | null
+  planned_manoeuvres: string | null
   notes: string | null
   people_on_jump: number | null
   landing_accuracy_value: string | null

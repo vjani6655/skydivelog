@@ -28,6 +28,10 @@ export interface PdfJump {
   landing_accuracy_unit: string | null
   notes: string | null
   people_on_jump: number | null
+  aad_fired: boolean
+  reserve_deployed: boolean
+  planned_objectives: string | null
+  planned_manoeuvres: string | null
   signer_name: string | null
   signer_licence_number: string | null
   signer_licence_rating: string | null

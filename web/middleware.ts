@@ -92,6 +92,20 @@ export async function middleware(request: NextRequest) {
     const inTrial = Date.now() < trialEnd.getTime()
 
     if (!inTrial) {
+      // Admins (any role) always get full app access without a subscription
+      const adminDb = createSupabaseClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SECRET_KEY!,
+        { auth: { persistSession: false } }
+      )
+      const { data: adminRow } = await adminDb
+        .from('admins')
+        .select('id')
+        .eq('email', user.email!)
+        .eq('active', true)
+        .maybeSingle()
+      if (adminRow) return supabaseResponse
+
       // Check for a paid active subscription
       const { data: sub } = await supabase
         .from("subscriptions")
