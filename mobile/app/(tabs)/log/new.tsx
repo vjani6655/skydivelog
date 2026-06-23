@@ -875,6 +875,7 @@ export default function NewJumpScreen() {
     if (!exitAlt.trim() || isNaN(alt) || alt <= 0) errs.exitAlt = 'Exit altitude is required';
     if (!canopyType.trim()) errs.canopyType = 'Canopy type is required';
     if (!jumpType.trim()) errs.jumpType = jumperType === 'Student' ? 'Jump stage is required' : 'Jump type is required';
+    if (jumperType === 'Student' && !landingAccuracyValue.trim()) errs.landingAccuracy = 'Landing accuracy is required for student jumps';
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -1059,11 +1060,11 @@ export default function NewJumpScreen() {
                 {errors.jumpType && <Text style={styles.fieldError}>{errors.jumpType}</Text>}
               </>
             )}
-            <Label text="LANDING ACCURACY — optional" />
+            <Label text={jumperType === 'Student' ? 'LANDING ACCURACY' : 'LANDING ACCURACY — optional'} />
             <View style={[styles.row2, { alignItems: 'flex-start' }]}>
               <View style={{ flex: 1 }}>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, !!errors.landingAccuracy && styles.inputError]}
                   value={landingAccuracyValue}
                   onChangeText={setLandingAccuracyValue}
                   keyboardType="numeric"
@@ -1077,6 +1078,7 @@ export default function NewJumpScreen() {
                 ))}
               </View>
             </View>
+            {errors.landingAccuracy && <Text style={styles.fieldError}>{errors.landingAccuracy}</Text>}
           </>)}
 
           {/* ─── Step 3: Notes & favourites ─────────────────────────────── */}
