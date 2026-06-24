@@ -1113,6 +1113,19 @@ export default function NewJumpScreen() {
               </View>
               <Toggle on={isFav} onChange={setIsFav} />
             </View>
+            {jumperType === 'Student' && (<>
+              <Label text="PLANNED OBJECTIVES" />
+              <TextInput style={[styles.input, styles.textareaSm, errors.plannedObjectives ? styles.inputError : null]} value={plannedObjectives} onChangeText={v => { setPlannedObjectives(v); setErrors(e => ({ ...e, plannedObjectives: '' })); }} multiline numberOfLines={3} placeholder="What was the student expected to achieve on this jump?" placeholderTextColor={colors.fg3} textAlignVertical="top" />
+              {errors.plannedObjectives && <Text style={styles.fieldError}>{errors.plannedObjectives}</Text>}
+              <Label text="PLANNED MANOEUVRES" />
+              <TextInput style={[styles.input, styles.textareaSm, errors.plannedManoeuvres ? styles.inputError : null]} value={plannedManoeuvres} onChangeText={v => { setPlannedManoeuvres(v); setErrors(e => ({ ...e, plannedManoeuvres: '' })); }} multiline numberOfLines={3} placeholder="Specific manoeuvres or exercises planned" placeholderTextColor={colors.fg3} textAlignVertical="top" />
+              {errors.plannedManoeuvres && <Text style={styles.fieldError}>{errors.plannedManoeuvres}</Text>}
+            </>)}
+            <Label text={jumperType === 'Student' ? 'JUMP DESCRIPTION' : 'JUMP DESCRIPTION (optional)'} />
+            <TextInput style={[styles.input, styles.textarea, errors.notes ? styles.inputError : null]} value={notes} onChangeText={v => { setNotes(v); setErrors(e => ({ ...e, notes: '' })); }} multiline numberOfLines={6} placeholder={jumperType === 'Student' ? 'What was achieved, what was difficult, self-assessment' : 'What happened on this jump?'} placeholderTextColor={colors.fg3} textAlignVertical="top" />
+            {errors.notes && <Text style={styles.fieldError}>{errors.notes}</Text>}
+            <Label text="PEOPLE ON JUMP (optional)" />
+            <TextInput style={styles.input} value={peopleOnJump} onChangeText={setPeopleOnJump} keyboardType="numeric" placeholder="e.g. 4" placeholderTextColor={colors.fg3} />
             <TouchableOpacity style={styles.checkRow} onPress={() => setAadFired(v => !v)} activeOpacity={0.7}>
               <Ionicons name={aadFired ? 'checkbox' : 'square-outline'} size={22} color={aadFired ? colors.warn : colors.fg3} />
               <View>
@@ -1127,21 +1140,10 @@ export default function NewJumpScreen() {
                 <Text style={styles.toggleSub}>Reserve parachute was deployed on this jump.</Text>
               </View>
             </TouchableOpacity>
-            {jumperType === 'Student' && (<>
-              <Label text="PLANNED OBJECTIVES" />
-              <TextInput style={[styles.input, styles.textareaSm, errors.plannedObjectives ? styles.inputError : null]} value={plannedObjectives} onChangeText={v => { setPlannedObjectives(v); setErrors(e => ({ ...e, plannedObjectives: '' })); }} multiline numberOfLines={3} placeholder="What was the student expected to achieve on this jump?" placeholderTextColor={colors.fg3} textAlignVertical="top" />
-              {errors.plannedObjectives && <Text style={styles.fieldError}>{errors.plannedObjectives}</Text>}
-              <Label text="PLANNED MANOEUVRES" />
-              <TextInput style={[styles.input, styles.textareaSm, errors.plannedManoeuvres ? styles.inputError : null]} value={plannedManoeuvres} onChangeText={v => { setPlannedManoeuvres(v); setErrors(e => ({ ...e, plannedManoeuvres: '' })); }} multiline numberOfLines={3} placeholder="Specific manoeuvres or exercises planned" placeholderTextColor={colors.fg3} textAlignVertical="top" />
-              {errors.plannedManoeuvres && <Text style={styles.fieldError}>{errors.plannedManoeuvres}</Text>}
-            </>)}
-            <Label text={jumperType === 'Student' ? 'JUMP DESCRIPTION' : 'JUMP DESCRIPTION (optional)'} />
-            <TextInput style={[styles.input, styles.textarea, errors.notes ? styles.inputError : null]} value={notes} onChangeText={v => { setNotes(v); setErrors(e => ({ ...e, notes: '' })); }} multiline numberOfLines={6} placeholder={jumperType === 'Student' ? 'What was achieved, what was difficult, self-assessment' : 'What happened on this jump?'} placeholderTextColor={colors.fg3} textAlignVertical="top" />
-            {errors.notes && <Text style={styles.fieldError}>{errors.notes}</Text>}
-            <Label text="PEOPLE ON JUMP (optional)" />
-            <TextInput style={styles.input} value={peopleOnJump} onChangeText={setPeopleOnJump} keyboardType="numeric" placeholder="e.g. 4" placeholderTextColor={colors.fg3} />
-            {userTags.length > 0 && (<>
-              <Label text="TAGS (optional)" />
+            <Label text="TAGS (optional)" />
+            {userTags.length === 0 ? (
+              <Text style={styles.emptyHint}>Add tags in Profile → Manage Tags to categorise your jumps.</Text>
+            ) : (
               <View style={styles.chipRow}>
                 {userTags.map(tag => {
                   const active = selectedTagIds.includes(tag.id);
@@ -1158,7 +1160,7 @@ export default function NewJumpScreen() {
                   );
                 })}
               </View>
-            </>)}
+            )}
           </>)}
 
           {/* ─── Step 4: Sign-off ────────────────────────────────────────── */}
@@ -1520,6 +1522,7 @@ function makeStyles(c: ColorSet) {
   btnPrimaryText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: c.onSky },
   btnGhostText: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: c.fg2 },
   step4Row: { flexDirection: 'row', gap: spacing[3] },
+  emptyHint: { fontFamily: 'InterTight-Regular', fontSize: 13, color: c.fg3, marginBottom: spacing[4] },
   // Saved screen
   savedCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing[8] },
   savedCircle: { width: 80, height: 80, borderRadius: 40, backgroundColor: c.okBg, borderWidth: 2, borderColor: c.ok, alignItems: 'center', justifyContent: 'center', marginBottom: spacing[5] },

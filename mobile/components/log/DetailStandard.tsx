@@ -79,6 +79,12 @@ export default function DetailStandard({ jump, signatures, tags, edits }: JumpDe
         {sig?.outcome === 'repeat' && (
           <Badge kind="warn">REPEAT</Badge>
         )}
+        {(jump as any).aad_fired && (
+          <Badge kind="danger">AAD FIRED</Badge>
+        )}
+        {(jump as any).reserve_deployed && (
+          <Badge kind="danger">RESERVE</Badge>
+        )}
       </View>
 
       {/* Telemetry card */}

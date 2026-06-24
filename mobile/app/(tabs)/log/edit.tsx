@@ -396,6 +396,9 @@ export default function EditJumpScreen() {
           <Label text="JUMP DESCRIPTION" />
           <TextInput style={[styles.input, styles.textarea]} value={notes} onChangeText={setNotes} multiline numberOfLines={4} placeholderTextColor={colors.fg3} textAlignVertical="top" />
 
+          <Label text="PEOPLE ON JUMP (optional)" />
+          <TextInput style={styles.input} value={peopleOnJump} onChangeText={setPeopleOnJump} keyboardType="numeric" placeholder="e.g. 4" placeholderTextColor={colors.fg3} />
+
           <TouchableOpacity style={styles.checkRow} onPress={() => setAadFired(v => !v)} activeOpacity={0.7}>
             <Ionicons name={aadFired ? 'checkbox' : 'square-outline'} size={22} color={aadFired ? colors.warn : colors.fg3} />
             <View>
@@ -411,11 +414,10 @@ export default function EditJumpScreen() {
             </View>
           </TouchableOpacity>
 
-          <Label text="PEOPLE ON JUMP (optional)" />
-          <TextInput style={styles.input} value={peopleOnJump} onChangeText={setPeopleOnJump} keyboardType="numeric" placeholder="e.g. 4" placeholderTextColor={colors.fg3} />
-
-          {userTags.length > 0 && (<>
-            <Label text="TAGS" />
+          <Label text="TAGS" />
+          {userTags.length === 0 ? (
+            <Text style={styles.emptyHint}>Add tags in Profile → Manage Tags to categorise your jumps.</Text>
+          ) : (
             <View style={styles.chipRow}>
               {userTags.map(tag => {
                 const active = selectedTagIds.includes(tag.id);
@@ -432,7 +434,7 @@ export default function EditJumpScreen() {
                 );
               })}
             </View>
-          </>)}
+          )}
 
           <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete} activeOpacity={0.7}>
             <Text style={styles.deleteBtnText}>Delete jump</Text>
@@ -471,6 +473,7 @@ function makeStyles(c: ColorSet) {
   chipActive: { backgroundColor: c.sky, borderColor: c.sky },
   chipText: { fontFamily: 'InterTight-Medium', fontSize: 13, color: c.fg2 },
   chipTextActive: { color: c.onSky },
+  emptyHint: { fontFamily: 'InterTight-Regular', fontSize: 13, color: c.fg3, marginBottom: spacing[4] },
   deleteBtn: { paddingVertical: spacing[4] },
   deleteBtnText: { fontFamily: 'InterTight-Medium', fontSize: 14, color: c.danger },
   });

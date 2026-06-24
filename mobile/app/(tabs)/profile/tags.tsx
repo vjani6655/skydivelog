@@ -99,6 +99,7 @@ export default function TagsScreen() {
         <FlatList
           data={tags}
           keyExtractor={t => t.id}
+          style={{ flex: 1 }}
           contentContainerStyle={styles.list}
           ListEmptyComponent={
             <View style={styles.emptyBox}>

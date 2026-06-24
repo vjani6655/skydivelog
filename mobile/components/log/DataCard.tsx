@@ -34,6 +34,9 @@ export default function DataCard({ jump, onPress, altUnit = 'ft', dateFormat = '
           {jump.is_draft && (
             <View style={styles.draftBadge}><Text style={styles.draftText}>DRAFT</Text></View>
           )}
+          {((jump as any).aad_fired || (jump as any).reserve_deployed) && (
+            <View style={styles.safetyBadge}><Text style={styles.safetyText}>⚠</Text></View>
+          )}
           {jump.is_favourite && (
             <Ionicons name="star" size={12} color={colors.warn} />
           )}
@@ -95,6 +98,19 @@ function makeStyles(colors: ColorSet) {
     fontSize: 8,
     color: colors.warn,
     letterSpacing: 0.3,
+  },
+  safetyBadge: {
+    backgroundColor: colors.danger + '22',
+    borderWidth: 1,
+    borderColor: colors.danger,
+    borderRadius: 3,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+  },
+  safetyText: {
+    fontFamily: 'JetBrainsMono-SemiBold',
+    fontSize: 8,
+    color: colors.danger,
   },
   overline: {
     fontFamily: 'JetBrainsMono-SemiBold',
