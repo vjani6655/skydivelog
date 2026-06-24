@@ -5,7 +5,7 @@
 import nodemailer from 'nodemailer'
 
 const zohoTransporter = nodemailer.createTransport({
-  host: 'smtp.zoho.com',
+  host: 'smtp.zoho.com.au',
   port: 465,
   secure: true,
   auth: {
