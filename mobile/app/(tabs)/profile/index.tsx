@@ -22,6 +22,7 @@ const MENU_ITEMS = [
   { label: 'Subscription', icon: 'star-outline', route: '/(tabs)/profile/subscription' },
   { label: 'Export logbook', icon: 'download-outline', route: '/(tabs)/profile/export' },
   { label: 'Manage tags', icon: 'pricetag-outline', route: '/(tabs)/profile/tags' },
+  { label: 'Sign-offs', icon: 'ribbon-outline', route: '/(tabs)/profile/signoffs' },
   { label: 'Notifications', icon: 'notifications-outline', route: '/(tabs)/profile/notifications' },
   { label: 'Contact us', icon: 'mail-outline', route: '/(tabs)/profile/contact' },
 ] as const;

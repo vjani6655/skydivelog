@@ -9,6 +9,9 @@ export default function ProfileLayout() {
       <Stack.Screen name="subscription" />
       <Stack.Screen name="export" />
       <Stack.Screen name="tags" />
+      <Stack.Screen name="signoffs" />
+      <Stack.Screen name="signoff-new" />
+      <Stack.Screen name="signoff-detail" />
       <Stack.Screen name="notifications" />
       <Stack.Screen name="notification-detail" />
       <Stack.Screen name="contact" />
