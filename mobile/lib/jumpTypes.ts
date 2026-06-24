@@ -1,0 +1,25 @@
+export const JUMP_TYPES = [
+  'Belly',
+  'Freefly',
+  'Tracking',
+  'Angle',
+  'Wingsuit',
+  'VFS',
+  'CRW',
+  'Canopy Piloting',
+  'AFF',
+  'Tandem',
+  'Coach',
+  'Camera Flying',
+  'Hop&Pop',
+  'Demo',
+  'Night',
+  'HALO',
+  'Accuracy',
+  'Water Jump',
+  'Hybrid',
+  'Speed',
+  'Skysurfing',
+] as const;
+
+export type JumpType = typeof JUMP_TYPES[number];

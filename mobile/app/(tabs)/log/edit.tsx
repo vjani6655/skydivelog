@@ -10,9 +10,9 @@ import { spacing, radii } from '@/constants/tokens';
 import type { ColorSet } from '@/constants/tokens';
 import { useColors } from '@/lib/theme';
 import { usePrefs, fmtJumpDateTime } from '@/lib/prefsContext';
-import type { JumpFull } from '@/lib/types';
-
-const JUMP_TYPES = ['Belly', 'Tracking', 'Wingsuit', 'Freefly', 'CRW', 'AFF', 'Tandem', 'Coach', 'Demo', 'Night', 'Camera Flying', 'Hop&Pop'];
+import type { JumpFull, TagData } from '@/lib/types';
+import { JUMP_TYPES } from '@/lib/jumpTypes';
+import { CollapsibleChipRow } from '@/components/log/CollapsibleChipRow';
 
 function sanitizeJumpType(text: string): string | null {
   if (!text.trim()) return null;
@@ -77,8 +77,10 @@ export default function EditJumpScreen() {
   const [landingAccuracyUnit, setLandingAccuracyUnit] = useState('M');
   const [canopyType, setCanopyType] = useState('');
   const [canopyGearId, setCanopyGearId] = useState<string | null>(null);
-  const [userCanopies, setUserCanopies] = useState<Array<{ id: string; make_model: string }>>([])
+  const [userCanopies, setUserCanopies] = useState<Array<{ id: string; make_model: string }>>([]);
   const [peopleOnJump, setPeopleOnJump] = useState('');
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [userTags, setUserTags] = useState<TagData[]>([]);
 
   useFocusEffect(useCallback(() => {
     (async () => {
@@ -109,16 +111,17 @@ export default function EditJumpScreen() {
         setCanopyGearId((j as any).canopy_gear_id ?? null);
         setPeopleOnJump(String((j as any).people_on_jump ?? ''));
       }
-      // Load user canopies for the picker
+      // Load user canopies + tags in parallel
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        const { data: canopies } = await supabase
-          .from('gear')
-          .select('id, make_model')
-          .eq('user_id', session.user.id)
-          .eq('type', 'canopy')
-          .order('make_model');
+        const [{ data: canopies }, { data: tags }, { data: jumpTagRows }] = await Promise.all([
+          supabase.from('gear').select('id, make_model').eq('user_id', session.user.id).eq('type', 'canopy').order('make_model'),
+          supabase.from('tags').select('id, name, color').eq('user_id', session.user.id).order('created_at', { ascending: true }),
+          supabase.from('jump_tags').select('tag_id').eq('jump_id', id),
+        ]);
         setUserCanopies(canopies ?? []);
+        setUserTags((tags as TagData[]) ?? []);
+        setSelectedTagIds((jumpTagRows ?? []).map((r: any) => r.tag_id));
       }
       // Check if this jump has a signature
       const { count } = await supabase.from('signatures').select('id', { count: 'exact', head: true }).eq('jump_id', id);
@@ -215,6 +218,14 @@ export default function EditJumpScreen() {
               changes,
             });
           }
+        }
+
+        // Sync tags: delete all existing, re-insert selected
+        await supabase.from('jump_tags').delete().eq('jump_id', id);
+        if (selectedTagIds.length > 0) {
+          await supabase.from('jump_tags')
+            .insert(selectedTagIds.map(tag_id => ({ jump_id: id, tag_id })))
+            .then(null, () => null);
         }
 
         // Delete old signature — jump has been edited, re-signing required
@@ -315,13 +326,15 @@ export default function EditJumpScreen() {
           </View>
 
           <Label text="JUMP TYPE" />
-          <View style={styles.chipRow}>
-            {JUMP_TYPES.map(t => (
-              <TouchableOpacity key={t} style={[styles.chip, jumpType === t && styles.chipActive]} onPress={() => setJumpType(jumpType === t ? '' : t)} activeOpacity={0.7}>
+          <CollapsibleChipRow
+            items={[...JUMP_TYPES]}
+            gap={8}
+            renderChip={(t) => (
+              <TouchableOpacity style={[styles.chip, jumpType === t && styles.chipActive]} onPress={() => setJumpType(jumpType === t ? '' : t)} activeOpacity={0.7}>
                 <Text style={[styles.chipText, jumpType === t && styles.chipTextActive]}>{t}</Text>
               </TouchableOpacity>
-            ))}
-          </View>
+            )}
+          />
 
           <Label text="CANOPY TYPE" />
           {jump?.jumper_type !== 'student' && userCanopies.length > 0 && (
@@ -399,6 +412,26 @@ export default function EditJumpScreen() {
 
           <Label text="PEOPLE ON JUMP (optional)" />
           <TextInput style={styles.input} value={peopleOnJump} onChangeText={setPeopleOnJump} keyboardType="numeric" placeholder="e.g. 4" placeholderTextColor={colors.fg3} />
+
+          {userTags.length > 0 && (<>
+            <Label text="TAGS" />
+            <View style={styles.chipRow}>
+              {userTags.map(tag => {
+                const active = selectedTagIds.includes(tag.id);
+                return (
+                  <TouchableOpacity
+                    key={tag.id}
+                    style={[styles.chip, { borderColor: tag.color, backgroundColor: active ? tag.color : colors.surface2, flexDirection: 'row', alignItems: 'center', gap: 5 }]}
+                    onPress={() => setSelectedTagIds(prev => active ? prev.filter(id => id !== tag.id) : [...prev, tag.id])}
+                    activeOpacity={0.7}
+                  >
+                    {!active && <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: tag.color }} />}
+                    <Text style={[styles.chipText, { color: active ? colors.onSky : colors.fg2 }]}>{tag.name}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </>)}
 
           <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete} activeOpacity={0.7}>
             <Text style={styles.deleteBtnText}>Delete jump</Text>

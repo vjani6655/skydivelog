@@ -40,6 +40,7 @@ export interface JumpFull {
     longitude: number
   } | null
   signatures?: { id: string; signed_at: string }[]
+  tags?: TagData[]
   // Local-only — undefined means synced; false means pending upload
   _synced?: boolean
   _localId?: string

@@ -73,6 +73,7 @@ export default function LogScreen() {
   const [voiceModalVisible, setVoiceModalVisible] = useState(false);
   const [voiceDisclaimerVisible, setVoiceDisclaimerVisible] = useState(false);
   const [isOfflineCache, setIsOfflineCache] = useState(false);
+  const [userTags, setUserTags] = useState<import('@/lib/types').TagData[]>([]);
 
   // ── data fetch ────────────────────────────────────────────────────────────
   const fetchAll = async () => {
@@ -88,11 +89,11 @@ export default function LogScreen() {
     // Flush any locally-queued jumps first
     await trySyncQueue(supabase).catch(() => null);
 
-    const [{ data: userData }, { data: jumpData }, { data: subData }] = await Promise.all([
+    const [{ data: userData }, { data: jumpData }, { data: subData }, { data: tagData }] = await Promise.all([
       supabase.from('users').select('display_layout_jump_list').eq('id', user.id).single(),
       supabase
         .from('jumps')
-        .select('*, dropzones(name, region, latitude, longitude), signatures(id, signed_at)')
+        .select('*, dropzones(name, region, latitude, longitude), signatures(id, signed_at), jump_tags(tags(id, name, color))')
         .eq('user_id', user.id)
         .is('deleted_at', null)
         .order('date', { ascending: false })
@@ -104,7 +105,13 @@ export default function LogScreen() {
         .order('started_at', { ascending: false })
         .limit(1)
         .maybeSingle(),
+      supabase
+        .from('tags')
+        .select('id, name, color')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: true }),
     ]);
+    setUserTags((tagData as any[]) ?? []);
 
     setUserCreatedAt(user.created_at);
     setTrialEndsAt((user.user_metadata?.trial_ends_at as string) ?? null);
@@ -132,10 +139,15 @@ export default function LogScreen() {
     const queuedJumps = (await getRawQueue()).map(queuedToJumpFull);
     let displayJumps: JumpFull[] = [];
     if (jumpData) {
+      // Flatten nested jump_tags(tags(...)) into a tags array on each jump
+      const mapped = (jumpData as any[]).map(j => ({
+        ...j,
+        tags: (j.jump_tags ?? []).map((jt: any) => jt.tags).filter(Boolean),
+      }));
       // Online: cache the most recent jumps for offline use
-      const toCache = (jumpData as JumpFull[]).slice(0, JUMP_CACHE_LIMIT);
+      const toCache = mapped.slice(0, JUMP_CACHE_LIMIT);
       await AsyncStorage.setItem(JUMP_CACHE_KEY, JSON.stringify(toCache)).catch(() => null);
-      displayJumps = jumpData as JumpFull[];
+      displayJumps = mapped as JumpFull[];
       setIsOfflineCache(false);
     } else {
       // Offline: fall back to cached list
@@ -224,6 +236,7 @@ export default function LogScreen() {
     activeFilter !== 'All' ||
     searchQuery.trim().length > 0 ||
     filter.jumpTypes.length > 0 ||
+    filter.tags.length > 0 ||
     filter.favouritesOnly ||
     filter.signedOnly ||
     filter.sort !== DEFAULT_FILTER.sort,
@@ -237,6 +250,9 @@ export default function LogScreen() {
     }
     if (filter.jumpTypes.length > 0) {
       list = list.filter(j => filter.jumpTypes.includes(j.jump_type ?? ''));
+    }
+    if (filter.tags.length > 0) {
+      list = list.filter(j => j.tags?.some(t => filter.tags.includes(t.id)) ?? false);
     }
     if (filter.favouritesOnly) {
       list = list.filter(j => j.is_favourite);
@@ -428,6 +444,7 @@ export default function LogScreen() {
       totalCount={jumps.length}
       filteredCount={filtered.length}
       allJumps={jumps}
+      userTags={userTags}
     />
   );
 

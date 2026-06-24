@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react';
 import {
   View, Text, TouchableOpacity, Modal, StyleSheet,
-  ScrollView, Animated, Pressable,
+  ScrollView, Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, radii } from '@/constants/tokens';
 import type { ColorSet } from '@/constants/tokens';
 import { useColors } from '@/lib/theme';
-import type { JumpFull } from '@/lib/types';
+import type { JumpFull, TagData } from '@/lib/types';
+import { JUMP_TYPES } from '@/lib/jumpTypes';
+import { CollapsibleChipRow } from '@/components/log/CollapsibleChipRow';
 
 const SORT_OPTIONS = [
   { key: 'date_desc', label: 'Newest first' },
@@ -16,13 +18,12 @@ const SORT_OPTIONS = [
   { key: 'freefall',  label: 'Freefall time' },
 ] as const;
 
-const JUMP_TYPES = ['Belly', 'Tracking', 'Wingsuit', 'Freefly', 'CRW', 'AFF', 'Tandem', 'Coach', 'Demo', 'Night', 'Camera Flying', 'Hop&Pop'];
-
 export type SortKey = typeof SORT_OPTIONS[number]['key'];
 
 export interface FilterState {
   sort: SortKey;
   jumpTypes: string[];
+  tags: string[];
   favouritesOnly: boolean;
   signedOnly: boolean;
 }
@@ -30,6 +31,7 @@ export interface FilterState {
 export const DEFAULT_FILTER: FilterState = {
   sort: 'date_desc',
   jumpTypes: [],
+  tags: [],
   favouritesOnly: false,
   signedOnly: false,
 };
@@ -42,58 +44,78 @@ interface FilterSheetProps {
   totalCount: number;
   filteredCount: number;
   allJumps?: JumpFull[];
+  userTags?: TagData[];
 }
 
-function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+function Chip({ label, active, color, onPress }: { label: string; active: boolean; color?: string; onPress: () => void }) {
   const colors = useColors();
   return (
     <TouchableOpacity
-      style={[{ paddingHorizontal: spacing[3], paddingVertical: spacing[1.5], borderRadius: radii.pill, borderWidth: 1, borderColor: active ? colors.sky : colors.border, backgroundColor: active ? colors.sky : colors.surface2 }]}
+      style={[{
+        paddingHorizontal: spacing[3], paddingVertical: spacing[1.5],
+        borderRadius: radii.pill, borderWidth: 1,
+        borderColor: active ? (color ?? colors.sky) : colors.border,
+        backgroundColor: active ? (color ?? colors.sky) : colors.surface2,
+        flexDirection: 'row', alignItems: 'center', gap: 5,
+      }]}
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <Text style={{ fontFamily: 'InterTight-Medium', fontSize: 13, color: active ? colors.onSky : colors.fg2 }}>{label}</Text>
+      {color && !active && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }} />}
+      <Text style={{ fontFamily: 'InterTight-Medium', fontSize: 13, color: active ? colors.onSky : colors.fg2 }}>
+        {label}
+      </Text>
     </TouchableOpacity>
   );
 }
 
-export function FilterSheet({ visible, onClose, filter, onApply, totalCount, filteredCount, allJumps }: FilterSheetProps) {
+export function FilterSheet({ visible, onClose, filter, onApply, totalCount, filteredCount, allJumps, userTags = [] }: FilterSheetProps) {
   const [local, setLocal] = useState<FilterState>(filter);
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+
+  // Sync local state when filter prop changes (e.g. external reset)
+  const prevVisible = useMemo(() => visible, [visible]);
+  if (visible && !prevVisible) {
+    // Can't call setLocal here; handled via key reset below
+  }
 
   const previewCount = useMemo(() => {
     if (!allJumps) return filteredCount;
     let list = allJumps;
     if (local.jumpTypes.length > 0) {
-      list = list.filter(j => local.jumpTypes.includes((j as any).jump_type ?? ''));
+      list = list.filter(j => local.jumpTypes.includes(j.jump_type ?? ''));
     }
-    if (local.favouritesOnly) {
-      list = list.filter(j => (j as any).is_favourite);
+    if (local.tags.length > 0) {
+      list = list.filter(j => j.tags?.some(t => local.tags.includes(t.id)) ?? false);
     }
-    if (local.signedOnly) {
-      list = list.filter(j => ((j as any).signatures?.length ?? 0) > 0);
-    }
+    if (local.favouritesOnly) list = list.filter(j => j.is_favourite);
+    if (local.signedOnly) list = list.filter(j => (j.signatures?.length ?? 0) > 0);
     return list.length;
   }, [local, allJumps, filteredCount]);
 
   const reset = () => setLocal(DEFAULT_FILTER);
-
-  const toggleType = (t: string) => {
-    setLocal(f => ({
-      ...f,
-      jumpTypes: f.jumpTypes.includes(t) ? f.jumpTypes.filter(x => x !== t) : [...f.jumpTypes, t],
-    }));
-  };
+  const toggleType = (t: string) => setLocal(f => ({
+    ...f,
+    jumpTypes: f.jumpTypes.includes(t) ? f.jumpTypes.filter(x => x !== t) : [...f.jumpTypes, t],
+  }));
+  const toggleTag = (id: string) => setLocal(f => ({
+    ...f,
+    tags: f.tags.includes(id) ? f.tags.filter(x => x !== id) : [...f.tags, id],
+  }));
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+      onShow={() => setLocal(filter)}
+    >
       <Pressable style={styles.overlay} onPress={onClose} />
       <View style={styles.sheet}>
-        {/* Handle */}
         <View style={styles.handle} />
 
-        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Filter &amp; sort</Text>
           <TouchableOpacity onPress={reset} activeOpacity={0.7}>
@@ -102,7 +124,7 @@ export function FilterSheet({ visible, onClose, filter, onApply, totalCount, fil
         </View>
 
         <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* Sort by */}
+          {/* Sort */}
           <Text style={styles.sectionLabel}>SORT BY</Text>
           <View style={styles.chipRow}>
             {SORT_OPTIONS.map(o => (
@@ -110,15 +132,32 @@ export function FilterSheet({ visible, onClose, filter, onApply, totalCount, fil
             ))}
           </View>
 
-          {/* Jump type */}
+          {/* Jump type — collapsible */}
           <Text style={styles.sectionLabel}>JUMP TYPE</Text>
-          <View style={styles.chipRow}>
-            {JUMP_TYPES.map(t => (
-              <Chip key={t} label={t} active={local.jumpTypes.includes(t)} onPress={() => toggleType(t)} />
-            ))}
-          </View>
+          <CollapsibleChipRow
+            items={[...JUMP_TYPES]}
+            renderChip={(t) => (
+              <Chip label={t} active={local.jumpTypes.includes(t)} onPress={() => toggleType(t)} />
+            )}
+          />
 
-          {/* Other filters */}
+          {/* Tags — only shown when user has tags */}
+          {userTags.length > 0 && (<>
+            <Text style={styles.sectionLabel}>TAGS</Text>
+            <View style={styles.chipRow}>
+              {userTags.map(tag => (
+                <Chip
+                  key={tag.id}
+                  label={tag.name}
+                  active={local.tags.includes(tag.id)}
+                  color={tag.color}
+                  onPress={() => toggleTag(tag.id)}
+                />
+              ))}
+            </View>
+          </>)}
+
+          {/* Other */}
           <Text style={styles.sectionLabel}>OTHER</Text>
           <View style={styles.toggleRow}>
             <Text style={styles.toggleLabel}>Favourites only</Text>
@@ -142,7 +181,6 @@ export function FilterSheet({ visible, onClose, filter, onApply, totalCount, fil
           </View>
         </ScrollView>
 
-        {/* Apply button */}
         <View style={styles.footer}>
           <TouchableOpacity
             style={styles.applyBtn}
@@ -160,28 +198,24 @@ export function FilterSheet({ visible, onClose, filter, onApply, totalCount, fil
 
 function makeStyles(colors: ColorSet) {
   return StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' },
-  sheet: { backgroundColor: colors.surface, borderTopLeftRadius: radii.xl, borderTopRightRadius: radii.xl, paddingBottom: 40, maxHeight: '80%' },
-  handle: { width: 38, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginTop: spacing[2.5], marginBottom: spacing[2] },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing[5], paddingVertical: spacing[3], borderBottomWidth: 1, borderBottomColor: colors.border },
-  title: { fontFamily: 'InterTight-SemiBold', fontSize: 17, color: colors.fg },
-  reset: { fontFamily: 'InterTight-Medium', fontSize: 14, color: colors.sky },
-  scroll: { flexShrink: 1 },
-  scrollContent: { padding: spacing[5], paddingBottom: spacing[2] },
-  sectionLabel: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: colors.fg3, marginBottom: spacing[2], marginTop: spacing[4] },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] },
-  chip: { paddingHorizontal: spacing[3], paddingVertical: spacing[1.5], borderRadius: radii.pill, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border },
-  chipActive: { backgroundColor: colors.sky, borderColor: colors.sky },
-  chipText: { fontFamily: 'InterTight-Medium', fontSize: 13, color: colors.fg2 },
-  chipTextActive: { color: colors.onSky },
-  toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing[3.5] },
-  toggleLabel: { fontFamily: 'InterTight-Regular', fontSize: 15, color: colors.fg },
-  toggle: { width: 46, height: 26, borderRadius: 13, backgroundColor: colors.surface2, justifyContent: 'center', paddingHorizontal: 2 },
-  toggleOn: { backgroundColor: colors.sky },
-  toggleThumb: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.fg3 },
-  toggleThumbOn: { backgroundColor: '#fff', alignSelf: 'flex-end' },
-  footer: { paddingHorizontal: spacing[5], paddingTop: spacing[3] },
-  applyBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing[2], backgroundColor: colors.sky, borderRadius: radii.md, paddingVertical: spacing[4] },
-  applyBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 16, color: colors.onSky },
-});
+    overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' },
+    sheet: { backgroundColor: colors.surface, borderTopLeftRadius: radii.xl, borderTopRightRadius: radii.xl, paddingBottom: 40, maxHeight: '85%' },
+    handle: { width: 38, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginTop: spacing[2.5], marginBottom: spacing[2] },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing[5], paddingVertical: spacing[3], borderBottomWidth: 1, borderBottomColor: colors.border },
+    title: { fontFamily: 'InterTight-SemiBold', fontSize: 17, color: colors.fg },
+    reset: { fontFamily: 'InterTight-Medium', fontSize: 14, color: colors.sky },
+    scroll: { flexShrink: 1 },
+    scrollContent: { padding: spacing[5], paddingBottom: spacing[2] },
+    sectionLabel: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: colors.fg3, marginBottom: spacing[2], marginTop: spacing[4] },
+    chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] },
+    toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing[3.5] },
+    toggleLabel: { fontFamily: 'InterTight-Regular', fontSize: 15, color: colors.fg },
+    toggle: { width: 46, height: 26, borderRadius: 13, backgroundColor: colors.surface2, justifyContent: 'center', paddingHorizontal: 2 },
+    toggleOn: { backgroundColor: colors.sky },
+    toggleThumb: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.fg3 },
+    toggleThumbOn: { backgroundColor: '#fff', alignSelf: 'flex-end' },
+    footer: { paddingHorizontal: spacing[5], paddingTop: spacing[3] },
+    applyBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing[2], backgroundColor: colors.sky, borderRadius: radii.md, paddingVertical: spacing[4] },
+    applyBtnText: { fontFamily: 'InterTight-SemiBold', fontSize: 16, color: colors.onSky },
+  });
 }

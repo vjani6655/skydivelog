@@ -18,9 +18,9 @@ import { spacing, radii, shadows } from '@/constants/tokens';
 import type { ColorSet } from '@/constants/tokens';
 import { useColors } from '@/lib/theme';
 import Toggle from '@/components/ui/Toggle';
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-const JUMP_TYPES = ['Belly', 'Tracking', 'Wingsuit', 'Freefly', 'CRW', 'AFF', 'Tandem', 'Coach', 'Demo', 'Night', 'Camera Flying', 'Hop&Pop'];
+import { JUMP_TYPES } from '@/lib/jumpTypes';
+import { CollapsibleChipRow } from '@/components/log/CollapsibleChipRow';
+import type { TagData } from '@/lib/types';
 
 // Maps free-text student stage input (e.g. "AFF 1", "IAD Stage 3") to a valid DB enum value
 function sanitizeJumpType(text: string): string | null {
@@ -417,6 +417,8 @@ export default function NewJumpScreen() {
   const [isFav, setIsFav] = useState(false);
   const [aadFired, setAadFired] = useState(false);
   const [reserveDeployed, setReserveDeployed] = useState(false);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [userTags, setUserTags] = useState<TagData[]>([]);
   const [plannedObjectives, setPlannedObjectives] = useState('');
   const [plannedManoeuvres, setPlannedManoeuvres] = useState('');
   const [notes, setNotes] = useState('');
@@ -527,6 +529,13 @@ export default function NewJumpScreen() {
           .eq('type', 'canopy')
           .order('make_model');
         setUserCanopies(canopies ?? []);
+        // Load user's tags for step 3
+        const { data: tags } = await supabase
+          .from('tags')
+          .select('id, name, color')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: true });
+        setUserTags((tags as TagData[]) ?? []);
         const { data: lastJump } = await supabase
           .from('jumps')
           .select('jump_number, aircraft_type, aircraft_rego, dropzones(name)')
@@ -710,6 +719,12 @@ export default function NewJumpScreen() {
           outcome: jumperType === 'Student' ? outcome : null,
           notes: signerNotes.trim() || null,
         }).then(null, () => null);
+      }
+
+      if (selectedTagIds.length > 0) {
+        await supabase.from('jump_tags')
+          .insert(selectedTagIds.map(tag_id => ({ jump_id: jumpId, tag_id })))
+          .then(null, () => null);
       }
 
       const { count } = await supabase.from('jumps').select('id', { count: 'exact' }).eq('user_id', user.id).is('deleted_at', null);
@@ -1054,8 +1069,14 @@ export default function NewJumpScreen() {
               </>
             ) : (
               <>
-                <View style={[styles.chipRow, errors.jumpType ? { borderWidth: 1, borderColor: colors.danger, borderRadius: 8, padding: 6 } : null]}>
-                  {JUMP_TYPES.map(t => <TypeChip key={t} label={t} active={jumpType === t} onPress={() => { setJumpType(jumpType === t ? '' : t); setErrors(e => ({ ...e, jumpType: '' })); }} />)}
+                <View style={errors.jumpType ? { borderWidth: 1, borderColor: colors.danger, borderRadius: 8, padding: 6 } : null}>
+                  <CollapsibleChipRow
+                    items={[...JUMP_TYPES]}
+                    gap={8}
+                    renderChip={(t) => (
+                      <TypeChip label={t} active={jumpType === t} onPress={() => { setJumpType(jumpType === t ? '' : t); setErrors(e => ({ ...e, jumpType: '' })); }} />
+                    )}
+                  />
                 </View>
                 {errors.jumpType && <Text style={styles.fieldError}>{errors.jumpType}</Text>}
               </>
@@ -1118,6 +1139,25 @@ export default function NewJumpScreen() {
             {errors.notes && <Text style={styles.fieldError}>{errors.notes}</Text>}
             <Label text="PEOPLE ON JUMP (optional)" />
             <TextInput style={styles.input} value={peopleOnJump} onChangeText={setPeopleOnJump} keyboardType="numeric" placeholder="e.g. 4" placeholderTextColor={colors.fg3} />
+            {userTags.length > 0 && (<>
+              <Label text="TAGS (optional)" />
+              <View style={styles.chipRow}>
+                {userTags.map(tag => {
+                  const active = selectedTagIds.includes(tag.id);
+                  return (
+                    <TouchableOpacity
+                      key={tag.id}
+                      style={[styles.chip, { borderColor: tag.color, backgroundColor: active ? tag.color : colors.surface2, flexDirection: 'row', alignItems: 'center', gap: 5 }]}
+                      onPress={() => setSelectedTagIds(prev => active ? prev.filter(id => id !== tag.id) : [...prev, tag.id])}
+                      activeOpacity={0.7}
+                    >
+                      {!active && <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: tag.color }} />}
+                      <Text style={[styles.chipText, { color: active ? colors.onSky : colors.fg2 }]}>{tag.name}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </>)}
           </>)}
 
           {/* ─── Step 4: Sign-off ────────────────────────────────────────── */}
