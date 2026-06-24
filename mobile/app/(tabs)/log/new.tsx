@@ -1150,7 +1150,7 @@ export default function NewJumpScreen() {
                   return (
                     <TouchableOpacity
                       key={tag.id}
-                      style={[styles.chip, { borderColor: tag.color, backgroundColor: active ? tag.color : colors.surface2, flexDirection: 'row', alignItems: 'center', gap: 5 }]}
+                      style={[styles.chip, { borderColor: active ? tag.color : colors.border, backgroundColor: active ? tag.color : colors.surface2, flexDirection: 'row', alignItems: 'center', gap: 5 }]}
                       onPress={() => setSelectedTagIds(prev => active ? prev.filter(id => id !== tag.id) : [...prev, tag.id])}
                       activeOpacity={0.7}
                     >
