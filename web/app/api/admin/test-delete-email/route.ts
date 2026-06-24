@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
 
     await sendEmailViaZoho({
       to:      target.email!,
+      bcc:     'deleteaccount@jumplogs.com',
       subject: '[TEST] Your Jump Logs export — account deleted',
       html: `<!DOCTYPE html>
 <html lang="en">
