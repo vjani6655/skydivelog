@@ -75,7 +75,8 @@ export default function EditJumpScreen() {
   const [landingAccuracyUnit, setLandingAccuracyUnit] = useState('M');
   const [canopyType, setCanopyType] = useState('');
   const [canopyGearId, setCanopyGearId] = useState<string | null>(null);
-  const [userCanopies, setUserCanopies] = useState<Array<{ id: string; make_model: string }>>([]);
+  const [reserveGearId, setReserveGearId] = useState<string | null>(null);
+  const [userCanopies, setUserCanopies] = useState<Array<{ id: string; make_model: string; canopy_sub_type: string | null; linked_main_gear_id: string | null }>>([]);
   const [peopleOnJump, setPeopleOnJump] = useState('');
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [userTags, setUserTags] = useState<TagData[]>([]);
@@ -107,13 +108,14 @@ export default function EditJumpScreen() {
         setLandingAccuracyUnit(j.landing_accuracy_unit ?? 'M');
         setCanopyType((j as any).canopy_type ?? '');
         setCanopyGearId((j as any).canopy_gear_id ?? null);
+        setReserveGearId((j as any).reserve_gear_id ?? null);
         setPeopleOnJump(String((j as any).people_on_jump ?? ''));
       }
       // Load user canopies + tags in parallel
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         const [{ data: canopies }, { data: tags }, { data: jumpTagRows }] = await Promise.all([
-          supabase.from('gear').select('id, make_model').eq('user_id', session.user.id).eq('type', 'canopy').order('make_model'),
+          supabase.from('gear').select('id, make_model, canopy_sub_type, linked_main_gear_id').eq('user_id', session.user.id).eq('type', 'canopy').order('make_model'),
           supabase.from('tags').select('id, name, color').eq('user_id', session.user.id).order('created_at', { ascending: true }),
           supabase.from('jump_tags').select('tag_id').eq('jump_id', id),
         ]);
@@ -163,6 +165,7 @@ export default function EditJumpScreen() {
           landing_accuracy_unit: landingAccuracyValue.trim() ? landingAccuracyUnit : null,
           canopy_type: canopyType.trim() || null,
           canopy_gear_id: canopyGearId || null,
+          reserve_gear_id: reserveGearId || null,
           people_on_jump: parseInt(peopleOnJump, 10) || null,
         }).eq('id', id);
         if (error) { Alert.alert('Error', error.message); return; }
@@ -336,15 +339,23 @@ export default function EditJumpScreen() {
           />
 
           <Label text="CANOPY TYPE" />
-          {jump?.jumper_type !== 'student' && userCanopies.length > 0 && (
+          {jump?.jumper_type !== 'student' && userCanopies.filter(c => c.canopy_sub_type !== 'reserve').length > 0 && (
             <View style={styles.chipRow}>
-              {userCanopies.map(c => (
+              {userCanopies.filter(c => c.canopy_sub_type !== 'reserve').map(c => (
                 <TouchableOpacity
                   key={c.id}
                   style={[styles.chip, canopyGearId === c.id && styles.chipActive]}
                   onPress={() => {
-                    if (canopyGearId === c.id) { setCanopyGearId(null); setCanopyType(''); }
-                    else { setCanopyGearId(c.id); setCanopyType(c.make_model); }
+                    if (canopyGearId === c.id) {
+                      setCanopyGearId(null);
+                      setCanopyType('');
+                      setReserveGearId(null);
+                    } else {
+                      setCanopyGearId(c.id);
+                      setCanopyType(c.make_model);
+                      const linked = userCanopies.find(r => r.canopy_sub_type === 'reserve' && r.linked_main_gear_id === c.id);
+                      setReserveGearId(linked?.id ?? null);
+                    }
                   }}
                   activeOpacity={0.7}
                 >

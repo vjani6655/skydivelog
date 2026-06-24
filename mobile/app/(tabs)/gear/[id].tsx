@@ -42,6 +42,8 @@ export default function GearDetailScreen() {
   const [gear, setGear] = useState<Gear | null>(null);
   const [loading, setLoading] = useState(true);
   const [jumpCount, setJumpCount] = useState<number | null>(null);
+  const [reserveRigJumpCount, setReserveRigJumpCount] = useState<number | null>(null);
+  const [reserveDeployments, setReserveDeployments] = useState<{ jump_number: number }[]>([]);
   const [log, setLog] = useState<EditLogEntry[]>([]);
   const [photoSignedUrl, setPhotoSignedUrl] = useState<string | null>(null);
 
@@ -51,9 +53,19 @@ export default function GearDetailScreen() {
       supabase.from('jumps').select('id', { count: 'exact', head: true }).eq('canopy_gear_id', id).is('deleted_at', null),
       supabase.from('edit_log').select('*').eq('item_id', id).eq('item_type', 'gear').order('changed_at', { ascending: false }),
     ]);
-    setGear(gearData as Gear | null);
+    const g = gearData as Gear | null;
+    setGear(g);
     setJumpCount(count ?? 0);
     setLog((logData ?? []) as EditLogEntry[]);
+    // Reserve-specific: jumps in rig + deployment history
+    if (g?.type === 'canopy' && g?.canopy_sub_type === 'reserve') {
+      const [{ count: rigCount }, { data: deployData }] = await Promise.all([
+        supabase.from('jumps').select('id', { count: 'exact', head: true }).eq('reserve_gear_id', id).is('deleted_at', null),
+        supabase.from('jumps').select('jump_number').eq('reserve_gear_id', id).eq('reserve_deployed', true).is('deleted_at', null).order('jump_number', { ascending: false }),
+      ]);
+      setReserveRigJumpCount(rigCount ?? 0);
+      setReserveDeployments((deployData ?? []) as { jump_number: number }[]);
+    }
     // Generate signed URL for photo (works whether bucket is public or private)
     const photoUrl = (gearData as Gear | null)?.photo_url ?? null;
     if (photoUrl) {
@@ -96,7 +108,9 @@ export default function GearDetailScreen() {
     ...(isReserve ? [['Last repacked on', fmtDate(gear.last_repack_date)] as [string, string]] : []),
     ...(isReserve ? [['Next repack date', fmtDate(gear.next_repack_date)] as [string, string]] : []),
     ...(gear.type === 'aad' ? [['Next service date', fmtDate(gear.next_service_date)] as [string, string]] : []),
-    ...(gear.type === 'canopy' && jumpCount !== null ? [['Jumps logged', String(jumpCount)] as [string, string]] : []),
+    ...(!isReserve && gear.type === 'canopy' && jumpCount !== null ? [['Jumps logged', String(jumpCount)] as [string, string]] : []),
+    ...(isReserve && reserveRigJumpCount !== null ? [['Jumps in rig', String(reserveRigJumpCount)] as [string, string]] : []),
+    ...(isReserve ? [['Reserve deployments', String(reserveDeployments.length)] as [string, string]] : []),
   ];
 
   return (
@@ -150,6 +164,24 @@ export default function GearDetailScreen() {
             </View>
           ))}
         </View>
+
+        {/* Reserve deployment history */}
+        {isReserve && reserveDeployments.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Reserve deployment history</Text>
+            <View style={styles.card}>
+              {reserveDeployments.map((d, i) => (
+                <View key={d.jump_number} style={[styles.specRow, i < reserveDeployments.length - 1 && styles.specRowBorder]}>
+                  <Text style={styles.specLabel}>Jump #{d.jump_number}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Ionicons name="shield-checkmark-outline" size={13} color={colors.warn} />
+                    <Text style={[styles.specValue, { color: colors.warn }]}>Reserve deployed</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
 
         <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete} activeOpacity={0.7}>
           <Text style={styles.deleteBtnText}>Delete gear item</Text>

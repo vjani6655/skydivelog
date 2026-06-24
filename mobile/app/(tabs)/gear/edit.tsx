@@ -117,6 +117,8 @@ export default function EditGearScreen() {
   const [lastRepackDate, setLastRepackDate] = useState<Date | null>(null);
   const [nextRepackDate, setNextRepackDate] = useState<Date | null>(null);
   const [nextServiceDate, setNextServiceDate] = useState<Date | null>(null);
+  const [linkedMainGearId, setLinkedMainGearId] = useState<string | null>(null);
+  const [mainCanopies, setMainCanopies] = useState<Array<{ id: string; make_model: string }>>([]);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [photoName, setPhotoName] = useState<string | null>(null);
   const [photoSignedUrl, setPhotoSignedUrl] = useState<string | null>(null);
@@ -137,6 +139,20 @@ export default function EditGearScreen() {
       setLastRepackDate(isoToDate(g.last_repack_date));
       setNextRepackDate(isoToDate(g.next_repack_date));
       setNextServiceDate(isoToDate(g.next_service_date));
+      setLinkedMainGearId(g.linked_main_gear_id ?? null);
+      // Load main canopies if this is a reserve
+      if (g.type === 'canopy' && g.canopy_sub_type === 'reserve') {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (!session?.user) return;
+          supabase.from('gear')
+            .select('id, make_model')
+            .eq('user_id', session.user.id)
+            .eq('type', 'canopy')
+            .eq('canopy_sub_type', 'main')
+            .order('make_model')
+            .then(({ data: mains }) => setMainCanopies(mains ?? []));
+        });
+      }
       // photo: show existing URL as initial preview if it's a local-compatible uri, else keep as-is
       setPhotoUri(g.photo_url ?? null);
       setPhotoName(g.photo_url ? 'Current photo' : null);
@@ -254,6 +270,7 @@ export default function EditGearScreen() {
         { key: 'last_repack_date', label: 'Last repacked on', newVal: newLastRepack },
         { key: 'next_repack_date', label: 'Next repack date', newVal: newNextRepack },
         { key: 'next_service_date', label: 'Next service date', newVal: newNextService },
+        { key: 'linked_main_gear_id', label: 'Linked main canopy', newVal: isReserve ? (linkedMainGearId ?? null) : null },
       ]);
       // Handle photo change separately — never expose raw URLs in the log
       const hadPhoto = !!orig.photo_url;
@@ -272,6 +289,7 @@ export default function EditGearScreen() {
         last_repack_date: newLastRepack,
         next_repack_date: newNextRepack,
         next_service_date: newNextService,
+        linked_main_gear_id: isReserve ? (linkedMainGearId ?? null) : null,
         photo_url: photoUrl,
       }).eq('id', id);
       if (error) { Alert.alert('Error saving', error.message); return; }
@@ -394,6 +412,28 @@ export default function EditGearScreen() {
             </>
           )}
 
+          {/* Link reserve to a main canopy */}
+          {isReserve && mainCanopies.length > 0 && (
+            <View style={styles.fieldGroup}>
+              <Label text="LINKED MAIN CANOPY (OPTIONAL)" />
+              <Text style={{ fontFamily: 'InterTight-Regular', fontSize: 12, color: colors.fg3, marginBottom: spacing[2] }}>
+                Jumps on the linked main will count towards this reserve&apos;s jump total.
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] }}>
+                {mainCanopies.map(c => (
+                  <TouchableOpacity
+                    key={c.id}
+                    style={[styles.subTypeCard, { paddingHorizontal: spacing[3] }, linkedMainGearId === c.id && styles.subTypeCardActive]}
+                    onPress={() => setLinkedMainGearId(linkedMainGearId === c.id ? null : c.id)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.subTypeLabel, linkedMainGearId === c.id && styles.subTypeLabelActive]} numberOfLines={1}>{c.make_model}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
+
           {/* Next service date — AAD only */}
           {isAad && (
             <DateField
@@ -459,6 +499,10 @@ function makeStyles(c: ColorSet) {
     dateModalTitle: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: c.fg },
     dateModalCancelText: { fontFamily: 'InterTight-Regular', fontSize: 16, color: c.fg2 },
     dateModalDoneText: { fontFamily: 'InterTight-SemiBold', fontSize: 16, color: c.sky, textAlign: 'right' },
+    subTypeCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, paddingVertical: spacing[2.5], paddingHorizontal: spacing[3] },
+    subTypeCardActive: { borderColor: c.sky, backgroundColor: 'rgba(74,158,255,0.08)' },
+    subTypeLabel: { fontFamily: 'InterTight-Medium', fontSize: 14, color: c.fg2 },
+    subTypeLabelActive: { color: c.sky },
     uploadRow: { flexDirection: 'row', alignItems: 'center', gap: spacing[3], backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, padding: spacing[3] },
     photoThumb: { width: 52, height: 52, borderRadius: radii.sm },
     uploadPlaceholder: { width: 52, height: 52, borderRadius: radii.sm, backgroundColor: c.surface2, justifyContent: 'center', alignItems: 'center' },

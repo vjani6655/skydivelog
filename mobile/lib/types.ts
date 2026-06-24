@@ -16,6 +16,7 @@ export interface JumpFull {
   jump_stage: string | null  // free-text student stage (e.g. "AFF 1", "IAD Stage 3")
   canopy_type: string | null
   canopy_gear_id: string | null
+  reserve_gear_id: string | null
   jumper_type: string | null   // 'licensed' | 'student'
   is_favourite: boolean
   is_draft: boolean
@@ -97,6 +98,7 @@ export interface Gear {
   next_service_date: string | null
   repack_reminder_enabled: boolean
   photo_url: string | null
+  linked_main_gear_id: string | null
   created_at: string
 }
 

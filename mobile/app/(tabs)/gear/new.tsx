@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet,  KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Modal, Image } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -104,6 +104,8 @@ export default function NewGearScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [gearType, setGearType] = useState<'rig' | 'canopy' | 'aad'>('rig');
   const [canopySubType, setCanopySubType] = useState<'main' | 'reserve'>('main');
+  const [linkedMainGearId, setLinkedMainGearId] = useState<string | null>(null);
+  const [mainCanopies, setMainCanopies] = useState<Array<{ id: string; make_model: string }>>([]);
   const [makeModel, setMakeModel] = useState('');
   const [serialNumber, setSerialNumber] = useState('');
   const [manufacturedDate, setManufacturedDate] = useState<Date | null>(null);
@@ -123,6 +125,19 @@ export default function NewGearScreen() {
     nextServiceDate?: string;
   }>({});
 
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session?.user) return;
+      supabase.from('gear')
+        .select('id, make_model')
+        .eq('user_id', session.user.id)
+        .eq('type', 'canopy')
+        .eq('canopy_sub_type', 'main')
+        .order('make_model')
+        .then(({ data }) => setMainCanopies(data ?? []));
+    });
+  }, []);
+
   const clearForm = () => {
     setMakeModel('');
     setSerialNumber('');
@@ -132,6 +147,7 @@ export default function NewGearScreen() {
     setNextServiceDate(null);
     setPhotoUri(null);
     setPhotoName(null);
+    setLinkedMainGearId(null);
     setErrors({});
   };
 
@@ -238,6 +254,7 @@ export default function NewGearScreen() {
           : null,
         repack_reminder_enabled: gearType === 'canopy' && canopySubType === 'reserve',
         next_service_date: gearType === 'aad' && nextServiceDate ? nextServiceDate.toISOString().slice(0, 10) : null,
+        linked_main_gear_id: (gearType === 'canopy' && canopySubType === 'reserve') ? linkedMainGearId : null,
         photo_url: photoUrl,
       });
       if (error) { Alert.alert('Error saving gear', error.message); return; }
@@ -390,6 +407,28 @@ export default function NewGearScreen() {
                 })()}
               />
             </>
+          )}
+
+          {/* Link reserve to a main canopy */}
+          {gearType === 'canopy' && canopySubType === 'reserve' && mainCanopies.length > 0 && (
+            <View style={styles.fieldGroup}>
+              <Label text="LINKED MAIN CANOPY (OPTIONAL)" />
+              <Text style={{ fontFamily: 'InterTight-Regular', fontSize: 12, color: colors.fg3, marginBottom: spacing[2] }}>
+                Select the main canopy this reserve is currently packed under. Jumps on that main will count towards this reserve&apos;s jump total.
+              </Text>
+              <View style={styles.typeRow}>
+                {mainCanopies.map(c => (
+                  <TouchableOpacity
+                    key={c.id}
+                    style={[styles.subTypeCard, linkedMainGearId === c.id && styles.subTypeCardActive]}
+                    onPress={() => setLinkedMainGearId(linkedMainGearId === c.id ? null : c.id)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.subTypeLabel, linkedMainGearId === c.id && styles.subTypeLabelActive]} numberOfLines={1}>{c.make_model}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
           )}
 
           {/* Next service date — AAD only */}

@@ -406,7 +406,8 @@ export default function NewJumpScreen() {
   const [landingAccuracyUnit, setLandingAccuracyUnit] = useState('M');
   const [canopyType, setCanopyType] = useState('');
   const [canopyGearId, setCanopyGearId] = useState<string | null>(null);
-  const [userCanopies, setUserCanopies] = useState<Array<{ id: string; make_model: string }>>([]);
+  const [reserveGearId, setReserveGearId] = useState<string | null>(null);
+  const [userCanopies, setUserCanopies] = useState<Array<{ id: string; make_model: string; canopy_sub_type: string | null; linked_main_gear_id: string | null }>>([]);
 
   // Validation errors
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -522,7 +523,7 @@ export default function NewJumpScreen() {
         // Load user's canopies for the canopy type selector
         const { data: canopies } = await supabase
           .from('gear')
-          .select('id, make_model')
+          .select('id, make_model, canopy_sub_type, linked_main_gear_id')
           .eq('user_id', user.id)
           .eq('type', 'canopy')
           .order('make_model');
@@ -598,6 +599,7 @@ export default function NewJumpScreen() {
         setJumpType(jt.toLowerCase() === 'student' ? (data.jump_stage ?? data.jump_type ?? '') : (data.jump_type ?? ''));
         setCanopyType((data as any).canopy_type ?? '');
         setCanopyGearId((data as any).canopy_gear_id ?? null);
+        setReserveGearId((data as any).reserve_gear_id ?? null);
         setIsFav(data.is_favourite ?? false);
         setAadFired((data as any).aad_fired ?? false);
         setReserveDeployed((data as any).reserve_deployed ?? false);
@@ -654,6 +656,7 @@ export default function NewJumpScreen() {
         jumper_type: jumperType.toLowerCase(),
         canopy_type: canopyType.trim() || null,
         canopy_gear_id: canopyGearId || null,
+        reserve_gear_id: reserveGearId || null,
         is_favourite: isFav,
         aad_fired: aadFired,
         reserve_deployed: reserveDeployed,
@@ -782,6 +785,7 @@ export default function NewJumpScreen() {
         jumper_type: jumperType.toLowerCase(),
         canopy_type: canopyType.trim() || null,
         canopy_gear_id: canopyGearId || null,
+        reserve_gear_id: reserveGearId || null,
         is_favourite: isFav,
         aad_fired: aadFired,
         reserve_deployed: reserveDeployed,
@@ -844,6 +848,7 @@ export default function NewJumpScreen() {
         jumper_type: jumperType.toLowerCase(),
         canopy_type: canopyType.trim() || null,
         canopy_gear_id: canopyGearId || null,
+        reserve_gear_id: reserveGearId || null,
         is_favourite: isFav,
         aad_fired: aadFired,
         reserve_deployed: reserveDeployed,
@@ -1016,9 +1021,9 @@ export default function NewJumpScreen() {
             <Label text="PULL ALTITUDE (FT) — optional" />
             <TextInput style={styles.input} value={pullAlt} onChangeText={setPullAlt} keyboardType="numeric" placeholder="3500" placeholderTextColor={colors.fg3} />
             <Label text="CANOPY TYPE" />
-            {jumperType === 'Licensed' && userCanopies.length > 0 && (
+            {jumperType === 'Licensed' && userCanopies.filter(c => c.canopy_sub_type !== 'reserve').length > 0 && (
               <View style={styles.chipRow}>
-                {userCanopies.map(c => (
+                {userCanopies.filter(c => c.canopy_sub_type !== 'reserve').map(c => (
                   <TypeChip
                     key={c.id}
                     label={c.make_model}
@@ -1027,9 +1032,12 @@ export default function NewJumpScreen() {
                       if (canopyGearId === c.id) {
                         setCanopyGearId(null);
                         setCanopyType('');
+                        setReserveGearId(null);
                       } else {
                         setCanopyGearId(c.id);
                         setCanopyType(c.make_model);
+                        const linked = userCanopies.find(r => r.canopy_sub_type === 'reserve' && r.linked_main_gear_id === c.id);
+                        setReserveGearId(linked?.id ?? null);
                       }
                       setErrors(e => ({ ...e, canopyType: '' }));
                     }}
