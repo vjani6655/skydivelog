@@ -295,19 +295,24 @@ export default function SettingsScreen() {
     setDeleting(true);
     setDeleteError('');
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user?.email) { setDeleteError('Not signed in.'); setDeleting(false); return; }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { setDeleteError('Not signed in.'); setDeleting(false); return; }
 
-      // Verify password by re-authenticating
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: user.email,
-        password: deletePassword,
+      const res = await fetch(`${WEB_URL}/api/account/delete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ password: deletePassword }),
       });
-      if (signInError) { setDeleteError('Incorrect password.'); setDeleting(false); return; }
 
-      // Delete account via security-definer RPC (no admin key needed on client)
-      const { error: rpcError } = await supabase.rpc('delete_own_account');
-      if (rpcError) { setDeleteError(rpcError.message ?? 'Could not delete account. Try again.'); setDeleting(false); return; }
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setDeleteError(json.error ?? 'Could not delete account. Try again.');
+        setDeleting(false);
+        return;
+      }
 
       await supabase.auth.signOut();
       router.replace('/welcome');
@@ -508,7 +513,17 @@ export default function SettingsScreen() {
         <SectionTitle text="DANGER ZONE" />
         <TouchableOpacity
           style={styles.deleteBtn}
-          onPress={() => { setDeletePassword(''); setDeleteError(''); setDeleteModal(true); }}
+          onPress={() => {
+            Alert.alert(
+              'Export your jumps first',
+              'When you delete your account, all your jump data is permanently wiped and cannot be recovered.\n\nWe strongly recommend exporting your logbook before you continue.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Export My Jumps', onPress: () => router.push('/(tabs)/profile/export' as any) },
+                { text: 'Delete Anyway', style: 'destructive', onPress: () => { setDeletePassword(''); setDeleteError(''); setDeleteModal(true); } },
+              ]
+            );
+          }}
           activeOpacity={0.8}
         >
           <Ionicons name="trash-outline" size={16} color={colors.danger} style={{ marginRight: spacing[2] }} />
@@ -610,10 +625,16 @@ export default function SettingsScreen() {
                   disabled={!deletePassword.trim() || deleting}
                   activeOpacity={0.8}
                 >
-                  {deleting
-                    ? <ActivityIndicator color="white" />
-                    : <Text style={styles.confirmBtnText}>Delete My Account</Text>
-                  }
+                  {deleting ? (
+                  <View style={{ alignItems: 'center', gap: spacing[2] }}>
+                    <ActivityIndicator color="white" />
+                    <Text style={[styles.confirmBtnText, { fontSize: 12, opacity: 0.85 }]}>
+                      Preparing your export…
+                    </Text>
+                  </View>
+                ) : (
+                  <Text style={styles.confirmBtnText}>Delete My Account</Text>
+                )}
                 </TouchableOpacity>
               </ScrollView>
             </View>

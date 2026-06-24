@@ -1,8 +1,51 @@
-// Simple email sender using Resend's REST API — no SDK needed.
-// Requires RESEND_API_KEY in .env.local
-// Set ADMIN_NOTIFY_EMAIL    — where admin notification emails land
-// Set INBOUND_EMAIL_DOMAIN  — subdomain configured for Resend inbound (e.g. reply.jumplogs.com)
-//                            Resend POSTs to /api/webhooks/email-inbound when mail arrives.
+// Email sending: Resend (existing) + Zoho SMTP via nodemailer (new).
+// Resend handles transactional/support emails; Zoho handles account-deletion exports.
+// Requires RESEND_API_KEY, ZOHO_SMTP_USER, ZOHO_SMTP_PASSWORD in .env.local
+
+import nodemailer from 'nodemailer'
+
+const zohoTransporter = nodemailer.createTransport({
+  host: 'smtp.zoho.com',
+  port: 465,
+  secure: true,
+  auth: {
+    user: process.env.ZOHO_SMTP_USER,
+    pass: process.env.ZOHO_SMTP_PASSWORD,
+  },
+})
+
+export interface ZohoAttachment {
+  filename: string
+  content:  Buffer
+  contentType: string
+}
+
+export async function sendEmailViaZoho({
+  to,
+  subject,
+  html,
+  bcc,
+  attachments,
+}: {
+  to:           string
+  subject:      string
+  html:         string
+  bcc?:         string
+  attachments?: ZohoAttachment[]
+}): Promise<void> {
+  if (!process.env.ZOHO_SMTP_USER || !process.env.ZOHO_SMTP_PASSWORD) {
+    console.warn('[email-zoho] ZOHO_SMTP_USER/PASSWORD not set — skipping')
+    return
+  }
+  await zohoTransporter.sendMail({
+    from:        'JumpLogs No-Reply <noreply@jumplogs.com>',
+    to,
+    bcc,
+    subject,
+    html,
+    attachments,
+  })
+}
 
 function escapeHtml(str: string): string {
   return str
