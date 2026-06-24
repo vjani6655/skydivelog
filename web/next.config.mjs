@@ -20,6 +20,14 @@ const nextConfig = {
         './node_modules/@expo-google-fonts/inter-tight/**/*.ttf',
         './node_modules/@expo-google-fonts/jetbrains-mono/**/*.ttf',
       ],
+      '/api/account/delete': [
+        './node_modules/@expo-google-fonts/inter-tight/**/*.ttf',
+        './node_modules/@expo-google-fonts/jetbrains-mono/**/*.ttf',
+      ],
+      '/api/admin/test-delete-email': [
+        './node_modules/@expo-google-fonts/inter-tight/**/*.ttf',
+        './node_modules/@expo-google-fonts/jetbrains-mono/**/*.ttf',
+      ],
     },
   },
 };
