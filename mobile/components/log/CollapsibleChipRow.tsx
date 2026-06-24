@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, Fragment } from 'react';
-import { View, Text, TouchableOpacity, LayoutChangeEvent } from 'react-native';
+import { View, Text, TouchableOpacity, LayoutChangeEvent, ViewStyle } from 'react-native';
 import { spacing, radii } from '@/constants/tokens';
 import { useColors } from '@/lib/theme';
 
@@ -7,13 +7,14 @@ interface Props {
   items: string[];
   renderChip: (item: string, index: number) => React.ReactNode;
   gap?: number;
+  style?: ViewStyle;
 }
 
 /**
  * Renders chips in a wrapping row and collapses to 2 rows with a "+N more" toggle.
  * Uses onLayout measurement to calculate the exact cutoff — works with variable chip widths.
  */
-export function CollapsibleChipRow({ items, renderChip, gap = 8 }: Props) {
+export function CollapsibleChipRow({ items, renderChip, gap = 8, style }: Props) {
   const colors = useColors();
   const [showAll, setShowAll] = useState(false);
   const [cutoff, setCutoff] = useState<number | null>(null);
@@ -76,7 +77,7 @@ export function CollapsibleChipRow({ items, renderChip, gap = 8 }: Props) {
   // Measurement phase: render everything (one frame), record y positions
   if (cutoff === null) {
     return (
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap }}>
+      <View style={[{ flexDirection: 'row', flexWrap: 'wrap', gap }, style]}>
         {items.map((item, i) => (
           <View key={i} onLayout={e => onChipLayout(i, e)}>
             {renderChip(item, i)}
@@ -87,7 +88,7 @@ export function CollapsibleChipRow({ items, renderChip, gap = 8 }: Props) {
   }
 
   return (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap }}>
+    <View style={[{ flexDirection: 'row', flexWrap: 'wrap', gap }, style]}>
       {visible.map((item, i) => <Fragment key={i}>{renderChip(item, i)}</Fragment>)}
       {hidden > 0 && moreChip}
     </View>

@@ -1073,6 +1073,7 @@ export default function NewJumpScreen() {
                   <CollapsibleChipRow
                     items={[...JUMP_TYPES]}
                     gap={8}
+                    style={{ marginTop: spacing[1], marginBottom: spacing[5] }}
                     renderChip={(t) => (
                       <TypeChip label={t} active={jumpType === t} onPress={() => { setJumpType(jumpType === t ? '' : t); setErrors(e => ({ ...e, jumpType: '' })); }} />
                     )}

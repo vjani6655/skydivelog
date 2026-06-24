@@ -329,6 +329,7 @@ export default function EditJumpScreen() {
           <CollapsibleChipRow
             items={[...JUMP_TYPES]}
             gap={8}
+            style={{ marginTop: spacing[1], marginBottom: spacing[4] }}
             renderChip={(t) => (
               <TouchableOpacity style={[styles.chip, jumpType === t && styles.chipActive]} onPress={() => setJumpType(jumpType === t ? '' : t)} activeOpacity={0.7}>
                 <Text style={[styles.chipText, jumpType === t && styles.chipTextActive]}>{t}</Text>

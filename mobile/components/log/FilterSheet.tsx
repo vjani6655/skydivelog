@@ -136,6 +136,7 @@ export function FilterSheet({ visible, onClose, filter, onApply, totalCount, fil
           <Text style={styles.sectionLabel}>JUMP TYPE</Text>
           <CollapsibleChipRow
             items={[...JUMP_TYPES]}
+            style={{ marginBottom: spacing[2] }}
             renderChip={(t) => (
               <Chip label={t} active={local.jumpTypes.includes(t)} onPress={() => toggleType(t)} />
             )}
