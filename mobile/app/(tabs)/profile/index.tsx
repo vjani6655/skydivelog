@@ -21,7 +21,7 @@ const MENU_ITEMS = [
   { label: 'Settings', icon: 'settings-outline', route: '/(tabs)/profile/settings' },
   { label: 'Subscription', icon: 'star-outline', route: '/(tabs)/profile/subscription' },
   { label: 'Export logbook', icon: 'download-outline', route: '/(tabs)/profile/export' },
-  { label: 'Manage tags', icon: 'pricetag-outline', route: '/(tabs)/log/tags' },
+  { label: 'Manage tags', icon: 'pricetag-outline', route: '/(tabs)/profile/tags' },
   { label: 'Notifications', icon: 'notifications-outline', route: '/(tabs)/profile/notifications' },
   { label: 'Contact us', icon: 'mail-outline', route: '/(tabs)/profile/contact' },
 ] as const;
