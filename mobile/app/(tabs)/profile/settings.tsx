@@ -1,8 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
-import {
-  View, Text, ScrollView, StyleSheet, SafeAreaView, TouchableOpacity,
-  ActivityIndicator, Alert, TextInput, Modal, KeyboardAvoidingView, Platform, Clipboard,
-} from 'react-native';
+import { View, Text, ScrollView, StyleSheet,  TouchableOpacity,
+  ActivityIndicator, Alert, TextInput, Modal, KeyboardAvoidingView, Platform, Clipboard } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';

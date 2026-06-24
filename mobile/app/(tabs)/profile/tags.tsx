@@ -1,8 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
-import {
-  View, Text, TextInput, TouchableOpacity, FlatList,
-  StyleSheet, SafeAreaView, ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList,
+  StyleSheet,  ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';

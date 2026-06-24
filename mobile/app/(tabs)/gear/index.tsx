@@ -1,8 +1,7 @@
 import { useCallback, useState, useMemo } from 'react';
-import {
-  View, Text, FlatList, StyleSheet, SafeAreaView, ActivityIndicator,
-  TouchableOpacity, RefreshControl, ScrollView,
-} from 'react-native';
+import { View, Text, FlatList, StyleSheet,  ActivityIndicator,
+  TouchableOpacity, RefreshControl, ScrollView } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Svg, Path, Line, Rect } from 'react-native-svg';

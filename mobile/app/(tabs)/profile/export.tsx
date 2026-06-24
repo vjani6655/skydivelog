@@ -1,11 +1,11 @@
 import { useState, useMemo } from 'react';
-import {
-  View, Text, TouchableOpacity, ScrollView, StyleSheet, SafeAreaView,
-  ActivityIndicator, Alert, Share, Linking,
-} from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet,
+  ActivityIndicator, Alert } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 import Constants from 'expo-constants';
 import { supabase } from '@/lib/supabase';
 import { checkAccess } from '@/lib/checkAccess';
@@ -130,7 +130,7 @@ export default function ExportScreen() {
 
       const fileUri = `${FileSystem.cacheDirectory}jumplogs-${Date.now()}.csv`;
       await FileSystem.writeAsStringAsync(fileUri, csv, { encoding: FileSystem.EncodingType.UTF8 });
-      await Share.share({ url: fileUri, title: 'Jump Logs export' });
+      await Sharing.shareAsync(fileUri, { mimeType: 'text/csv', dialogTitle: 'Export Logbook' });
     } catch (err: unknown) {
       Alert.alert('Export failed', err instanceof Error ? err.message : String(err));
     } finally {
@@ -195,8 +195,7 @@ export default function ExportScreen() {
       const fileUri = `${FileSystem.cacheDirectory}jumplogs-export-${Date.now()}.pdf`;
       await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
 
-      // Opens the PDF in iOS Quick Look viewer — tap the share icon there to save/print/AirDrop
-      await Linking.openURL(fileUri);
+      await Sharing.shareAsync(fileUri, { mimeType: 'application/pdf', dialogTitle: 'Export Logbook' });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       const hint = msg.toLowerCase().includes('fetch') || msg.toLowerCase().includes('network')

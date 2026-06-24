@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import {
-  FlatList,
+import { FlatList,
   View,
   Text,
   StyleSheet,
@@ -8,11 +7,10 @@ import {
   Alert,
   RefreshControl,
   ScrollView,
-  TextInput,
-  SafeAreaView,
+  TextInput, 
   TouchableOpacity,
-  Modal,
-} from 'react-native';
+  Modal } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';

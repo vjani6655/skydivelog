@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
-  View, Text, ScrollView, StyleSheet, SafeAreaView,
-  ActivityIndicator, Alert, TouchableOpacity,
-} from 'react-native';
+import { View, Text, ScrollView, StyleSheet, 
+  ActivityIndicator, Alert, TouchableOpacity } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
@@ -96,43 +95,35 @@ export default function SignoffDetailScreen() {
 
       <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
 
-        {/* Role badge + date */}
-        <View style={styles.badgeRow}>
+        {/* Hero: role + date */}
+        <View style={styles.heroRow}>
           <View style={styles.rolePill}>
             <Text style={styles.roleText}>{signoff.signer_role}</Text>
           </View>
           <Text style={styles.dateText}>{fmtDate(signoff.signoff_date)}</Text>
         </View>
 
-        {/* Statement */}
-        <View style={styles.statementCard}>
-          <Text style={styles.statement}>
+        {/* Declaration card */}
+        <View style={styles.declarationCard}>
+          <Text style={styles.declarationProse}>
             {'As of '}
-            <Text style={styles.statementBold}>{signoff.jump_number} jumps</Text>
+            <Text style={styles.proseBold}>{signoff.jump_number} jumps</Text>
             {' on '}
-            <Text style={styles.statementBold}>{fmtDate(signoff.signoff_date)}</Text>
-            {' I '}
-            <Text style={styles.statementBold}>{signoff.signer_name}</Text>
-            {' am signing off '}
-            <Text style={styles.statementBold}>{signoff.user_display_name}</Text>
+            <Text style={styles.proseBold}>{fmtDate(signoff.signoff_date)}</Text>
+            {', '}
+            <Text style={styles.proseBold}>{signoff.signer_name}</Text>
+            {' signed off '}
+            <Text style={styles.proseBold}>{signoff.user_display_name}</Text>
             {' to:'}
           </Text>
-          <View style={styles.descBlock}>
-            <Text style={styles.descText}>{signoff.description}</Text>
+          <View style={styles.descriptionBlock}>
+            <Text style={styles.descriptionText}>{signoff.description}</Text>
           </View>
         </View>
 
-        {/* Comments */}
-        {signoff.comments ? (
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>ADDITIONAL COMMENTS</Text>
-            <Text style={styles.bodyText}>{signoff.comments}</Text>
-          </View>
-        ) : null}
-
         {/* Signature */}
         {signoff.signature_data ? (
-          <View style={styles.sigCard}>
+          <View style={styles.sectionCard}>
             <Text style={styles.sectionLabel}>SIGNATURE</Text>
             <View style={styles.sigCanvas}>
               <Svg viewBox="0 0 320 180" width="100%" height={110} preserveAspectRatio="xMidYMid meet">
@@ -149,8 +140,8 @@ export default function SignoffDetailScreen() {
           </View>
         ) : null}
 
-        {/* Signer details */}
-        <View style={styles.section}>
+        {/* Signed by */}
+        <View style={styles.sectionCard}>
           <Text style={styles.sectionLabel}>SIGNED BY</Text>
           <Text style={styles.signerName}>{signoff.signer_name}</Text>
           <Text style={styles.signerRole}>{signoff.signer_role}</Text>
@@ -159,7 +150,15 @@ export default function SignoffDetailScreen() {
           ) : null}
         </View>
 
-        <Text style={styles.ts}>Recorded {fmtDate(signoff.created_at)}</Text>
+        {/* Comments */}
+        {signoff.comments ? (
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionLabel}>ADDITIONAL COMMENTS</Text>
+            <Text style={styles.bodyText}>{signoff.comments}</Text>
+          </View>
+        ) : null}
+
+        <Text style={styles.timestamp}>Recorded {fmtDate(signoff.created_at)}</Text>
 
         <View style={{ height: spacing[8] }} />
       </ScrollView>
@@ -178,9 +177,14 @@ function makeStyles(c: ColorSet) {
     back: { width: 36, height: 36, justifyContent: 'center' },
     title: { flex: 1, textAlign: 'center', fontFamily: 'InterTight-Bold', fontSize: 22, color: c.fg, letterSpacing: -0.4 },
     deleteBtn: { width: 36, height: 36, justifyContent: 'center', alignItems: 'flex-end' },
-    body: { padding: spacing[5] },
+    body: { padding: spacing[5], gap: spacing[3] },
 
-    badgeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing[3] },
+    // Hero row
+    heroRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
     rolePill: {
       backgroundColor: c.skyBg ?? c.sky + '22',
       borderWidth: 1,
@@ -189,48 +193,48 @@ function makeStyles(c: ColorSet) {
       paddingHorizontal: spacing[3],
       paddingVertical: spacing[1],
     },
-    roleText: { fontFamily: 'JetBrainsMono-SemiBold', fontSize: 11, color: c.sky, letterSpacing: 0.5 },
+    roleText: { fontFamily: 'JetBrainsMono-SemiBold', fontSize: 10, color: c.sky, letterSpacing: 0.5 },
     dateText: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, color: c.fg3 },
 
-    statementCard: {
+    // Declaration card
+    declarationCard: {
       backgroundColor: c.surface,
       borderWidth: 1,
       borderColor: c.border,
       borderRadius: radii.lg,
       padding: spacing[4],
-      marginBottom: spacing[3],
       gap: spacing[3],
       ...shadows.card,
     },
-    statement: {
+    declarationProse: {
       fontFamily: 'InterTight-Regular',
       fontSize: 15,
       color: c.fg2,
       lineHeight: 24,
     },
-    statementBold: {
+    proseBold: {
       fontFamily: 'InterTight-SemiBold',
       color: c.fg,
     },
-    descBlock: {
+    descriptionBlock: {
       backgroundColor: c.surface2,
       borderRadius: radii.base,
       padding: spacing[3],
     },
-    descText: {
+    descriptionText: {
       fontFamily: 'InterTight-Medium',
       fontSize: 15,
       color: c.fg,
       lineHeight: 22,
     },
 
-    section: {
+    // Section cards
+    sectionCard: {
       backgroundColor: c.surface,
       borderWidth: 1,
       borderColor: c.border,
       borderRadius: radii.md,
       padding: spacing[4],
-      marginBottom: spacing[3],
       gap: spacing[1],
     },
     sectionLabel: {
@@ -247,21 +251,15 @@ function makeStyles(c: ColorSet) {
       lineHeight: 21,
     },
 
-    sigCard: {
-      backgroundColor: c.surface,
-      borderWidth: 1,
-      borderColor: c.border,
-      borderRadius: radii.md,
-      padding: spacing[4],
-      marginBottom: spacing[3],
-    },
+    // Signature canvas
     sigCanvas: {
-      marginTop: spacing[2],
       borderTopWidth: 1,
       borderTopColor: c.border,
       paddingTop: spacing[2],
+      marginTop: spacing[1],
     },
 
+    // Signer info
     signerName: {
       fontFamily: 'InterTight-SemiBold',
       fontSize: 16,
@@ -279,13 +277,12 @@ function makeStyles(c: ColorSet) {
       marginTop: 2,
     },
 
-    ts: {
+    timestamp: {
       fontFamily: 'JetBrainsMono-Regular',
       fontSize: 10,
       letterSpacing: 0.6,
       color: c.fg3,
       textAlign: 'center',
-      marginTop: spacing[2],
     },
   });
 }

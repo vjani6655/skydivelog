@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Share } from 'react-native';
+import { View, Text, StyleSheet,  TouchableOpacity, Share } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';

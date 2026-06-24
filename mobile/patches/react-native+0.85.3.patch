@@ -1,0 +1,14 @@
+diff --git a/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/modules/appearance/AppearanceModule.kt b/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/modules/appearance/AppearanceModule.kt
+index 443baea..9299553 100644
+--- a/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/modules/appearance/AppearanceModule.kt
++++ b/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/modules/appearance/AppearanceModule.kt
+@@ -82,7 +82,8 @@ constructor(
+     return colorSchemeForCurrentConfiguration(activity ?: reactApplicationContext)
+   }
+ 
+-  public override fun setColorScheme(style: String) {
++  public override fun setColorScheme(style: String?) {
++    if (style == null) return
+     UiThreadUtil.runOnUiThread {
+       when (style) {
+         "dark" -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)

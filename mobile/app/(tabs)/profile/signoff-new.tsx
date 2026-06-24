@@ -1,8 +1,6 @@
 import { useCallback, useRef, useState, useMemo } from 'react';
-import {
-  View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet,
-  SafeAreaView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet,  KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
@@ -18,11 +16,11 @@ const CANVAS_H = 180;
 const ROLES = ['CI', 'DZSO', 'Instructor', 'Coach'] as const;
 type Role = typeof ROLES[number];
 
-function Label({ text, optional }: { text: string; optional?: boolean }) {
+function FieldLabel({ text }: { text: string }) {
   const colors = useColors();
   return (
     <Text style={{ fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: colors.fg3, marginBottom: spacing[1.5] }}>
-      {text}{optional ? ' — optional' : ''}
+      {text}
     </Text>
   );
 }
@@ -52,7 +50,6 @@ export default function SignoffNewScreen() {
   const [sigPaths, setSigPaths] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Signature state
   const allPaths = useRef<string[]>([]);
   const currentPath = useRef('');
   const [sigTick, setSigTick] = useState(0);
@@ -96,7 +93,6 @@ export default function SignoffNewScreen() {
     setSigTick(t => t + 1);
   };
 
-  // Suppress unused warning — sigTick drives re-render of sig canvas
   void sigTick;
 
   useFocusEffect(useCallback(() => {
@@ -172,7 +168,7 @@ export default function SignoffNewScreen() {
         <TouchableOpacity style={styles.headerClose} onPress={() => router.back()} activeOpacity={0.7}>
           <Ionicons name="close" size={22} color={colors.fg} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>New sign-off</Text>
+        <Text style={styles.headerTitle}>New Sign-off</Text>
         <TouchableOpacity onPress={handleSave} disabled={saving} activeOpacity={0.7}>
           {saving
             ? <ActivityIndicator size="small" color={colors.sky} />
@@ -191,64 +187,83 @@ export default function SignoffNewScreen() {
           scrollEnabled={scrollEnabled}
         >
 
-          {/* Statement card */}
-          <View style={styles.statementCard}>
-            <Text style={styles.statementLine}>
-              {'As of '}
-              <Text style={styles.statementBold}>{jumpNumber != null ? `${jumpNumber} jumps` : '— jumps'}</Text>
-              {' on '}
-              <Text style={styles.statementBold}>{fmtDate(today)}</Text>
+          {/* Context card — read-only */}
+          <View style={styles.contextCard}>
+            <Text style={styles.contextLabel}>SIGNING OFF</Text>
+            <Text style={styles.contextName}>{userName || '—'}</Text>
+            <Text style={styles.contextMeta}>
+              {jumpNumber != null ? `Jump #${jumpNumber}` : '—'} · {fmtDate(today)}
             </Text>
-
-            <View style={styles.statementRow}>
-              <Text style={styles.statementLabel}>I</Text>
-              <TextInput
-                style={[styles.statementInput, !!errors.signerName && styles.statementInputError]}
-                value={signerName}
-                onChangeText={v => { setSignerName(v); setErrors(e => ({ ...e, signerName: '' })); }}
-                placeholder="signer's full name"
-                placeholderTextColor={colors.fg3}
-                autoCapitalize="words"
-                autoCorrect={false}
-              />
-            </View>
-            {errors.signerName ? <Text style={styles.stmtError}>{errors.signerName}</Text> : null}
-
-            <Text style={styles.statementLine}>
-              {'am signing off '}
-              <Text style={styles.statementBold}>{userName || '—'}</Text>
-              {' to:'}
-            </Text>
-
-            <TextInput
-              style={[styles.statementDesc, !!errors.description && { borderColor: colors.danger }]}
-              value={description}
-              onChangeText={v => { setDescription(v); setErrors(e => ({ ...e, description: '' })); }}
-              placeholder="e.g. conduct night jumps"
-              placeholderTextColor={colors.fg3}
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-              autoCapitalize="sentences"
-            />
-            {errors.description ? <Text style={styles.stmtError}>{errors.description}</Text> : null}
           </View>
 
-          {/* Additional comments */}
-          <Label text="ADDITIONAL COMMENTS" optional />
+          {/* ── SIGNER ── */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>SIGNER</Text>
+          </View>
+
+          <FieldLabel text="FULL NAME" />
           <TextInput
-            style={[styles.input, styles.textarea]}
-            value={comments}
-            onChangeText={setComments}
-            placeholder="Any additional notes or conditions…"
+            style={[styles.input, !!errors.signerName && styles.inputError]}
+            value={signerName}
+            onChangeText={v => { setSignerName(v); setErrors(e => ({ ...e, signerName: '' })); }}
+            placeholder="Full name"
+            placeholderTextColor={colors.fg3}
+            autoCapitalize="words"
+            autoCorrect={false}
+          />
+          {errors.signerName ? <Text style={styles.fieldError}>{errors.signerName}</Text> : null}
+
+          <FieldLabel text="ROLE" />
+          {errors.signerRole ? <Text style={[styles.fieldError, { marginBottom: spacing[2] }]}>{errors.signerRole}</Text> : null}
+          <View style={styles.chipRow}>
+            {ROLES.map(r => (
+              <TouchableOpacity
+                key={r}
+                style={[styles.chip, signerRole === r && styles.chipActive]}
+                onPress={() => { setSignerRole(r); setErrors(e => ({ ...e, signerRole: '' })); }}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.chipText, signerRole === r && styles.chipTextActive]}>{r}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <FieldLabel text="LICENCE NUMBER" />
+          <TextInput
+            style={[styles.input, !!errors.signerLicence && styles.inputError]}
+            value={signerLicence}
+            onChangeText={v => { setSignerLicence(v); setErrors(e => ({ ...e, signerLicence: '' })); }}
+            placeholder="e.g. CI-1234"
+            placeholderTextColor={colors.fg3}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150)}
+          />
+          {errors.signerLicence ? <Text style={styles.fieldError}>{errors.signerLicence}</Text> : null}
+
+          {/* ── SIGNING OFF TO ── */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>SIGNING OFF TO</Text>
+          </View>
+
+          <TextInput
+            style={[styles.textarea, !!errors.description && styles.inputError]}
+            value={description}
+            onChangeText={v => { setDescription(v); setErrors(e => ({ ...e, description: '' })); }}
+            placeholder="e.g. conduct night jumps"
             placeholderTextColor={colors.fg3}
             multiline
             numberOfLines={3}
             textAlignVertical="top"
+            autoCapitalize="sentences"
           />
+          {errors.description ? <Text style={styles.fieldError}>{errors.description}</Text> : null}
 
-          {/* Signature */}
-          <Label text="SIGNATURE" />
+          {/* ── SIGNATURE ── */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>SIGNATURE</Text>
+          </View>
+
           {errors.signature ? <Text style={[styles.fieldError, { marginBottom: spacing[2] }]}>{errors.signature}</Text> : null}
           <View style={[styles.sigPad, !!errors.signature && { borderColor: colors.danger }]}>
             <View
@@ -280,37 +295,26 @@ export default function SignoffNewScreen() {
             </View>
           </View>
 
-          {/* Signed by role */}
-          <Label text="SIGNED BY ROLE" />
-          {errors.signerRole ? <Text style={[styles.fieldError, { marginBottom: spacing[2] }]}>{errors.signerRole}</Text> : null}
-          <View style={styles.chipRow}>
-            {ROLES.map(r => (
-              <TouchableOpacity
-                key={r}
-                style={[styles.chip, signerRole === r && styles.chipActive]}
-                onPress={() => { setSignerRole(r); setErrors(e => ({ ...e, signerRole: '' })); }}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.chipText, signerRole === r && styles.chipTextActive]}>{r}</Text>
-              </TouchableOpacity>
-            ))}
+          {/* ── ADDITIONAL COMMENTS ── */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>
+              {'ADDITIONAL COMMENTS '}
+              <Text style={styles.optionalTag}>— OPTIONAL</Text>
+            </Text>
           </View>
 
-          {/* Licence number */}
-          <Label text="LICENCE NUMBER" />
           <TextInput
-            style={[styles.input, !!errors.signerLicence && styles.inputError]}
-            value={signerLicence}
-            onChangeText={v => { setSignerLicence(v); setErrors(e => ({ ...e, signerLicence: '' })); }}
-            placeholder="e.g. CI-1234"
+            style={styles.textarea}
+            value={comments}
+            onChangeText={setComments}
+            placeholder="Any additional notes or conditions…"
             placeholderTextColor={colors.fg3}
-            autoCapitalize="characters"
-            autoCorrect={false}
-            onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150)}
+            multiline
+            numberOfLines={3}
+            textAlignVertical="top"
           />
-          {errors.signerLicence ? <Text style={styles.fieldError}>{errors.signerLicence}</Text> : null}
 
-          <View style={{ height: spacing[6] }} />
+          <View style={{ height: spacing[10] }} />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -328,67 +332,58 @@ function makeStyles(c: ColorSet) {
     },
     headerClose: { width: 36, height: 36, justifyContent: 'center' },
     headerTitle: { flex: 1, textAlign: 'center', fontFamily: 'InterTight-SemiBold', fontSize: 17, color: c.fg },
-    saveBtn: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: c.sky, width: 36, textAlign: 'right' },
-    body: { padding: spacing[5], paddingBottom: spacing[8] },
+    saveBtn: { fontFamily: 'InterTight-SemiBold', fontSize: 15, color: c.sky, minWidth: 36, textAlign: 'right' },
+    body: { padding: spacing[5] },
 
-    // Statement card
-    statementCard: {
+    // Context card
+    contextCard: {
       backgroundColor: c.surface,
       borderWidth: 1,
       borderColor: c.border,
-      borderRadius: radii.lg,
-      padding: spacing[4],
-      marginBottom: spacing[4],
-      gap: spacing[3],
-    },
-    statementLine: {
-      fontFamily: 'InterTight-Regular',
-      fontSize: 15,
-      color: c.fg2,
-      lineHeight: 22,
-    },
-    statementBold: {
-      fontFamily: 'InterTight-SemiBold',
-      color: c.fg,
-    },
-    statementRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing[2],
-    },
-    statementLabel: {
-      fontFamily: 'InterTight-Regular',
-      fontSize: 15,
-      color: c.fg2,
-    },
-    statementInput: {
-      flex: 1,
-      borderBottomWidth: 1,
-      borderBottomColor: c.border,
-      fontFamily: 'InterTight-Medium',
-      fontSize: 15,
-      color: c.fg,
-      paddingVertical: spacing[1],
-    },
-    statementInputError: { borderBottomColor: c.danger },
-    statementDesc: {
-      borderWidth: 1,
-      borderColor: c.border,
-      borderRadius: radii.base,
+      borderRadius: radii.md,
       padding: spacing[3],
-      fontFamily: 'InterTight-Regular',
+      gap: spacing[0.5],
+    },
+    contextLabel: {
+      fontFamily: 'JetBrainsMono-Regular',
+      fontSize: 9,
+      letterSpacing: 1,
+      color: c.fg3,
+    },
+    contextName: {
+      fontFamily: 'InterTight-SemiBold',
       fontSize: 15,
       color: c.fg,
-      minHeight: 80,
+      letterSpacing: -0.2,
     },
-    stmtError: {
-      fontFamily: 'InterTight-Regular',
-      fontSize: 12,
-      color: c.danger,
-      marginTop: -spacing[2],
+    contextMeta: {
+      fontFamily: 'JetBrainsMono-Regular',
+      fontSize: 10,
+      color: c.fg3,
     },
 
-    // Standard inputs
+    // Section headers with top divider
+    sectionHeader: {
+      borderTopWidth: 1,
+      borderTopColor: c.border,
+      paddingTop: spacing[4],
+      marginTop: spacing[5],
+      marginBottom: spacing[3],
+    },
+    sectionTitle: {
+      fontFamily: 'InterTight-SemiBold',
+      fontSize: 11,
+      letterSpacing: 0.6,
+      color: c.fg2,
+    },
+    optionalTag: {
+      fontFamily: 'InterTight-Regular',
+      fontSize: 11,
+      letterSpacing: 0.3,
+      color: c.fg3,
+    },
+
+    // Inputs
     input: {
       backgroundColor: c.surface,
       borderWidth: 1,
@@ -402,8 +397,26 @@ function makeStyles(c: ColorSet) {
       color: c.fg,
     },
     inputError: { borderColor: c.danger, marginBottom: spacing[1] },
-    textarea: { minHeight: 80, paddingTop: spacing[3] },
-    fieldError: { fontFamily: 'InterTight-Regular', fontSize: 12, color: c.danger, marginBottom: spacing[3] },
+    textarea: {
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: radii.md,
+      paddingHorizontal: spacing[3],
+      paddingVertical: spacing[3],
+      fontFamily: 'InterTight-Regular',
+      fontSize: 15,
+      color: c.fg,
+      minHeight: 80,
+      marginBottom: spacing[1],
+    },
+    fieldError: {
+      fontFamily: 'InterTight-Regular',
+      fontSize: 12,
+      color: c.danger,
+      marginBottom: spacing[3],
+      marginTop: spacing[1],
+    },
 
     // Signature pad
     sigPad: {
@@ -412,7 +425,7 @@ function makeStyles(c: ColorSet) {
       borderColor: c.border,
       borderRadius: radii.lg,
       overflow: 'hidden',
-      marginBottom: spacing[4],
+      marginBottom: spacing[3],
     },
     sigCanvas: { height: 180, position: 'relative' },
     sigPlaceholder: { ...StyleSheet.absoluteFill, justifyContent: 'center', alignItems: 'center' },
@@ -427,20 +440,20 @@ function makeStyles(c: ColorSet) {
       borderTopColor: c.border,
     },
     sigHint: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, letterSpacing: 0.8, color: c.fg3 },
-    sigClear: { fontFamily: 'InterTight-Regular', fontSize: 13, color: c.fg2 },
+    sigClear: { fontFamily: 'InterTight-Medium', fontSize: 13, color: c.fg2 },
 
     // Role chips
-    chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2], marginBottom: spacing[4] },
+    chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2], marginTop: spacing[1], marginBottom: spacing[4] },
     chip: {
-      paddingHorizontal: spacing[4],
-      paddingVertical: spacing[2],
+      paddingHorizontal: spacing[3],
+      paddingVertical: spacing[1.5],
       borderRadius: radii.pill,
       backgroundColor: c.surface,
       borderWidth: 1,
       borderColor: c.border,
     },
     chipActive: { backgroundColor: c.sky, borderColor: c.sky },
-    chipText: { fontFamily: 'InterTight-Medium', fontSize: 14, color: c.fg2 },
+    chipText: { fontFamily: 'InterTight-Medium', fontSize: 13, color: c.fg2 },
     chipTextActive: { color: c.onSky },
   });
 }

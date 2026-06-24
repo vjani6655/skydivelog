@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Platform } from 'react-native';
+import { Platform, LogBox } from 'react-native';
+
+LogBox.ignoreLogs([
+  'AuthApiError',
+  'Invalid Refresh Token',
+]);
 import { useFonts } from 'expo-font';
 import { Stack, router } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
