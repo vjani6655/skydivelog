@@ -51,7 +51,7 @@ export default function DeleteAccountForm({ jumpCount }: { jumpCount: number }) 
             <p className="text-sm font-semibold text-danger mb-1">This is permanent.</p>
             <p className="text-xs text-fg-2">
               All {jumpCount > 0 ? jumpCount.toLocaleString() : "your"} jumps, gear records, certificates
-              and notes will be deleted after a 30-day grace window.
+              and notes will be permanently deleted immediately.
             </p>
           </div>
         </div>
@@ -123,7 +123,7 @@ export default function DeleteAccountForm({ jumpCount }: { jumpCount: number }) 
               className="mt-0.5 w-3.5 h-3.5 flex-shrink-0 accent-danger"
             />
             <span className="text-xs text-fg-3 leading-relaxed">
-              I understand my data will be deleted after 30 days and cannot be recovered.
+              I understand my data will be permanently deleted immediately and cannot be recovered.
             </span>
           </label>
 

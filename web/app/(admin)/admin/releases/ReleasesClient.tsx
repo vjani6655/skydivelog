@@ -39,7 +39,8 @@ const ALL_PLATFORMS: Platform[] = ['iOS App', 'Android App', 'Web']
 
 export interface Release {
   id: string
-  build_number: number | null
+  ios_build_number: number | null
+  android_build_number: number | null
   version: string | null
   title: string | null
   changes: ReleaseChange[]
@@ -145,7 +146,8 @@ function ReleaseForm({ initial, onSave, onCancel, loading }: {
   onCancel: () => void
   loading: boolean
 }) {
-  const [buildNumber, setBuildNumber] = useState(initial?.build_number != null ? String(initial.build_number) : '')
+  const [iosBuildNumber, setIosBuildNumber]         = useState(initial?.ios_build_number != null ? String(initial.ios_build_number) : '')
+  const [androidBuildNumber, setAndroidBuildNumber] = useState(initial?.android_build_number != null ? String(initial.android_build_number) : '')
   const [version, setVersion]         = useState(initial?.version ?? '')
   const [title, setTitle]             = useState(initial?.title ?? '')
   const [platforms, setPlatforms]     = useState<Platform[]>(initial?.platforms ?? [])
@@ -182,7 +184,8 @@ function ReleaseForm({ initial, onSave, onCancel, loading }: {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onSave({
-      build_number: buildNumber ? Number(buildNumber) : null,
+      ios_build_number:     iosBuildNumber ? Number(iosBuildNumber) : null,
+      android_build_number: androidBuildNumber ? Number(androidBuildNumber) : null,
       version:      version || null,
       title:        title || null,
       platforms,
@@ -194,16 +197,26 @@ function ReleaseForm({ initial, onSave, onCancel, loading }: {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {isMobileRelease && (
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-[11px] font-mono tracking-widest text-fg-3 mb-1">BUILD NUMBER</label>
-            <input type="number" value={buildNumber} onChange={e => setBuildNumber(e.target.value)} className={inputCls} placeholder="37" required />
-          </div>
+        <>
           <div>
             <label className="block text-[11px] font-mono tracking-widest text-fg-3 mb-1">VERSION</label>
-            <input type="text" value={version} onChange={e => setVersion(e.target.value)} className={inputCls} placeholder="1.0.0" required />
+            <input type="text" value={version} onChange={e => setVersion(e.target.value)} className={inputCls} placeholder="1.1.0" />
           </div>
-        </div>
+          <div className="grid grid-cols-2 gap-3">
+            {platforms.includes('iOS App') && (
+              <div>
+                <label className="block text-[11px] font-mono tracking-widest text-fg-3 mb-1">IOS BUILD NUMBER <span className="text-fg-4 normal-case font-sans tracking-normal">(optional)</span></label>
+                <input type="number" value={iosBuildNumber} onChange={e => setIosBuildNumber(e.target.value)} className={inputCls} placeholder="40" />
+              </div>
+            )}
+            {platforms.includes('Android App') && (
+              <div>
+                <label className="block text-[11px] font-mono tracking-widest text-fg-3 mb-1">ANDROID BUILD NUMBER <span className="text-fg-4 normal-case font-sans tracking-normal">(optional)</span></label>
+                <input type="number" value={androidBuildNumber} onChange={e => setAndroidBuildNumber(e.target.value)} className={inputCls} placeholder="2" />
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       <div className="grid grid-cols-2 gap-3">
@@ -320,8 +333,9 @@ function SortableReleaseCard({
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                {release.version    && <span className="font-mono text-sm font-semibold text-fg">v{release.version}</span>}
-                {release.build_number && <span className="font-mono text-[11px] text-fg-3">Build {release.build_number}</span>}
+                {release.version             && <span className="font-mono text-sm font-semibold text-fg">v{release.version}</span>}
+                {release.ios_build_number     && <span className="font-mono text-[11px] text-fg-3">iOS {release.ios_build_number}</span>}
+                {release.android_build_number && <span className="font-mono text-[11px] text-fg-3">Android {release.android_build_number}</span>}
                 {release.is_published ? <Badge kind="ok">PUBLISHED</Badge> : <Badge kind="muted">DRAFT</Badge>}
                 {(release.platforms ?? []).map(p => (
                   <span key={p} className="inline-flex items-center px-1.5 py-0.5 rounded-[4px] text-[10px] font-mono tracking-widest border bg-surface-2 text-fg-3 border-border">

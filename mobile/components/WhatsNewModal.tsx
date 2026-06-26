@@ -12,7 +12,8 @@ interface ReleaseChange {
 
 export interface ReleaseNote {
   id: string
-  build_number: number
+  ios_build_number: number | null
+  android_build_number: number | null
   version: string
   title: string | null
   changes: ReleaseChange[]
@@ -119,7 +120,7 @@ export default function WhatsNewModal({ releases, onDismiss }: Props) {
             <Text style={styles.title}>What's New</Text>
             <Text style={styles.subtitle}>
               {releases.length === 1
-                ? `Version ${latestVersion} (${releases[0].build_number})`
+                ? `Version ${latestVersion}`
                 : `Versions ${releases[releases.length - 1].version} – ${latestVersion}`}
             </Text>
           </View>
@@ -132,7 +133,7 @@ export default function WhatsNewModal({ releases, onDismiss }: Props) {
             {releases.map((release, ri) => (
               <View key={release.id} style={[styles.releaseBlock, ri > 0 && styles.releaseBlockBorder]}>
                 {releases.length > 1 && (
-                  <Text style={styles.versionLabel}>v{release.version} · Build {release.build_number}</Text>
+                  <Text style={styles.versionLabel}>v{release.version}</Text>
                 )}
                 {release.title && (
                   <Text style={styles.releaseTitle}>{release.title}</Text>

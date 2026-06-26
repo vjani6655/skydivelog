@@ -29,7 +29,8 @@ async function checkWhatsNew(): Promise<ReleaseNote[]> {
   const currentBuild = Number(build);
   if (currentBuild <= lastBuild) return [];
   try {
-    const res = await fetch(`${WEB_URL}/api/releases?since=${lastBuild}`);
+    const platform = Platform.OS === 'android' ? 'android' : 'ios';
+    const res = await fetch(`${WEB_URL}/api/releases?since=${lastBuild}&platform=${platform}`);
     if (res.ok) {
       const data: ReleaseNote[] = await res.json();
       return data.length > 0 ? data : [];

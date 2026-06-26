@@ -19,7 +19,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const db = createAdminClient()
 
   const patch: Record<string, unknown> = {}
-  if ('build_number' in body) patch.build_number = body.build_number ? Number(body.build_number) : null
+  if ('ios_build_number'     in body) patch.ios_build_number     = body.ios_build_number ? Number(body.ios_build_number) : null
+  if ('android_build_number' in body) patch.android_build_number = body.android_build_number ? Number(body.android_build_number) : null
   if ('version'      in body) patch.version = body.version
   if ('title'        in body) patch.title = body.title || null
   if ('changes'      in body) patch.changes = body.changes

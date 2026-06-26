@@ -28,13 +28,14 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   if (!await assertAdmin()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const body = await req.json()
-  const { build_number, version, title, changes, platforms, published_at } = body
+  const { ios_build_number, android_build_number, version, title, changes, platforms, published_at } = body
 
   const db = createAdminClient()
   const { data, error } = await db
     .from('releases')
     .insert({
-      build_number: build_number ? Number(build_number) : null,
+      ios_build_number:     ios_build_number ? Number(ios_build_number) : null,
+      android_build_number: android_build_number ? Number(android_build_number) : null,
       version:      version || null,
       title:        title || null,
       changes:      changes ?? [],
