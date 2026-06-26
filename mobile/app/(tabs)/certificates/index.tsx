@@ -1,4 +1,4 @@
-import { useCallback, useState, useMemo } from 'react';
+import { useCallback, useState, useMemo, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet,  ActivityIndicator,
   TouchableOpacity, RefreshControl, ScrollView } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,6 +9,7 @@ import { checkAccess } from '@/lib/checkAccess';
 import { spacing, radii } from '@/constants/tokens';
 import type { ColorSet } from '@/constants/tokens';
 import { useColors } from '@/lib/theme';
+import { useAttention } from '@/lib/attention';
 import type { Certificate } from '@/lib/types';
 
 function daysUntil(dateStr: string): number {
@@ -36,22 +37,43 @@ function fmtDMY(iso: string): string {
 export default function CertificatesScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { setAttention } = useAttention();
   const [certs, setCerts] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
 
   const fetchCerts = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     const user = session?.user;
-    if (!user) { setLoading(false); return; }
-    const { data } = await supabase.from('certificates').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
-    setCerts((data ?? []) as Certificate[]);
+    if (!user) { setLoading(false); setRefreshing(false); return; }
+
+    try {
+      const offlineTimeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('offline_timeout')), 5000)
+      );
+      const { data } = await Promise.race([
+        supabase.from('certificates').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
+        offlineTimeout,
+      ]);
+      setCerts((data ?? []) as Certificate[]);
+      setIsOffline(false);
+    } catch {
+      setIsOffline(true);
+    }
+
     setLoading(false);
     setRefreshing(false);
   };
 
   useFocusEffect(useCallback(() => { fetchCerts(); }, []));
+
+  useEffect(() => {
+    if (!loading) {
+      setAttention('certs', certs.some(c => c.expires_date && daysUntil(c.expires_date) <= 30));
+    }
+  }, [certs, loading, setAttention]);
 
   const expiringSoon = certs.filter(c => c.expires_date && daysUntil(c.expires_date) <= 30).length;
 
@@ -63,8 +85,29 @@ export default function CertificatesScreen() {
 
   if (loading) return <View style={[styles.center, { backgroundColor: colors.bg }]}><ActivityIndicator color={colors.sky} /></View>;
 
+  if (isOffline) {
+    return (
+      <SafeAreaView style={styles.screen} edges={['top']}>
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.title}>Certificates</Text>
+            <Text style={styles.sub}>ONLINE ONLY</Text>
+          </View>
+        </View>
+        <View style={styles.offlineContainer}>
+          <Ionicons name="cloud-offline-outline" size={48} color={colors.fg3} />
+          <Text style={styles.offlineTitle}>No internet connection</Text>
+          <Text style={styles.offlineSub}>Connect to the internet to view your certificates</Text>
+          <TouchableOpacity onPress={() => { setLoading(true); setIsOffline(false); fetchCerts(); }} activeOpacity={0.7}>
+            <Text style={styles.offlineRetry}>Try again</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>Certificates</Text>
@@ -170,6 +213,10 @@ function makeStyles(c: ColorSet) {
   return StyleSheet.create({
   screen: { flex: 1, backgroundColor: c.bg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  offlineContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing[8], gap: spacing[3] },
+  offlineTitle: { fontFamily: 'InterTight-SemiBold', fontSize: 17, color: c.fg, textAlign: 'center' },
+  offlineSub: { fontFamily: 'InterTight-Regular', fontSize: 14, color: c.fg3, textAlign: 'center', lineHeight: 20 },
+  offlineRetry: { fontFamily: 'InterTight-Medium', fontSize: 14, color: c.sky, marginTop: spacing[2] },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: spacing[5], paddingTop: spacing[5], paddingBottom: spacing[3] },
   title: { fontFamily: 'InterTight-Bold', fontSize: 28, color: c.fg, letterSpacing: -0.5 },
   sub: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, letterSpacing: 0.8, color: c.fg3, marginTop: 3 },

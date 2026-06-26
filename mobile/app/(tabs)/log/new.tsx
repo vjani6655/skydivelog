@@ -290,9 +290,50 @@ function DateTimeField({ value, onChange }: { value: Date; onChange: (d: Date) =
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(value);
+  const [androidStep, setAndroidStep] = useState<'date' | 'time' | null>(null);
 
   const confirm = () => { onChange(draft); setOpen(false); };
   const cancel = () => { setDraft(value); setOpen(false); };
+
+  if (Platform.OS === 'android') {
+    return (
+      <View style={styles.flex}>
+        <Label text="DATE & TIME" />
+        <TouchableOpacity style={styles.input} onPress={() => { setDraft(value); setAndroidStep('date'); }} activeOpacity={0.7}>
+          <Text style={{ fontFamily: 'InterTight-Regular', fontSize: 15, color: colors.fg }}>{fmtDateTime(value)}</Text>
+        </TouchableOpacity>
+        {androidStep === 'date' && (
+          <DateTimePicker
+            value={draft}
+            mode="date"
+            display="default"
+            maximumDate={new Date()}
+            onChange={(_, d) => {
+              if (d) {
+                const updated = new Date(d);
+                updated.setHours(draft.getHours(), draft.getMinutes(), 0, 0);
+                setDraft(updated);
+                setAndroidStep('time');
+              } else {
+                setAndroidStep(null);
+              }
+            }}
+          />
+        )}
+        {androidStep === 'time' && (
+          <DateTimePicker
+            value={draft}
+            mode="time"
+            display="default"
+            onChange={(_, d) => {
+              if (d) { setDraft(d); onChange(d); }
+              setAndroidStep(null);
+            }}
+          />
+        )}
+      </View>
+    );
+  }
 
   return (
     <View style={styles.flex}>
@@ -304,7 +345,6 @@ function DateTimeField({ value, onChange }: { value: Date; onChange: (d: Date) =
         <TouchableOpacity style={styles.dateModalOverlay} activeOpacity={1} onPress={cancel}>
           <TouchableOpacity activeOpacity={1} onPress={() => {}}>
             <View style={styles.dateModalSheet}>
-              {/* iOS-style toolbar */}
               <View style={styles.dateModalToolbar}>
                 <TouchableOpacity onPress={cancel} style={styles.dateModalToolbarBtn}>
                   <Text style={styles.dateModalCancelText}>Cancel</Text>
@@ -337,7 +377,7 @@ function SavedScreen({ jumpNum, totalJumps, jumpId }: { jumpNum: number; totalJu
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.savedCenter}>
         <View style={styles.savedCircle}>
           <Ionicons name="checkmark" size={42} color={colors.ok} />
@@ -656,6 +696,7 @@ export default function NewJumpScreen() {
         jumper_type: jumperType.toLowerCase(),
         canopy_type: canopyType.trim() || null,
         canopy_gear_id: canopyGearId || null,
+        canopy_make_model: canopyGearId ? (userCanopies.find(c => c.id === canopyGearId)?.make_model ?? null) : null,
         reserve_gear_id: reserveGearId || null,
         is_favourite: isFav,
         aad_fired: aadFired,
@@ -785,6 +826,7 @@ export default function NewJumpScreen() {
         jumper_type: jumperType.toLowerCase(),
         canopy_type: canopyType.trim() || null,
         canopy_gear_id: canopyGearId || null,
+        canopy_make_model: canopyGearId ? (userCanopies.find(c => c.id === canopyGearId)?.make_model ?? null) : null,
         reserve_gear_id: reserveGearId || null,
         is_favourite: isFav,
         aad_fired: aadFired,
@@ -848,6 +890,7 @@ export default function NewJumpScreen() {
         jumper_type: jumperType.toLowerCase(),
         canopy_type: canopyType.trim() || null,
         canopy_gear_id: canopyGearId || null,
+        canopy_make_model: canopyGearId ? (userCanopies.find(c => c.id === canopyGearId)?.make_model ?? null) : null,
         reserve_gear_id: reserveGearId || null,
         is_favourite: isFav,
         aad_fired: aadFired,
@@ -930,7 +973,7 @@ export default function NewJumpScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerBack} onPress={() => step === 1 ? router.back() : setStep((step as number) - 1 as Step)} activeOpacity={0.7}>
           <Ionicons name={step === 1 ? 'close' : 'chevron-back'} size={22} color={colors.fg} />

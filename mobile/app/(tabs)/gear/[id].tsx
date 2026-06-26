@@ -42,8 +42,7 @@ export default function GearDetailScreen() {
   const [gear, setGear] = useState<Gear | null>(null);
   const [loading, setLoading] = useState(true);
   const [jumpCount, setJumpCount] = useState<number | null>(null);
-  const [reserveRigJumpCount, setReserveRigJumpCount] = useState<number | null>(null);
-  const [reserveDeployments, setReserveDeployments] = useState<{ jump_number: number }[]>([]);
+  const [reserveDeployments, setReserveDeployments] = useState<{ id: string; jump_number: number; date: string; canopy_make_model: string | null }[]>([]);
   const [log, setLog] = useState<EditLogEntry[]>([]);
   const [photoSignedUrl, setPhotoSignedUrl] = useState<string | null>(null);
 
@@ -57,14 +56,16 @@ export default function GearDetailScreen() {
     setGear(g);
     setJumpCount(count ?? 0);
     setLog((logData ?? []) as EditLogEntry[]);
-    // Reserve-specific: jumps in rig + deployment history
+    // Reserve-specific: deployment history with main canopy snapshot
     if (g?.type === 'canopy' && g?.canopy_sub_type === 'reserve') {
-      const [{ count: rigCount }, { data: deployData }] = await Promise.all([
-        supabase.from('jumps').select('id', { count: 'exact', head: true }).eq('reserve_gear_id', id).is('deleted_at', null),
-        supabase.from('jumps').select('jump_number').eq('reserve_gear_id', id).eq('reserve_deployed', true).is('deleted_at', null).order('jump_number', { ascending: false }),
-      ]);
-      setReserveRigJumpCount(rigCount ?? 0);
-      setReserveDeployments((deployData ?? []) as { jump_number: number }[]);
+      const { data: deployData } = await supabase
+        .from('jumps')
+        .select('id, jump_number, date, canopy_make_model')
+        .eq('reserve_gear_id', id)
+        .eq('reserve_deployed', true)
+        .is('deleted_at', null)
+        .order('date', { ascending: false });
+      setReserveDeployments((deployData ?? []) as { id: string; jump_number: number; date: string; canopy_make_model: string | null }[]);
     }
     // Generate signed URL for photo (works whether bucket is public or private)
     const photoUrl = (gearData as Gear | null)?.photo_url ?? null;
@@ -100,6 +101,10 @@ export default function GearDetailScreen() {
 
   const isReserve = gear.type === 'canopy' && gear.canopy_sub_type === 'reserve';
 
+  const lastDeployDate = isReserve && reserveDeployments.length > 0 ? reserveDeployments[0].date : null;
+  const needsRepack = isReserve && lastDeployDate != null &&
+    (!gear.last_repack_date || lastDeployDate > gear.last_repack_date);
+
   const specs: [string, string][] = [
     ['Type', gear.type + (gear.canopy_sub_type ? ` · ${gear.canopy_sub_type}` : '')],
     ['Make / Model', gear.make_model],
@@ -109,12 +114,11 @@ export default function GearDetailScreen() {
     ...(isReserve ? [['Next repack date', fmtDate(gear.next_repack_date)] as [string, string]] : []),
     ...(gear.type === 'aad' ? [['Next service date', fmtDate(gear.next_service_date)] as [string, string]] : []),
     ...(!isReserve && gear.type === 'canopy' && jumpCount !== null ? [['Jumps logged', String(jumpCount)] as [string, string]] : []),
-    ...(isReserve && reserveRigJumpCount !== null ? [['Jumps in rig', String(reserveRigJumpCount)] as [string, string]] : []),
     ...(isReserve ? [['Reserve deployments', String(reserveDeployments.length)] as [string, string]] : []),
   ];
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.back} onPress={() => router.back()} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={22} color={colors.fg} />
@@ -146,6 +150,19 @@ export default function GearDetailScreen() {
           </View>
         </View>
 
+        {/* Repack required alert */}
+        {needsRepack && lastDeployDate && (
+          <View style={styles.repackAlert}>
+            <Ionicons name="warning-outline" size={18} color={colors.danger} style={{ marginTop: 1 }} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.repackAlertTitle}>Repack required</Text>
+              <Text style={styles.repackAlertBody}>
+                Reserve deployed on {fmtDate(lastDeployDate)}. A repack is required before use. Edit this gear item to update the last repack date once complete.
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Photo */}
         {gear.photo_url && photoSignedUrl ? (
           <>
@@ -169,15 +186,35 @@ export default function GearDetailScreen() {
         {isReserve && reserveDeployments.length > 0 && (
           <>
             <Text style={styles.sectionTitle}>Reserve deployment history</Text>
-            <View style={styles.card}>
+            <Text style={styles.deployContext}>
+              These are all the times {gear.make_model} was deployed. The main canopy in use at the time is shown on each row — tap to view the jump.
+            </Text>
+            <View style={[styles.card, { marginTop: spacing[2] }]}>
               {reserveDeployments.map((d, i) => (
-                <View key={d.jump_number} style={[styles.specRow, i < reserveDeployments.length - 1 && styles.specRowBorder]}>
-                  <Text style={styles.specLabel}>Jump #{d.jump_number}</Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <Ionicons name="shield-checkmark-outline" size={13} color={colors.warn} />
-                    <Text style={[styles.specValue, { color: colors.warn }]}>Reserve deployed</Text>
+                <TouchableOpacity
+                  key={d.id}
+                  style={[styles.specRow, i < reserveDeployments.length - 1 && styles.specRowBorder]}
+                  onPress={() => router.push(`/(tabs)/log/${d.id}` as any)}
+                  activeOpacity={0.7}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.specLabel}>Jump #{d.jump_number}</Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 3 }}>
+                      <Text style={styles.deployDate}>{fmtDate(d.date)}</Text>
+                      {d.canopy_make_model ? (
+                        <>
+                          <Text style={styles.deployDate}>·</Text>
+                          <Text style={styles.deployDate}>{d.canopy_make_model} (main)</Text>
+                        </>
+                      ) : null}
+                    </View>
                   </View>
-                </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="shield-checkmark-outline" size={13} color={colors.warn} />
+                    <Text style={[styles.specValue, { color: colors.warn }]}>Deployed</Text>
+                    <Ionicons name="chevron-forward" size={14} color={colors.fg3} style={{ marginLeft: 2 }} />
+                  </View>
+                </TouchableOpacity>
               ))}
             </View>
           </>
@@ -237,6 +274,11 @@ function makeStyles(c: ColorSet) {
   specLabel: { fontFamily: 'InterTight-Regular', fontSize: 14, color: c.fg2 },
   specValue: { fontFamily: 'InterTight-Medium', fontSize: 14, color: c.fg, flexShrink: 1, textAlign: 'right', marginLeft: spacing[3], textTransform: 'capitalize' },
   notesText: { fontFamily: 'InterTight-Regular', fontSize: 14, color: c.fg2, padding: spacing[4] },
+  deployContext: { fontFamily: 'InterTight-Regular', fontSize: 13, color: c.fg3, lineHeight: 18, marginBottom: spacing[1] },
+  deployDate: { fontFamily: 'JetBrainsMono-Regular', fontSize: 10, color: c.fg3, marginTop: 2 },
+  repackAlert: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing[3], backgroundColor: 'rgba(255,107,107,0.08)', borderWidth: 1, borderColor: 'rgba(255,107,107,0.3)', borderRadius: radii.md, padding: spacing[4], marginBottom: spacing[5] },
+  repackAlertTitle: { fontFamily: 'InterTight-SemiBold', fontSize: 14, color: c.danger, marginBottom: spacing[1] },
+  repackAlertBody: { fontFamily: 'InterTight-Regular', fontSize: 13, color: c.fg2, lineHeight: 18 },
   deleteBtn: { paddingVertical: spacing[4] },
   deleteBtnText: { fontFamily: 'InterTight-Medium', fontSize: 14, color: c.danger },
   logEntry: { paddingHorizontal: spacing[4], paddingVertical: spacing[3] },

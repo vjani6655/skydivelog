@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { View, type ColorValue } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 import { useColors } from '@/lib/theme';
+import { AttentionProvider, useAttention } from '@/lib/attention';
 import AnnouncementBanner from '@/components/ui/AnnouncementBanner';
 import { useAnnouncementBanner } from '@/lib/useAnnouncementBanner';
 
@@ -37,57 +38,113 @@ function CanopyIcon({ color, size }: { color: string; size: number }) {
   );
 }
 
-export default function TabLayout() {
+function AttentionDot({ bg }: { bg: string }) {
+  return (
+    <View
+      style={{
+        position: 'absolute',
+        top: -3,
+        right: -4,
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#FF6B6B',
+        borderWidth: 1.5,
+        borderColor: bg,
+      }}
+    />
+  );
+}
+
+function GearTabIcon({ color, size }: { color: string; size: number }) {
+  const { attention } = useAttention();
+  const colors = useColors();
+  return (
+    <View style={{ position: 'relative' }}>
+      <CanopyIcon color={color} size={size} />
+      {attention.gear && <AttentionDot bg={colors.bg} />}
+    </View>
+  );
+}
+
+function CertsTabIcon({ color, size }: { color: string; size: number }) {
+  const { attention } = useAttention();
+  const colors = useColors();
+  return (
+    <View style={{ position: 'relative' }}>
+      <Ionicons name="card-outline" size={size} color={color} />
+      {attention.certs && <AttentionDot bg={colors.bg} />}
+    </View>
+  );
+}
+
+function StatsTabIcon({ color, size }: { color: string; size: number }) {
+  const { attention } = useAttention();
+  const colors = useColors();
+  return (
+    <View style={{ position: 'relative' }}>
+      <Ionicons name="stats-chart-outline" size={size} color={color} />
+      {attention.stats && <AttentionDot bg={colors.bg} />}
+    </View>
+  );
+}
+
+function TabsContent() {
   const colors = useColors();
   const { announcement, dismiss } = useAnnouncementBanner();
 
   return (
     <View style={{ flex: 1 }}>
       <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: colors.sky,
-        tabBarInactiveTintColor: colors.fg3,
-        tabBarStyle: {
-          backgroundColor: colors.bg,
-          borderTopColor: colors.border,
-          borderTopWidth: 1,
-        },
-        tabBarLabelStyle: {
-          fontFamily: 'InterTight-Medium',
-          fontSize: 10,
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="log"
-        options={{ title: 'Log', tabBarIcon: tabIcon('journal-outline') }}
-      />
-      <Tabs.Screen
-        name="stats"
-        options={{ title: 'Stats', tabBarIcon: tabIcon('stats-chart-outline') }}
-      />
-      <Tabs.Screen
-        name="gear"
-        options={{
-          title: 'Gear',
-          tabBarIcon: ({ color, size }) => <CanopyIcon color={color as string} size={size} />,
+        screenOptions={{
+          headerShown: false,
+          tabBarActiveTintColor: colors.sky,
+          tabBarInactiveTintColor: colors.fg3,
+          tabBarStyle: {
+            backgroundColor: colors.bg,
+            borderTopColor: colors.border,
+            borderTopWidth: 1,
+          },
+          tabBarLabelStyle: {
+            fontFamily: 'InterTight-Medium',
+            fontSize: 10,
+          },
         }}
-      />
-      <Tabs.Screen
-        name="certificates"
-        options={{ title: 'Certs', tabBarIcon: tabIcon('card-outline') }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{ title: 'Profile', tabBarIcon: tabIcon('person-circle-outline') }}
-      />
-      {/* Hide any auto-discovered index route from the tab bar */}
-      <Tabs.Screen name="index" options={{ href: null }} />
-    </Tabs>
-    {announcement && (
-      <AnnouncementBanner announcement={announcement} onDismiss={dismiss} />
-    )}
+      >
+        <Tabs.Screen
+          name="log"
+          options={{ title: 'Log', tabBarIcon: tabIcon('journal-outline') }}
+        />
+        <Tabs.Screen
+          name="stats"
+          options={{ title: 'Stats', tabBarIcon: ({ color, size }) => <StatsTabIcon color={color as string} size={size} /> }}
+        />
+        <Tabs.Screen
+          name="gear"
+          options={{ title: 'Gear', tabBarIcon: ({ color, size }) => <GearTabIcon color={color as string} size={size} /> }}
+        />
+        <Tabs.Screen
+          name="certificates"
+          options={{ title: 'Certs', tabBarIcon: ({ color, size }) => <CertsTabIcon color={color as string} size={size} /> }}
+        />
+        <Tabs.Screen
+          name="profile"
+          options={{ title: 'Profile', tabBarIcon: tabIcon('person-circle-outline') }}
+        />
+        {/* Hide any auto-discovered index route from the tab bar */}
+        <Tabs.Screen name="index" options={{ href: null }} />
+      </Tabs>
+      {announcement && (
+        <AnnouncementBanner announcement={announcement} onDismiss={dismiss} />
+      )}
     </View>
+  );
+}
+
+export default function TabLayout() {
+  return (
+    <AttentionProvider>
+      <TabsContent />
+    </AttentionProvider>
   );
 }

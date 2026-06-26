@@ -146,7 +146,7 @@ export default function ContactScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.back} onPress={() => router.back()} activeOpacity={0.7}>

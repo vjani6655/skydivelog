@@ -55,6 +55,29 @@ function DateField({ label, value, onChange, error, minimumDate, maximumDate }: 
   const confirm = () => { onChange(draft); setOpen(false); };
   const cancel = () => { setDraft(value ?? new Date()); setOpen(false); };
 
+  if (Platform.OS === 'android') {
+    return (
+      <View style={styles.fieldGroup}>
+        <Label text={label} />
+        <TouchableOpacity style={[styles.dateBtn, !!error && styles.inputError]} onPress={() => { setDraft(value ?? (minimumDate ?? new Date())); setOpen(true); }} activeOpacity={0.7}>
+          <Ionicons name="calendar-outline" size={15} color={value ? colors.fg : colors.fg3} style={{ marginRight: spacing[2] }} />
+          <Text style={[styles.dateBtnText, !value && { color: colors.fg3 }]}>{display}</Text>
+        </TouchableOpacity>
+        {!!error && <Text style={styles.errorText}>{error}</Text>}
+        {open && (
+          <DateTimePicker
+            value={draft}
+            mode="date"
+            display="default"
+            onChange={(_, selected) => { setOpen(false); if (selected) { setDraft(selected); onChange(selected); } }}
+            maximumDate={maximumDate}
+            minimumDate={minimumDate}
+          />
+        )}
+      </View>
+    );
+  }
+
   return (
     <View style={styles.fieldGroup}>
       <Label text={label} />
@@ -106,6 +129,7 @@ export default function NewGearScreen() {
   const [canopySubType, setCanopySubType] = useState<'main' | 'reserve'>('main');
   const [linkedMainGearId, setLinkedMainGearId] = useState<string | null>(null);
   const [mainCanopies, setMainCanopies] = useState<Array<{ id: string; make_model: string }>>([]);
+  const [reminderDays, setReminderDays] = useState(30);
   const [makeModel, setMakeModel] = useState('');
   const [serialNumber, setSerialNumber] = useState('');
   const [manufacturedDate, setManufacturedDate] = useState<Date | null>(null);
@@ -128,13 +152,13 @@ export default function NewGearScreen() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session?.user) return;
-      supabase.from('gear')
-        .select('id, make_model')
-        .eq('user_id', session.user.id)
-        .eq('type', 'canopy')
-        .eq('canopy_sub_type', 'main')
-        .order('make_model')
-        .then(({ data }) => setMainCanopies(data ?? []));
+      Promise.all([
+        supabase.from('gear').select('id, make_model').eq('user_id', session.user.id).eq('type', 'canopy').eq('canopy_sub_type', 'main').order('make_model'),
+        supabase.from('users').select('repack_reminder_days').eq('id', session.user.id).single(),
+      ]).then(([{ data: mains }, { data: prefs }]) => {
+        setMainCanopies(mains ?? []);
+        if (prefs?.repack_reminder_days != null) setReminderDays(prefs.repack_reminder_days);
+      });
     });
   }, []);
 
@@ -265,7 +289,7 @@ export default function NewGearScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.close} onPress={() => router.back()} activeOpacity={0.7}>
           <Ionicons name="close" size={22} color={colors.fg} />
@@ -324,7 +348,7 @@ export default function NewGearScreen() {
           )}
 
           <View style={styles.fieldGroup}>
-            <Label text="MAKE / MODEL" />
+            <Label text={gearType === 'canopy' ? 'MAKE / MODEL / SIZE' : 'MAKE / MODEL'} />
             <TextInput
               style={[styles.input, !!errors.makeModel && styles.inputError]}
               value={makeModel}
@@ -332,14 +356,21 @@ export default function NewGearScreen() {
               placeholder={
                 gearType === 'rig' ? 'Vector 3, Javelin Odyssey, Icon i5' :
                 gearType === 'aad' ? 'Cypress 2, Vigil II, MARS' :
-                canopySubType === 'reserve' ? 'PD Reserve, Optimum, Smart 150' :
-                'Crossfire 3, Sabre 3, Pilot 7'
+                canopySubType === 'reserve' ? 'Optimum 270, PD Reserve 176, Smart 150' :
+                'Sabre 1 135, Crossfire 3 109, Pilot 7 188'
               }
               placeholderTextColor={colors.fg3}
               autoCapitalize="words"
               autoCorrect={false}
             />
             {!!errors.makeModel && <Text style={styles.errorText}>{errors.makeModel}</Text>}
+            {gearType === 'canopy' && (
+              <Text style={styles.fieldHint}>
+                {canopySubType === 'reserve'
+                  ? 'Include the make, model, and size — e.g. "Optimum 270". This name cannot be changed after saving.'
+                  : 'Include the make, model, and size — e.g. "Sabre 1 135". This name cannot be changed after saving.'}
+              </Text>
+            )}
           </View>
 
           <View style={styles.fieldGroup}>
@@ -406,6 +437,17 @@ export default function NewGearScreen() {
                   return d;
                 })()}
               />
+              {nextRepackDate && (() => {
+                const rd = new Date(nextRepackDate.getTime() - reminderDays * 86400000);
+                return (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[1.5], marginTop: -spacing[2], marginBottom: spacing[4] }}>
+                    <Ionicons name="notifications-outline" size={12} color={colors.fg3} />
+                    <Text style={{ fontFamily: 'InterTight-Regular', fontSize: 12, color: colors.fg3 }}>
+                      Reminder will be sent on {rd.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </Text>
+                  </View>
+                );
+              })()}
             </>
           )}
 
@@ -433,12 +475,25 @@ export default function NewGearScreen() {
 
           {/* Next service date — AAD only */}
           {gearType === 'aad' && (
-            <DateField
-              label="NEXT SERVICE DATE"
-              value={nextServiceDate}
-              onChange={d => { setNextServiceDate(d); setErrors(e => ({ ...e, nextServiceDate: undefined })); }}
-              error={errors.nextServiceDate}
-            />
+            <>
+              <DateField
+                label="NEXT SERVICE DATE"
+                value={nextServiceDate}
+                onChange={d => { setNextServiceDate(d); setErrors(e => ({ ...e, nextServiceDate: undefined })); }}
+                error={errors.nextServiceDate}
+              />
+              {nextServiceDate && (() => {
+                const rd = new Date(nextServiceDate.getTime() - reminderDays * 86400000);
+                return (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[1.5], marginTop: -spacing[2], marginBottom: spacing[4] }}>
+                    <Ionicons name="notifications-outline" size={12} color={colors.fg3} />
+                    <Text style={{ fontFamily: 'InterTight-Regular', fontSize: 12, color: colors.fg3 }}>
+                      Reminder will be sent on {rd.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </Text>
+                  </View>
+                );
+              })()}
+            </>
           )}
 
           {/* Photo */}
@@ -497,6 +552,7 @@ function makeStyles(c: ColorSet) {
   input: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, paddingHorizontal: spacing[3], paddingVertical: spacing[3], fontFamily: 'InterTight-Regular', fontSize: 15, color: c.fg },
   inputError: { borderColor: c.danger },
   errorText: { fontFamily: 'InterTight-Regular', fontSize: 12, color: c.danger, marginTop: spacing[1] },
+  fieldHint: { fontFamily: 'InterTight-Regular', fontSize: 12, color: c.fg3, marginTop: spacing[1.5], lineHeight: 17 },
   dateBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radii.md, paddingHorizontal: spacing[3], paddingVertical: spacing[3] },
   dateBtnText: { fontFamily: 'InterTight-Regular', fontSize: 15, color: c.fg, flex: 1 },
   dateModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },

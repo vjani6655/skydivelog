@@ -16,7 +16,10 @@
       "ios": { "buildConfiguration": "Release" }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_WEB_URL": "https://www.jumplogs.com"
+      }
     }
   },
   "submit": {

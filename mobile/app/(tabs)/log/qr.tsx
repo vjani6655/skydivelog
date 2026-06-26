@@ -75,7 +75,7 @@ export default function QRScreen() {
   // ── Signed success state ───────────────────────────────────────────────────
   if (signed) {
     return (
-      <SafeAreaView style={styles.screen}>
+      <SafeAreaView style={styles.screen} edges={['top']}>
         <View style={styles.header}>
           <View style={{ width: 36 }} />
           <Text style={styles.headerTitle}>Jump signed</Text>
@@ -114,7 +114,7 @@ export default function QRScreen() {
 
   // ── Normal QR state ────────────────────────────────────────────────────────
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.close}

@@ -37,6 +37,25 @@ function DateField({ label, value, onChange, optional, error, minimumDate, maxim
     : optional ? '—' : 'Tap to select';
   const confirm = () => { onChange(draft); setOpen(false); };
   const cancel = () => { setDraft(value ?? new Date()); setOpen(false); };
+
+  if (Platform.OS === 'android') {
+    return (
+      <View style={styles.fieldGroup}>
+        <Label text={label} />
+        <TouchableOpacity style={[styles.dateBtn, !!error && styles.inputError]} onPress={() => { setDraft(value ?? (minimumDate ?? new Date())); setOpen(true); }} activeOpacity={0.7}>
+          <Ionicons name="calendar-outline" size={15} color={value ? colors.fg : colors.fg3} style={{ marginRight: spacing[2] }} />
+          <Text style={[styles.dateBtnText, !value && { color: colors.fg3 }]}>{display}</Text>
+        </TouchableOpacity>
+        {!!error && <Text style={styles.errorText}>{error}</Text>}
+        {open && (
+          <DateTimePicker value={draft} mode="date" display="default"
+            onChange={(_, s) => { setOpen(false); if (s) { setDraft(s); onChange(s); } }}
+            minimumDate={minimumDate} maximumDate={maximumDate} />
+        )}
+      </View>
+    );
+  }
+
   return (
     <View style={styles.fieldGroup}>
       <Label text={label} />
@@ -106,10 +125,18 @@ export default function EditCertificateScreen() {
   const [photoSignedUrl, setPhotoSignedUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [certReminderDays, setCertReminderDays] = useState(30);
   const [errors, setErrors] = useState<{ title?: string; issuingBody?: string; issuedDate?: string; expiresDate?: string }>({});
 
   useEffect(() => {
-    supabase.from('certificates').select('*').eq('id', id).single().then(({ data }) => {
+    Promise.all([
+      supabase.from('certificates').select('*').eq('id', id).single(),
+      supabase.auth.getSession().then(({ data: { session } }) =>
+        session?.user
+          ? supabase.from('users').select('cert_expiry_warning_days').eq('id', session.user.id).single()
+          : Promise.resolve({ data: null })
+      ),
+    ]).then(([{ data }, { data: prefs }]) => {
       const c = data as Certificate;
       setOrig(c);
       setCategory(c.category);
@@ -132,6 +159,7 @@ export default function EditCertificateScreen() {
           setPhotoSignedUrl(c.document_file_url);
         }
       }
+      if (prefs?.cert_expiry_warning_days != null) setCertReminderDays(prefs.cert_expiry_warning_days);
       setLoading(false);
     });
   }, [id]);
@@ -277,7 +305,7 @@ export default function EditCertificateScreen() {
   const minExpiry = issuedDate ? new Date(issuedDate.getTime() + 86400000) : undefined;
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.close} onPress={() => router.back()} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={22} color={colors.fg} />
@@ -349,6 +377,17 @@ export default function EditCertificateScreen() {
             error={errors.expiresDate}
             minimumDate={minExpiry}
           />
+          {expiresDate && (() => {
+            const rd = new Date(expiresDate.getTime() - certReminderDays * 86400000);
+            return (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[1.5], marginTop: -spacing[2], marginBottom: spacing[4] }}>
+                <Ionicons name="notifications-outline" size={12} color={colors.fg3} />
+                <Text style={{ fontFamily: 'InterTight-Regular', fontSize: 12, color: colors.fg3 }}>
+                  Expiry reminder will be sent on {rd.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </Text>
+              </View>
+            );
+          })()}
 
           <View style={styles.fieldGroup}>
             <Label text="REFERENCE NUMBER" />

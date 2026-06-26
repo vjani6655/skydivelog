@@ -12,6 +12,7 @@ import { getUnreadCount } from '@/lib/notifications';
 import { spacing, radii } from '@/constants/tokens';
 
 const SUB_CACHE_KEY = '@jumplogs/sub_cache';
+const PROFILE_CACHE_KEY = '@jumplogs/profile_cache';
 import type { ColorSet } from '@/constants/tokens';
 import { useColors } from '@/lib/theme';
 
@@ -67,37 +68,46 @@ export default function ProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
-    try {
-      await supabase.auth.refreshSession().catch(() => null);
-      // getUser() requires network; fall back to local session when offline
-      let user = (await supabase.auth.getUser().catch(() => ({ data: { user: null } }))).data.user;
-      if (!user) {
-        user = (await supabase.auth.getSession().catch(() => ({ data: { session: null } }))).data.session?.user ?? null;
-      }
-      if (!user) { setLoading(false); return; }
-      setEmail(user.email ?? null);
+    // Instant local read — no network needed
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user ?? null;
+    if (!user) { setLoading(false); return; }
+    setEmail(user.email ?? null);
+    setUserCreatedAt(user.created_at);
+    setTrialEndsAt((user.user_metadata?.trial_ends_at as string) ?? null);
 
-      const [profileRes, jumpsRes, subRes, unreadCount, adminCheck] = await Promise.all([
-        supabase.from('users').select('full_name, licence_number, licence_rating, country, date_of_birth, phone, home_dropzone_id, emergency_contact_name, emergency_contact_relationship, emergency_contact_phone, prior_freefall_seconds, prior_canopy_seconds').eq('id', user.id).single(),
-        supabase.from('jumps').select('freefall_seconds, canopy_seconds, dropzone_id, jump_number').eq('user_id', user.id).is('deleted_at', null),
-        supabase.from('subscriptions').select('status, renews_at').eq('user_id', user.id).order('started_at', { ascending: false }).limit(1).maybeSingle(),
-        getUnreadCount(supabase, user.id).catch(() => 0),
-        supabase.rpc('is_admin'),
+    // Restore cached data immediately so UI shows something while network loads
+    const [subRaw, profileRaw] = await Promise.all([
+      AsyncStorage.getItem(SUB_CACHE_KEY).catch(() => null),
+      AsyncStorage.getItem(PROFILE_CACHE_KEY).catch(() => null),
+    ]);
+    if (subRaw) {
+      const s = JSON.parse(subRaw) as { status: string | null; renews_at: string | null };
+      setSub(s.status ? { status: s.status, renews_at: s.renews_at } : null);
+    }
+    if (profileRaw) {
+      const p = JSON.parse(profileRaw) as { profile: typeof profile; stats: typeof stats };
+      setProfile(p.profile);
+      setStats(p.stats);
+    }
+
+    try {
+      const offlineTimeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('offline_timeout')), 5000)
+      );
+      const [profileRes, jumpsRes, subRes, unreadCount, adminCheck] = await Promise.race([
+        Promise.all([
+          supabase.from('users').select('full_name, licence_number, licence_rating, country, date_of_birth, phone, home_dropzone_id, emergency_contact_name, emergency_contact_relationship, emergency_contact_phone, prior_freefall_seconds, prior_canopy_seconds').eq('id', user.id).single(),
+          supabase.from('jumps').select('freefall_seconds, canopy_seconds, dropzone_id, jump_number').eq('user_id', user.id).is('deleted_at', null),
+          supabase.from('subscriptions').select('status, renews_at').eq('user_id', user.id).order('started_at', { ascending: false }).limit(1).maybeSingle(),
+          getUnreadCount(supabase, user.id).catch(() => 0),
+          supabase.rpc('is_admin'),
+        ]),
+        offlineTimeout,
       ]);
       setIsAdmin(adminCheck.data === true);
-
       setUnreadNotifs(unreadCount as number);
-      setUserCreatedAt(user.created_at);
-      setTrialEndsAt((user.user_metadata?.trial_ends_at as string) ?? null);
       setSub(subRes.data ?? null);
-
-      // Keep sub cache fresh for offline use
-      await AsyncStorage.setItem(SUB_CACHE_KEY, JSON.stringify({
-        status:        subRes.data?.status   ?? null,
-        renews_at:     subRes.data?.renews_at ?? null,
-        trial_ends_at: (user.user_metadata?.trial_ends_at as string) ?? null,
-        created_at:    user.created_at,
-      })).catch(() => null);
 
       setProfile(profileRes.data ?? null);
       const jumps = jumpsRes.data ?? [];
@@ -106,20 +116,24 @@ export default function ProfileScreen() {
       const priorFF = (profileRes.data as any)?.prior_freefall_seconds ?? 0;
       const priorCanopy = (profileRes.data as any)?.prior_canopy_seconds ?? 0;
       const dzCount = new Set(jumps.map(j => j.dropzone_id).filter(Boolean)).size;
-      // Use the highest jump number as the career total — correctly reflects
-      // users who started logging mid-career (e.g. started at jump #250)
+      // Use the highest jump number as the career total
       const maxJumpNum = jumps.reduce((mx, j) => Math.max(mx, (j as any).jump_number ?? 0), 0);
-      setStats({ jumps: maxJumpNum || jumps.length, ff: appFF + priorFF, appFF, canopy: appCanopy + priorCanopy, appCanopy, dzs: dzCount });
+      const freshStats = { jumps: maxJumpNum || jumps.length, ff: appFF + priorFF, appFF, canopy: appCanopy + priorCanopy, appCanopy, dzs: dzCount };
+      setStats(freshStats);
+
+      // Update caches for next offline session
+      await Promise.all([
+        AsyncStorage.setItem(SUB_CACHE_KEY, JSON.stringify({
+          status:    subRes.data?.status   ?? null,
+          renews_at: subRes.data?.renews_at ?? null,
+        })).catch(() => null),
+        AsyncStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify({
+          profile: profileRes.data ?? null,
+          stats:   freshStats,
+        })).catch(() => null),
+      ]);
     } catch {
-      // Offline: restore subscription state from cache so the badge shows the
-      // correct status (active/trial/expired) rather than defaulting to FREE.
-      const subRaw = await AsyncStorage.getItem(SUB_CACHE_KEY).catch(() => null);
-      if (subRaw) {
-        const s = JSON.parse(subRaw) as { status: string | null; renews_at: string | null; trial_ends_at: string | null; created_at: string };
-        setSub(s.status ? { status: s.status, renews_at: s.renews_at } : null);
-        setTrialEndsAt(s.trial_ends_at);
-        setUserCreatedAt(s.created_at);
-      }
+      // Network unavailable or timed out — cached data already restored above
     }
     setLoading(false);
   }, []);
@@ -190,7 +204,7 @@ export default function ProfileScreen() {
     : { label: 'FREE', bg: colors.surface2, text: colors.fg3 };
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
       <ScrollView
         contentContainerStyle={styles.body}
         showsVerticalScrollIndicator={false}

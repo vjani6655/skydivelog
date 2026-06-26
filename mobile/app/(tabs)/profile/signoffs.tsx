@@ -30,7 +30,8 @@ export default function SignoffsScreen() {
   useFocusEffect(useCallback(() => {
     (async () => {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
       if (!user) { setLoading(false); return; }
       const { data } = await supabase
         .from('signoffs')
@@ -43,7 +44,7 @@ export default function SignoffsScreen() {
   }, []));
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.back} onPress={() => router.back()} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={22} color={colors.fg} />
@@ -105,7 +106,7 @@ function makeStyles(c: ColorSet) {
       borderBottomWidth: 1, borderBottomColor: c.border,
     },
     back: { width: 36, height: 36, justifyContent: 'center' },
-    title: { flex: 1, textAlign: 'center', fontFamily: 'InterTight-Bold', fontSize: 22, color: c.fg, letterSpacing: -0.4 },
+    title: { flex: 1, textAlign: 'center', fontFamily: 'InterTight-SemiBold', fontSize: 17, color: c.fg },
     addBtn: { width: 36, height: 36, justifyContent: 'center', alignItems: 'flex-end' },
     list: { padding: spacing[5], gap: spacing[3] },
     emptyContainer: { flex: 1 },

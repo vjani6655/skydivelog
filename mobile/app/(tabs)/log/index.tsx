@@ -76,38 +76,42 @@ export default function LogScreen() {
   // ── data fetch ────────────────────────────────────────────────────────────
   const fetchAll = async () => {
     try {
-    await supabase.auth.refreshSession().catch(() => null);
-    // getUser() requires network; fall back to getSession() (local storage) when offline
-    let user = (await supabase.auth.getUser().catch(() => ({ data: { user: null } }))).data.user;
-    if (!user) {
-      user = (await supabase.auth.getSession().catch(() => ({ data: { session: null } }))).data.session?.user ?? null;
-    }
+    // getSession() reads from local AsyncStorage — instant, works offline
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user ?? null;
     if (!user) { setLoading(false); return; }
 
     // Flush any locally-queued jumps first
     await trySyncQueue(supabase).catch(() => null);
 
-    const [{ data: userData }, { data: jumpData }, { data: subData }, { data: tagData }] = await Promise.all([
-      supabase.from('users').select('display_layout_jump_list').eq('id', user.id).single(),
-      supabase
-        .from('jumps')
-        .select('*, dropzones(name, region, latitude, longitude), signatures(id, signed_at), jump_tags(tags(id, name, color))')
-        .eq('user_id', user.id)
-        .is('deleted_at', null)
-        .order('date', { ascending: false })
-        .order('jump_number', { ascending: false }),
-      supabase
-        .from('subscriptions')
-        .select('status, renews_at')
-        .eq('user_id', user.id)
-        .order('started_at', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      supabase
-        .from('tags')
-        .select('id, name, color')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: true }),
+    // Race all network queries against a 5s timeout so offline falls through to the catch block
+    const offlineTimeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('offline_timeout')), 5000)
+    );
+    const [{ data: userData }, { data: jumpData }, { data: subData }, { data: tagData }] = await Promise.race([
+      Promise.all([
+        supabase.from('users').select('display_layout_jump_list').eq('id', user.id).single(),
+        supabase
+          .from('jumps')
+          .select('*, dropzones(name, region, latitude, longitude), signatures(id, signed_at), jump_tags(tags(id, name, color))')
+          .eq('user_id', user.id)
+          .is('deleted_at', null)
+          .order('date', { ascending: false })
+          .order('jump_number', { ascending: false }),
+        supabase
+          .from('subscriptions')
+          .select('status, renews_at')
+          .eq('user_id', user.id)
+          .order('started_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from('tags')
+          .select('id, name, color')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: true }),
+      ]),
+      offlineTimeout,
     ]);
     setUserTags((tagData as any[]) ?? []);
 
@@ -503,7 +507,7 @@ export default function LogScreen() {
 
   if (layout === 'Timeline') {
     return (
-      <SafeAreaView style={styles.screen}>
+      <SafeAreaView style={styles.screen} edges={['top']}>
         <FlatList
           data={timelineGroups}
           keyExtractor={g => g.month}
@@ -548,7 +552,7 @@ export default function LogScreen() {
 
   if (layout === 'Compact') {
     return (
-      <SafeAreaView style={styles.screen}>
+      <SafeAreaView style={styles.screen} edges={['top']}>
         <FlatList
           data={filtered}
           keyExtractor={j => j.id}
@@ -592,7 +596,7 @@ export default function LogScreen() {
 
   // Cards (default)
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
       <FlatList
         data={filtered}
         keyExtractor={j => j.id}

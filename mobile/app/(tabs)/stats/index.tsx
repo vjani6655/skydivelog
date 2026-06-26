@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet,  ActivityIndicator,
   RefreshControl, TouchableOpacity } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { spacing, radii } from '@/constants/tokens';
 import type { ColorSet } from '@/constants/tokens';
 import { useColors } from '@/lib/theme';
+import { useAttention } from '@/lib/attention';
 import type { JumpFull } from '@/lib/types';
 
 type StatsLayout = 'Cards' | 'Cockpit' | 'Story';
@@ -218,6 +219,15 @@ function StatsA({ s }: { s: StatsBag }) {
           <Text style={styles.labelSm}>Last jump · {s.daysSinceLast}d ago</Text>
           <Text style={styles.labelSm}>{isCurrent ? `${s.currencyDays - s.daysSinceLast} days left` : 'Log a jump'}</Text>
         </View>
+        {isCurrent && (() => {
+          const alertDate = new Date(Date.now() + (s.currencyDays - s.daysSinceLast) * 86400000);
+          return (
+            <View style={[styles.inlineRow, { marginTop: spacing[2] }]}>
+              <Ionicons name="notifications-outline" size={12} color={colors.fg3} />
+              <Text style={styles.labelSm}>Alert on {alertDate.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</Text>
+            </View>
+          );
+        })()}
       </View>
 
       <Text style={styles.sectionTitle}>By jump type</Text>
@@ -314,6 +324,15 @@ function StatsB({ s }: { s: StatsBag }) {
           <Text style={styles.labelSm}>{isCurrent ? `+${30 - s.daysSinceLast}D` : '+0D'}</Text>
           <Text style={styles.labelSm}>+30D LAPSE</Text>
         </View>
+        {isCurrent && (() => {
+          const alertDate = new Date(Date.now() + (s.currencyDays - s.daysSinceLast) * 86400000);
+          return (
+            <View style={[styles.inlineRow, { marginTop: spacing[2] }]}>
+              <Ionicons name="notifications-outline" size={12} color={colors.fg3} />
+              <Text style={styles.labelSm}>Alert on {alertDate.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</Text>
+            </View>
+          );
+        })()}
       </View>
 
       <View style={styles.card}>
@@ -389,6 +408,15 @@ function StatsC({ s }: { s: StatsBag }) {
           <Text style={styles.labelSm}>
             {isCurrent ? `Lapses in ${s.currencyDays - s.daysSinceLast} days · go log a jump.` : 'Log a jump to reset currency.'}
           </Text>
+          {isCurrent && (() => {
+            const alertDate = new Date(Date.now() + (s.currencyDays - s.daysSinceLast) * 86400000);
+            return (
+              <View style={[styles.inlineRow, { marginTop: spacing[2] }]}>
+                <Ionicons name="notifications-outline" size={12} color={colors.fg3} />
+                <Text style={styles.labelSm}>Alert on {alertDate.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</Text>
+              </View>
+            );
+          })()}
         </View>
 
         <Text style={styles.sectionTitle}>By jump type</Text>
@@ -431,8 +459,10 @@ function makeHeroBannerStyles(c: ColorSet) {
 export default function StatsScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { setAttention } = useAttention();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
   const [layout, setLayout] = useState<StatsLayout>('Cards');
   const [jumps, setJumps] = useState<JumpFull[]>([]);
   const [currencyMonths, setCurrencyMonths] = useState(1);
@@ -442,18 +472,30 @@ export default function StatsScreen() {
   const fetchAll = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     const user = session?.user;
-    if (!user) { setLoading(false); return; }
+    if (!user) { setLoading(false); setRefreshing(false); return; }
 
-    const [{ data: userData }, { data: jumpData }] = await Promise.all([
-      supabase.from('users').select('display_layout_stats_overview, currency_alert_months, prior_freefall_seconds, prior_canopy_seconds').eq('id', user.id).single(),
-      supabase.from('jumps').select('*, dropzones(name, region, latitude, longitude)').eq('user_id', user.id).is('deleted_at', null).order('date', { ascending: false }),
-    ]);
+    try {
+      const offlineTimeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('offline_timeout')), 5000)
+      );
+      const [{ data: userData }, { data: jumpData }] = await Promise.race([
+        Promise.all([
+          supabase.from('users').select('display_layout_stats_overview, currency_alert_months, prior_freefall_seconds, prior_canopy_seconds').eq('id', user.id).single(),
+          supabase.from('jumps').select('*, dropzones(name, region, latitude, longitude)').eq('user_id', user.id).is('deleted_at', null).order('date', { ascending: false }),
+        ]),
+        offlineTimeout,
+      ]);
 
-    if (userData?.display_layout_stats_overview) setLayout(userData.display_layout_stats_overview as StatsLayout);
-    if (userData?.currency_alert_months != null) setCurrencyMonths(userData.currency_alert_months);
-    setPriorFFSecs(userData?.prior_freefall_seconds ?? 0);
-    setPriorCanopySecs(userData?.prior_canopy_seconds ?? 0);
-    setJumps((jumpData ?? []) as JumpFull[]);
+      if (userData?.display_layout_stats_overview) setLayout(userData.display_layout_stats_overview as StatsLayout);
+      if (userData?.currency_alert_months != null) setCurrencyMonths(userData.currency_alert_months);
+      setPriorFFSecs(userData?.prior_freefall_seconds ?? 0);
+      setPriorCanopySecs(userData?.prior_canopy_seconds ?? 0);
+      setJumps((jumpData ?? []) as JumpFull[]);
+      setIsOffline(false);
+    } catch {
+      setIsOffline(true);
+    }
+
     setLoading(false);
     setRefreshing(false);
   };
@@ -502,8 +544,29 @@ export default function StatsScreen() {
     return { totalJumps, maxJumpNum, totalFFSecs, appFFSecs, priorFFSecs, totalCanopySecs, appCanopySecs, priorCanopySecs, avgFFSecs, daysSinceLast, currencyDays: currencyMonths * 30, monthlySparkline: monthlyCounts, typeBreakdown, weeklyCounts, topDZ, thisYear };
   }, [jumps, currencyMonths, priorFFSecs, priorCanopySecs]);
 
+  useEffect(() => {
+    if (!loading) {
+      setAttention('stats', stats.daysSinceLast > stats.currencyDays);
+    }
+  }, [stats, loading, setAttention]);
+
   if (loading) {
     return <View style={[styles.screen, styles.center]}><ActivityIndicator color={colors.sky} /></View>;
+  }
+
+  if (isOffline) {
+    return (
+      <SafeAreaView style={styles.screen} edges={['top']}>
+        <View style={styles.offlineContainer}>
+          <Ionicons name="cloud-offline-outline" size={48} color={colors.fg3} />
+          <Text style={styles.offlineTitle}>No internet connection</Text>
+          <Text style={styles.offlineSub}>Connect to the internet to view your stats</Text>
+          <TouchableOpacity onPress={() => { setLoading(true); setIsOffline(false); fetchAll(); }} activeOpacity={0.7}>
+            <Text style={styles.offlineRetry}>Try again</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   const refreshCtrl = (
@@ -511,7 +574,7 @@ export default function StatsScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
       {layout === 'Cards'   && <StatsA s={stats} />}
       {layout === 'Cockpit' && <StatsB s={stats} />}
       {layout === 'Story'   && <StatsC s={stats} />}
@@ -524,6 +587,10 @@ function makeStyles(c: ColorSet) {
   screen: { flex: 1, backgroundColor: c.bg },
   flex: { flex: 1 },
   center: { justifyContent: 'center', alignItems: 'center' },
+  offlineContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing[8], gap: spacing[3] },
+  offlineTitle: { fontFamily: 'InterTight-SemiBold', fontSize: 17, color: c.fg, textAlign: 'center' },
+  offlineSub: { fontFamily: 'InterTight-Regular', fontSize: 14, color: c.fg3, textAlign: 'center', lineHeight: 20 },
+  offlineRetry: { fontFamily: 'InterTight-Medium', fontSize: 14, color: c.sky, marginTop: spacing[2] },
   body: { paddingHorizontal: spacing[5], paddingBottom: spacing[12] },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingTop: spacing[5], paddingBottom: spacing[4] },
   screenTitle: { fontFamily: 'InterTight-Bold', fontSize: 28, color: c.fg, letterSpacing: -0.5 },

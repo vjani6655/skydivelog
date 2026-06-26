@@ -4,7 +4,10 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase';
+
+const JUMP_CACHE_KEY = '@jumplogs/jumps_list_cache';
 import { useColors } from '@/lib/theme';
 import typography from '@/constants/typography';
 import { IconButton } from '@/components/ui';
@@ -120,7 +123,17 @@ export default function JumpDetailScreen() {
       supabase.from('subscriptions').select('status, renews_at').eq('user_id', user.id).order('started_at', { ascending: false }).limit(1).maybeSingle(),
     ]);
 
-    if (jumpRes.data) setJump(jumpRes.data as JumpFull);
+    if (jumpRes.data) {
+      setJump(jumpRes.data as JumpFull);
+    } else {
+      // Offline: look for the jump in the cached list
+      const raw = await AsyncStorage.getItem(JUMP_CACHE_KEY).catch(() => null);
+      if (raw) {
+        const cached = JSON.parse(raw) as JumpFull[];
+        const cached_jump = cached.find(j => j.id === id);
+        if (cached_jump) setJump(cached_jump);
+      }
+    }
     if (userRes.data?.display_layout_jump_detail) {
       setLayout(userRes.data.display_layout_jump_detail as LayoutPref);
     }
@@ -207,7 +220,7 @@ export default function JumpDetailScreen() {
   if (!jump) {
     return (
       <View style={[styles.center, { backgroundColor: colors.bg }]}>
-        <Text style={[typography.base, { color: colors.fg2 }]}>Jump not found.</Text>
+        <Text style={[typography.base, { color: colors.fg2 }]}>Jump not found. Connect to the internet to view this jump.</Text>
       </View>
     );
   }

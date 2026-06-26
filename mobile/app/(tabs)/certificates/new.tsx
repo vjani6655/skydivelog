@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet,  KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Modal, Image } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -35,6 +35,24 @@ function DateField({ label, value, onChange, optional, error, minimumDate }: {
 
   const confirm = () => { onChange(draft); setOpen(false); };
   const cancel = () => { setDraft(value ?? new Date()); setOpen(false); };
+
+  if (Platform.OS === 'android') {
+    return (
+      <View style={styles.flex}>
+        <Label text={label} />
+        <TouchableOpacity style={[styles.dateBtn, !!error && { borderColor: colors.danger }]} onPress={() => { setDraft(value ?? (minimumDate ?? new Date())); setOpen(true); }} activeOpacity={0.7}>
+          <Ionicons name="calendar-outline" size={15} color={value ? colors.fg : colors.fg3} style={{ marginRight: spacing[2] }} />
+          <Text style={[styles.dateBtnText, !value && { color: colors.fg3 }]}>{display}</Text>
+        </TouchableOpacity>
+        {!!error && <Text style={{ fontFamily: 'InterTight-Regular', fontSize: 12, color: colors.danger, marginTop: 4, marginBottom: spacing[1] }}>{error}</Text>}
+        {open && (
+          <DateTimePicker value={draft} mode="date" display="default"
+            onChange={(_, selected) => { setOpen(false); if (selected) { setDraft(selected); onChange(selected); } }}
+            minimumDate={minimumDate ?? undefined} />
+        )}
+      </View>
+    );
+  }
 
   return (
     <View style={styles.flex}>
@@ -92,12 +110,22 @@ export default function NewCertificateScreen() {
   const [documentName, setDocumentName] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [certReminderDays, setCertReminderDays] = useState(30);
   const [errors, setErrors] = useState<{
     title?: string;
     issuingBody?: string;
     issuedDate?: string;
     expiresDate?: string;
   }>({});
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session?.user) return;
+      supabase.from('users').select('cert_expiry_warning_days').eq('id', session.user.id).single().then(({ data }) => {
+        if (data?.cert_expiry_warning_days != null) setCertReminderDays(data.cert_expiry_warning_days);
+      });
+    });
+  }, []);
 
   const clearError = (field: string) => setErrors(e => ({ ...e, [field]: undefined }));
 
@@ -213,7 +241,7 @@ export default function NewCertificateScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.close} onPress={() => router.back()} activeOpacity={0.7}>
           <Ionicons name="close" size={22} color={colors.fg} />
@@ -273,6 +301,17 @@ export default function NewCertificateScreen() {
             <DateField label="ISSUED" value={issuedDate} onChange={d => { setIssuedDate(d); if (expiresDate && expiresDate <= d) setExpiresDate(null); clearError('issuedDate'); }} error={errors.issuedDate} />
             <DateField label="EXPIRES" value={expiresDate} onChange={d => { setExpiresDate(d); clearError('expiresDate'); }} optional error={errors.expiresDate} minimumDate={issuedDate ? new Date(issuedDate.getTime() + 86400000) : undefined} />
           </View>
+          {expiresDate && (() => {
+            const rd = new Date(expiresDate.getTime() - certReminderDays * 86400000);
+            return (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[1.5], marginTop: -spacing[2], marginBottom: spacing[4] }}>
+                <Ionicons name="notifications-outline" size={12} color={colors.fg3} />
+                <Text style={{ fontFamily: 'InterTight-Regular', fontSize: 12, color: colors.fg3 }}>
+                  Expiry reminder will be sent on {rd.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </Text>
+              </View>
+            );
+          })()}
 
           <Label text="REFERENCE / NUMBER" />
           <TextInput

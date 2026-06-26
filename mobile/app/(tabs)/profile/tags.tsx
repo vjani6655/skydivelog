@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList,
   StyleSheet,  ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { spacing, radii } from '@/constants/tokens';
@@ -93,7 +93,14 @@ export default function TagsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
+          <Ionicons name="chevron-back" size={22} color={colors.fg} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Manage tags</Text>
+        <View style={styles.backBtn} />
+      </View>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <FlatList
           data={tags}
@@ -154,6 +161,9 @@ function makeStyles(colors: ColorSet) {
   return StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.bg },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+    header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing[5], paddingVertical: spacing[3], borderBottomWidth: 1, borderBottomColor: colors.border },
+    backBtn: { width: 36, height: 36, justifyContent: 'center' },
+    headerTitle: { flex: 1, textAlign: 'center', fontFamily: 'InterTight-SemiBold', fontSize: 17, color: colors.fg },
     list: { padding: spacing[5], paddingBottom: spacing[3] },
     hint: {
       fontFamily: 'InterTight-Regular', fontSize: 13, color: colors.fg3,

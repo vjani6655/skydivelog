@@ -19,7 +19,8 @@ const DATE_RANGES = ['All time', 'This year', 'Last 90 days'];
 // In dev on a physical device, replace 'localhost' with the Expo bundler host
 // (same machine IP that Metro is running on) so the device can reach the web server.
 function resolveWebUrl(): string {
-  const base = process.env.EXPO_PUBLIC_WEB_URL ?? 'http://localhost:3000';
+  // Fall back to production URL so EAS builds work even without the env var set
+  const base = process.env.EXPO_PUBLIC_WEB_URL ?? 'https://www.jumplogs.com';
   if (!__DEV__ || !base.includes('localhost')) return base;
   // expoConfig.hostUri looks like "192.168.x.x:8081"
   const host =
@@ -198,7 +199,7 @@ export default function ExportScreen() {
       await Sharing.shareAsync(fileUri, { mimeType: 'application/pdf', dialogTitle: 'Export Logbook' });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      const hint = msg.toLowerCase().includes('fetch') || msg.toLowerCase().includes('network')
+      const hint = __DEV__ && (msg.toLowerCase().includes('fetch') || msg.toLowerCase().includes('network'))
         ? `\n\nMake sure the web server is running:\ncd web && npm run dev\n\nTarget: ${WEB_URL}`
         : '';
       Alert.alert('Export failed', msg + hint);
@@ -210,7 +211,7 @@ export default function ExportScreen() {
   const isPdf = format === 'PDF';
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={22} color={colors.fg} />

@@ -163,7 +163,7 @@ export default function SignoffNewScreen() {
   const sigIsEmpty = allPaths.current.length === 0 && !currentPath.current;
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerClose} onPress={() => router.back()} activeOpacity={0.7}>
           <Ionicons name="close" size={22} color={colors.fg} />

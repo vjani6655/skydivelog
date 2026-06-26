@@ -393,7 +393,7 @@ export default function InstructorSignScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
       <Stack.Screen options={{ gestureEnabled: false }} />
       <View style={styles.header}>
         <TouchableOpacity style={styles.back} onPress={() => router.back()} activeOpacity={0.7}>

@@ -111,7 +111,7 @@ export default function EditProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={22} color={colors.fg} />
@@ -165,45 +165,66 @@ export default function EditProfileScreen() {
               {dob ? fmtDOB(dob) : 'Date of birth'}
             </Text>
           </TouchableOpacity>
-          <Modal transparent animationType="slide" visible={dobOpen} onRequestClose={() => setDobOpen(false)}>
-            <TouchableOpacity style={styles.dateModalOverlay} activeOpacity={1} onPress={() => setDobOpen(false)}>
-              <TouchableOpacity activeOpacity={1} onPress={() => {}}>
-                <View style={styles.dateModalSheet}>
-                  <View style={styles.dateModalToolbar}>
-                    <TouchableOpacity onPress={() => setDobOpen(false)} style={styles.dateModalToolbarBtn}>
-                      <Text style={styles.dateModalCancelText}>Cancel</Text>
-                    </TouchableOpacity>
-                    <Text style={styles.dateModalTitle}>Date of Birth</Text>
-                    <TouchableOpacity
-                      onPress={() => {
-                        const cutoff = new Date();
-                        cutoff.setFullYear(cutoff.getFullYear() - 10);
-                        if (dobDraft >= cutoff) {
-                          Alert.alert('Invalid date', 'Date of birth must be more than 10 years ago.');
-                          return;
-                        }
-                        setDob(dobDraft);
-                        setDobOpen(false);
-                      }}
-                      style={styles.dateModalToolbarBtn}
-                    >
-                      <Text style={styles.dateModalDoneText}>Done</Text>
-                    </TouchableOpacity>
+          {Platform.OS === 'android' ? (
+            dobOpen && (
+              <DateTimePicker
+                value={dobDraft}
+                mode="date"
+                display="default"
+                maximumDate={(() => { const d = new Date(); d.setFullYear(d.getFullYear() - 10); return d; })()}
+                onChange={(_, d) => {
+                  setDobOpen(false);
+                  if (d) {
+                    const cutoff = new Date();
+                    cutoff.setFullYear(cutoff.getFullYear() - 10);
+                    if (d >= cutoff) { Alert.alert('Invalid date', 'Date of birth must be more than 10 years ago.'); return; }
+                    setDobDraft(d);
+                    setDob(d);
+                  }
+                }}
+              />
+            )
+          ) : (
+            <Modal transparent animationType="slide" visible={dobOpen} onRequestClose={() => setDobOpen(false)}>
+              <TouchableOpacity style={styles.dateModalOverlay} activeOpacity={1} onPress={() => setDobOpen(false)}>
+                <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+                  <View style={styles.dateModalSheet}>
+                    <View style={styles.dateModalToolbar}>
+                      <TouchableOpacity onPress={() => setDobOpen(false)} style={styles.dateModalToolbarBtn}>
+                        <Text style={styles.dateModalCancelText}>Cancel</Text>
+                      </TouchableOpacity>
+                      <Text style={styles.dateModalTitle}>Date of Birth</Text>
+                      <TouchableOpacity
+                        onPress={() => {
+                          const cutoff = new Date();
+                          cutoff.setFullYear(cutoff.getFullYear() - 10);
+                          if (dobDraft >= cutoff) {
+                            Alert.alert('Invalid date', 'Date of birth must be more than 10 years ago.');
+                            return;
+                          }
+                          setDob(dobDraft);
+                          setDobOpen(false);
+                        }}
+                        style={styles.dateModalToolbarBtn}
+                      >
+                        <Text style={styles.dateModalDoneText}>Done</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <DateTimePicker
+                      value={dobDraft}
+                      mode="date"
+                      display="spinner"
+                      maximumDate={(() => { const d = new Date(); d.setFullYear(d.getFullYear() - 10); return d; })()}
+                      onChange={(_, d) => { if (d) setDobDraft(d); }}
+                      textColor={colors.fg}
+                      themeVariant="dark"
+                      style={{ height: 216 }}
+                    />
                   </View>
-                  <DateTimePicker
-                    value={dobDraft}
-                    mode="date"
-                    display="spinner"
-                    maximumDate={(() => { const d = new Date(); d.setFullYear(d.getFullYear() - 10); return d; })()}
-                    onChange={(_, d) => { if (d) setDobDraft(d); }}
-                    textColor={colors.fg}
-                    themeVariant="dark"
-                    style={{ height: 216 }}
-                  />
-                </View>
+                </TouchableOpacity>
               </TouchableOpacity>
-            </TouchableOpacity>
-          </Modal>
+            </Modal>
+          )}
 
           {/* Country picker modal */}
           <Modal transparent animationType="slide" visible={countryModalOpen} onRequestClose={() => setCountryModalOpen(false)}>

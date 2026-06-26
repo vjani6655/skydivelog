@@ -1,4 +1,4 @@
-import { useCallback, useState, useMemo } from 'react';
+import { useCallback, useState, useMemo, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet,  ActivityIndicator,
   TouchableOpacity, RefreshControl, ScrollView } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,6 +10,7 @@ import { checkAccess } from '@/lib/checkAccess';
 import { spacing, radii } from '@/constants/tokens';
 import type { ColorSet } from '@/constants/tokens';
 import { useColors } from '@/lib/theme';
+import { useAttention } from '@/lib/attention';
 import type { Gear } from '@/lib/types';
 
 const REPACK_INTERVAL_DAYS = 180;
@@ -26,8 +27,14 @@ function daysUntilService(g: Gear): number | null {
   return Math.ceil((new Date(g.next_service_date).getTime() - Date.now()) / 86400000);
 }
 
-function isDueSoon(g: Gear): boolean {
+function isDeployedSinceRepack(g: Gear, lastDeployedDate?: string): boolean {
+  if (!lastDeployedDate) return false;
+  return !g.last_repack_date || lastDeployedDate > g.last_repack_date;
+}
+
+function isDueSoon(g: Gear, lastDeployedDate?: string): boolean {
   if (g.type === 'canopy' && g.canopy_sub_type === 'reserve' && g.repack_reminder_enabled) {
+    if (isDeployedSinceRepack(g, lastDeployedDate)) return true;
     if (!g.next_repack_date) return true;
     const days = daysUntilRepack(g);
     return days !== null && days <= 30;
@@ -68,31 +75,73 @@ const FILTER_CHIPS: { key: FilterKey; label: string }[] = [
 export default function GearScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { setAttention } = useAttention();
 
   const [gear, setGear] = useState<Gear[]>([]);
+  const [lastDeployedDates, setLastDeployedDates] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterKey>('All');
 
   const fetchGear = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     const user = session?.user;
-    if (!user) { setLoading(false); return; }
-    const { data } = await supabase
-      .from('gear')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
-    setGear((data ?? []) as Gear[]);
+    if (!user) { setLoading(false); setRefreshing(false); return; }
+
+    try {
+      const offlineTimeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('offline_timeout')), 5000)
+      );
+      const { data } = await Promise.race([
+        supabase.from('gear').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
+        offlineTimeout,
+      ]);
+      const gearList = (data ?? []) as Gear[];
+      setGear(gearList);
+      setIsOffline(false);
+
+      // Fetch most recent deployment date per reserve (best-effort after main load)
+      const reserveIds = gearList
+        .filter(g => g.type === 'canopy' && g.canopy_sub_type === 'reserve')
+        .map(g => g.id);
+      if (reserveIds.length > 0) {
+        const { data: deployData } = await supabase
+          .from('jumps')
+          .select('reserve_gear_id, date')
+          .in('reserve_gear_id', reserveIds)
+          .eq('reserve_deployed', true)
+          .is('deleted_at', null)
+          .order('date', { ascending: false });
+        const dates: Record<string, string> = {};
+        for (const d of deployData ?? []) {
+          if (d.reserve_gear_id && !dates[d.reserve_gear_id]) {
+            dates[d.reserve_gear_id] = d.date;
+          }
+        }
+        setLastDeployedDates(dates);
+      } else {
+        setLastDeployedDates({});
+      }
+    } catch {
+      setIsOffline(true);
+    }
+
     setLoading(false);
     setRefreshing(false);
   };
 
   useFocusEffect(useCallback(() => { fetchGear(); }, []));
 
+  useEffect(() => {
+    if (!loading) {
+      setAttention('gear', gear.some(g => isDueSoon(g, lastDeployedDates[g.id])));
+    }
+  }, [gear, lastDeployedDates, loading, setAttention]);
+
   const filtered = gear.filter(g => {
     if (activeFilter === 'All') return true;
-    if (activeFilter === 'due') return isDueSoon(g);
+    if (activeFilter === 'due') return isDueSoon(g, lastDeployedDates[g.id]);
     return g.type === activeFilter;
   });
 
@@ -100,8 +149,29 @@ export default function GearScreen() {
     return <View style={[styles.center, { backgroundColor: colors.bg }]}><ActivityIndicator color={colors.sky} /></View>;
   }
 
+  if (isOffline) {
+    return (
+      <SafeAreaView style={styles.screen} edges={['top']}>
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.title}>Gear</Text>
+            <Text style={styles.sub}>ONLINE ONLY</Text>
+          </View>
+        </View>
+        <View style={styles.offlineContainer}>
+          <Ionicons name="cloud-offline-outline" size={48} color={colors.fg3} />
+          <Text style={styles.offlineTitle}>No internet connection</Text>
+          <Text style={styles.offlineSub}>Connect to the internet to view your gear</Text>
+          <TouchableOpacity onPress={() => { setLoading(true); setIsOffline(false); fetchGear(); }} activeOpacity={0.7}>
+            <Text style={styles.offlineRetry}>Try again</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>Gear</Text>
@@ -155,13 +225,14 @@ export default function GearScreen() {
         renderItem={({ item: g }) => {
           const days = daysUntilRepack(g);
           const serviceDays = daysUntilService(g);
+          const deployedSinceRepack = isDeployedSinceRepack(g, lastDeployedDates[g.id]);
           const isOverdue = days !== null && days < 0;
           const isWarn = days !== null && days >= 0 && days <= 30;
           const notSetUp = g.type === 'canopy' && g.canopy_sub_type === 'reserve' && g.repack_reminder_enabled && !g.next_repack_date;
           const isServiceOverdue = serviceDays !== null && serviceDays < 0;
           const isServiceWarn = serviceDays !== null && serviceDays >= 0 && serviceDays <= 30;
           const aadNotSetUp = g.type === 'aad' && !g.next_service_date;
-          const iconColor = (isOverdue || isServiceOverdue) ? colors.danger
+          const iconColor = (isOverdue || isServiceOverdue || deployedSinceRepack) ? colors.danger
             : (isWarn || notSetUp || isServiceWarn || aadNotSetUp) ? colors.warn
             : colors.sky;
           return (
@@ -179,7 +250,11 @@ export default function GearScreen() {
                 <View style={styles.cardInfo}>
                   <View style={styles.cardTop}>
                     <Text style={styles.gearName}>{g.make_model}</Text>
-                    {(notSetUp || aadNotSetUp) ? (
+                    {deployedSinceRepack ? (
+                      <View style={[styles.badge, styles.badgeDanger]}>
+                        <Text style={[styles.badgeText, { color: colors.danger }]}>REPACK REQ'D</Text>
+                      </View>
+                    ) : (notSetUp || aadNotSetUp) ? (
                       <View style={[styles.badge, styles.badgeWarn]}>
                         <Text style={[styles.badgeText, { color: colors.warn }]}>SETUP NEEDED</Text>
                       </View>
@@ -237,6 +312,10 @@ function makeStyles(c: ColorSet) {
   return StyleSheet.create({
   screen: { flex: 1, backgroundColor: c.bg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  offlineContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing[8], gap: spacing[3] },
+  offlineTitle: { fontFamily: 'InterTight-SemiBold', fontSize: 17, color: c.fg, textAlign: 'center' },
+  offlineSub: { fontFamily: 'InterTight-Regular', fontSize: 14, color: c.fg3, textAlign: 'center', lineHeight: 20 },
+  offlineRetry: { fontFamily: 'InterTight-Medium', fontSize: 14, color: c.sky, marginTop: spacing[2] },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: spacing[5], paddingTop: spacing[5], paddingBottom: spacing[3] },
   title: { fontFamily: 'InterTight-Bold', fontSize: 28, color: c.fg, letterSpacing: -0.5 },
   sub: { fontFamily: 'JetBrainsMono-Regular', fontSize: 11, letterSpacing: 0.8, color: c.fg3, marginTop: 3 },

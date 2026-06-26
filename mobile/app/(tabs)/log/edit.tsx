@@ -165,6 +165,7 @@ export default function EditJumpScreen() {
           landing_accuracy_unit: landingAccuracyValue.trim() ? landingAccuracyUnit : null,
           canopy_type: canopyType.trim() || null,
           canopy_gear_id: canopyGearId || null,
+          canopy_make_model: canopyGearId ? (userCanopies.find(c => c.id === canopyGearId)?.make_model ?? null) : null,
           reserve_gear_id: reserveGearId || null,
           people_on_jump: parseInt(peopleOnJump, 10) || null,
         }).eq('id', id);
@@ -275,7 +276,7 @@ export default function EditJumpScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerClose} onPress={() => router.back()} activeOpacity={0.7}>
           <Ionicons name="close" size={22} color={colors.fg} />
