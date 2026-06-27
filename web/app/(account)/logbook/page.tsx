@@ -100,7 +100,7 @@ export default async function LogbookPage({ searchParams }: { searchParams: Prom
           </p>
           <h1 className="text-[28px] font-bold text-fg tracking-tight">{totalCount.toLocaleString()} jumps</h1>
         </div>
-        <LogbookBulkExportButton jumpIds={(jumps ?? []).map((j: JumpRow) => j.id)} />
+        <LogbookBulkExportButton />
       </div>
 
       {/* Filters row */}

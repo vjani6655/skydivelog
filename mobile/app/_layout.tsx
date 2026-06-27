@@ -175,7 +175,7 @@ export default function RootLayout() {
 
   return (
     <UserPrefsProvider>
-      <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
+      <Stack screenOptions={{ headerShown: false, animation: 'fade', gestureEnabled: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="welcome" />
         <Stack.Screen name="sign-in" options={{ animation: 'slide_from_right' }} />

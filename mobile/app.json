@@ -18,6 +18,7 @@
       }
     },
     "android": {
+      "userInterfaceStyle": "dark",
       "permissions": [
         "android.permission.RECORD_AUDIO"
       ],
